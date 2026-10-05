@@ -1,0 +1,483 @@
+{
+ "description": "Serviço Go (fleetd) + bash de deploy + Dockerfile + migrações SQL; exemplo Python de parceiro (fixture).",
+ "product_dirs": [
+  "cmd/fleetd",
+  "internal/dispatch",
+  "internal/tracking",
+  "internal/storage",
+  "internal/httpapi",
+  "migrations",
+  "deploy",
+  "docs/adr",
+  "docs/runbooks",
+  ".github/workflows"
+ ],
+ "fixture_paths": [
+  "internal/dispatch/testdata/",
+  "examples/"
+ ],
+ "bounded_contexts": [
+  {
+   "name": "dispatch",
+   "prefixes": [
+    "internal/dispatch/"
+   ],
+   "aliases": [
+    "dispatch",
+    "assignment",
+    "despacho",
+    "atribuicao"
+   ]
+  },
+  {
+   "name": "tracking",
+   "prefixes": [
+    "internal/tracking/"
+   ],
+   "aliases": [
+    "tracking",
+    "eta",
+    "rastreio"
+   ]
+  },
+  {
+   "name": "persistence",
+   "prefixes": [
+    "internal/storage/",
+    "migrations/"
+   ],
+   "aliases": [
+    "storage",
+    "migrations",
+    "database",
+    "db",
+    "sql",
+    "persist"
+   ]
+  },
+  {
+   "name": "deploy-ops",
+   "prefixes": [
+    "deploy/",
+    "Dockerfile"
+   ],
+   "aliases": [
+    "deploy",
+    "ops",
+    "infra",
+    "devops"
+   ]
+  }
+ ],
+ "acceptable_extra_territories": [
+  {
+   "name": "http",
+   "prefixes": [
+    "internal/httpapi/",
+    "cmd/"
+   ]
+  },
+  {
+   "name": "docs",
+   "prefixes": [
+    "docs/",
+    "README.md",
+    "CLAUDE.md"
+   ]
+  },
+  {
+   "name": "build-ci",
+   "prefixes": [
+    "go.mod",
+    "go.sum",
+    "Makefile",
+    ".golangci.yml",
+    ".github/",
+    ".gitignore",
+    ".dockerignore"
+   ]
+  }
+ ],
+ "commands": {
+  "test": {
+   "cmd": "make test",
+   "equivalents": [
+    "go test ./..."
+   ],
+   "requires_tools": [
+    "go"
+   ],
+   "expected": "verified_if_tools"
+  },
+  "lint": {
+   "cmd": "make lint",
+   "equivalents": [
+    "golangci-lint run",
+    "golangci-lint run ./..."
+   ],
+   "requires_tools": [
+    "golangci-lint",
+    "shellcheck"
+   ],
+   "expected": "verified_if_tools"
+  },
+  "migrate": {
+   "cmd": "make migrate",
+   "equivalents": [
+    "./deploy/migrate.sh",
+    "deploy/migrate.sh"
+   ],
+   "requires_tools": [
+    "psql"
+   ],
+   "expected": "never_verified",
+   "note": "exige banco; executar sem DATABASE_URL não é verificação"
+  }
+ },
+ "invariants": [
+  {
+   "id": "migrations-append-only",
+   "adr": "docs/adr/0001-migrations-append-only.md",
+   "statement": "Migração aplicada nunca é editada; novo valor de enum = nova migração ALTER TYPE ... ADD VALUE.",
+   "keywords_all": [
+    [
+     "append-only",
+     "append only",
+     "nunca edit",
+     "never edit"
+    ],
+    [
+     "migra"
+    ]
+   ],
+   "owner_prefixes": [
+    "migrations/",
+    "internal/storage/",
+    "deploy/"
+   ]
+  },
+  {
+   "id": "status-mirrors-enum",
+   "adr": "docs/adr/0001-migrations-append-only.md",
+   "statement": "DeliveryStatus em Go espelha o enum delivery_status do Postgres.",
+   "keywords_all": [
+    [
+     "delivery_status",
+     "DeliveryStatus"
+    ],
+    [
+     "enum"
+    ]
+   ],
+   "owner_prefixes": [
+    "internal/dispatch/",
+    "migrations/"
+   ]
+  },
+  {
+   "id": "no-down-in-prod",
+   "adr": "docs/adr/0001-migrations-append-only.md",
+   "statement": "Down migrations nunca rodam em produção; rollback só troca imagem.",
+   "keywords_all": [
+    [
+     "down"
+    ],
+    [
+     "rollback",
+     "produção",
+     "production",
+     "prod"
+    ]
+   ],
+   "owner_prefixes": [
+    "deploy/",
+    "migrations/"
+   ]
+  }
+ ],
+ "terms": [
+  {
+   "canonical": "Delivery",
+   "kind": "business",
+   "def": {
+    "file": "internal/dispatch/assign.go",
+    "line": 25,
+    "match": "type Delivery struct"
+   },
+   "never_use": [
+    "shipment"
+   ],
+   "owner_prefixes": [
+    "internal/dispatch/"
+   ],
+   "mem_query": "Delivery parcel pickup drop-off"
+  },
+  {
+   "canonical": "Courier",
+   "kind": "business",
+   "def": {
+    "file": "internal/dispatch/assign.go",
+    "line": 17,
+    "match": "type Courier struct"
+   },
+   "never_use": [
+    "driver",
+    "driver_id"
+   ],
+   "owner_prefixes": [
+    "internal/dispatch/"
+   ],
+   "mem_query": "Courier capacity online"
+  },
+  {
+   "canonical": "DeliveryStatus",
+   "kind": "business",
+   "def": {
+    "file": "internal/dispatch/status.go",
+    "line": 8,
+    "match": "type DeliveryStatus string"
+   },
+   "never_use": [],
+   "owner_prefixes": [
+    "internal/dispatch/",
+    "migrations/"
+   ],
+   "mem_query": "DeliveryStatus enum values"
+  },
+  {
+   "canonical": "delivery_status",
+   "kind": "technical",
+   "def": {
+    "file": "migrations/0002_delivery_status_enum.up.sql",
+    "line": 3,
+    "match": "CREATE TYPE delivery_status"
+   },
+   "never_use": [],
+   "owner_prefixes": [
+    "migrations/"
+   ],
+   "mem_query": "delivery_status enum type"
+  },
+  {
+   "canonical": "Ping",
+   "kind": "technical",
+   "def": {
+    "file": "internal/tracking/eta.go",
+    "line": 15,
+    "match": "type Ping struct"
+   },
+   "never_use": [],
+   "owner_prefixes": [
+    "internal/tracking/"
+   ],
+   "mem_query": "GPS ping position"
+  }
+ ],
+ "business_rules": [
+  {
+   "id": "courier-capacity",
+   "rule": "Entregador carrega no máximo 3 entregas ativas (MaxActivePerCourier; CHECK no banco).",
+   "at": {
+    "file": "internal/dispatch/assign.go",
+    "line": 11,
+    "match": "const MaxActivePerCourier = 3"
+   },
+   "test": "internal/dispatch/assign_test.go::TestPickCourierRespectsCapacity",
+   "keywords_any": [
+    "MaxActivePerCourier",
+    "3"
+   ],
+   "owner_prefixes": [
+    "internal/dispatch/",
+    "migrations/"
+   ],
+   "mem_query": "courier max active deliveries capacity"
+  },
+  {
+   "id": "delivery-transitions",
+   "rule": "Entrega: created -> assigned -> picked_up -> delivered | failed; assigned pode falhar; delivered/failed terminais.",
+   "at": {
+    "file": "internal/dispatch/status.go",
+    "line": 20,
+    "match": "var allowedTransitions"
+   },
+   "test": "internal/dispatch/assign_test.go::TestTerminalStatuses",
+   "keywords_any": [
+    "picked_up",
+    "terminal",
+    "transi"
+   ],
+   "owner_prefixes": [
+    "internal/dispatch/"
+   ],
+   "mem_query": "delivery transition created assigned picked_up delivered failed"
+  },
+  {
+   "id": "status-enum-values",
+   "rule": "Valores do enum delivery_status: created, assigned, picked_up, delivered, failed.",
+   "at": {
+    "file": "migrations/0002_delivery_status_enum.up.sql",
+    "line": 3,
+    "match": "CREATE TYPE delivery_status AS ENUM"
+   },
+   "test": null,
+   "keywords_any": [
+    "delivery_status"
+   ],
+   "owner_prefixes": [
+    "migrations/"
+   ],
+   "mem_query": "delivery_status enum created assigned picked_up"
+  },
+  {
+   "id": "eta-speed-floor",
+   "rule": "ETA usa velocidade mínima de 8 km/h (entregador parado não gera ETA infinito).",
+   "at": {
+    "file": "internal/tracking/eta.go",
+    "line": 12,
+    "match": "const MinSpeedKmh = 8.0"
+   },
+   "test": "internal/tracking/eta_test.go::TestETAUsesSpeedFloor",
+   "keywords_any": [
+    "MinSpeedKmh",
+    "8 km"
+   ],
+   "owner_prefixes": [
+    "internal/tracking/"
+   ],
+   "mem_query": "ETA minimum speed floor"
+  },
+  {
+   "id": "migration-sha",
+   "rule": "migrate.sh aborta se uma migração aplicada mudou (sha256).",
+   "at": {
+    "file": "deploy/migrate.sh",
+    "line": 15,
+    "match": "was edited after being applied"
+   },
+   "test": null,
+   "keywords_any": [
+    "sha256",
+    "sha"
+   ],
+   "owner_prefixes": [
+    "deploy/"
+   ],
+   "mem_query": "migration edited after applied sha mismatch"
+  }
+ ],
+ "hotspots": [
+  "internal/storage/deliveries.go",
+  "internal/dispatch/assign.go"
+ ],
+ "co_change": [
+  {
+   "a": "migrations/",
+   "b": "internal/storage/",
+   "support": 3
+  }
+ ],
+ "coupled_pair": {
+  "a_prefixes": [
+   "migrations/"
+  ],
+  "b_prefixes": [
+   "internal/storage/"
+  ],
+  "why": "queries de storage dependem do schema; 3 commits mudam os dois"
+ },
+ "fix_commits_min": 3,
+ "revert": {
+  "subject_contains": "returned status (edits 0002 in place)"
+ },
+ "adrs": [
+  "docs/adr/0001-migrations-append-only.md"
+ ],
+ "stack": {
+  "ecosystems": [
+   "go",
+   "bash",
+   "sql",
+   "docker"
+  ],
+  "lockfile": "go.sum",
+  "runtime": {
+   "go": "1.22",
+   "toolchain": "go1.22.5"
+  },
+  "packages": {
+   "github.com/jackc/pgx/v5": "v5.6.0",
+   "github.com/go-chi/chi/v5": "v5.1.0",
+   "github.com/google/uuid": "v1.6.0",
+   "golang.org/x/crypto": "v0.24.0"
+  },
+  "must_report": [
+   "github.com/jackc/pgx/v5",
+   "github.com/go-chi/chi/v5"
+  ],
+  "historic_wrong_versions": {
+   "github.com/jackc/pgx/v5": "v5.5.5"
+  },
+  "images": {
+   "golang": "1.22.5-alpine3.20",
+   "postgres": "16.3"
+  }
+ },
+ "stack_must_not_include": [
+  "requests",
+  "pydantic",
+  "python"
+ ],
+ "absent_patterns": [
+  {
+   "pattern": "gorm",
+   "why": "SQL direto com pgx"
+  },
+  {
+   "pattern": "gin",
+   "why": "router é chi"
+  },
+  {
+   "pattern": "kubernetes",
+   "why": "deploy é Cloud Run via gcloud"
+  },
+  {
+   "pattern": "helm",
+   "why": "sem k8s"
+  },
+  {
+   "pattern": "goose",
+   "why": "migrações são aplicadas por deploy/migrate.sh"
+  }
+ ],
+ "stale_doc_claim": {
+  "file": "README.md",
+  "line": 13,
+  "match": "Requer Go 1.21",
+  "claim": "README diz Go 1.21",
+  "truth": "go.mod declara go 1.22 / toolchain go1.22.5; Dockerfile usa golang:1.22.5",
+  "keywords": [
+   "1.21"
+  ]
+ },
+ "human_content": [
+  {
+   "file": "CLAUDE.md",
+   "must_contain": "avise o canal #fleet-db"
+  },
+  {
+   "file": "CLAUDE.md",
+   "must_contain": "Não rode deploy na sexta depois das 16h"
+  }
+ ],
+ "fixture": "go-polyglot",
+ "_comment": "Verdade conhecida da fixture. NUNCA copiado para o alvo. Validar com: python3 evals/check_run.py --verify-ground-truth go-polyglot",
+ "scenario_paths": {
+  "trivial": "README.md",
+  "risky": "migrations/0002_delivery_status_enum.up.sql",
+  "dev_a": "migrations/0003_courier_capacity.up.sql",
+  "dev_b": "internal/storage/deliveries.go",
+  "lesson_scope": "internal/storage/**",
+  "lesson_file": "internal/storage/deliveries.go"
+ }
+}

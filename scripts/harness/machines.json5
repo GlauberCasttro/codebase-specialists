@@ -1,0 +1,181 @@
+// machines.json5 — FONTE ÚNICA das máquinas de estado do harness (ARCHITECTURE §8-quinquies/§8-septies). Lido por engine/hcore/validate; gerado à mão só na skill.
+{
+  version: 1,
+  verdict_enum: ["PASS", "FAIL", "NEEDS_SPECIALIST"],
+  abstain_kinds: ["spec_ambiguous", "test_suspect", "out_of_territory", "other"],
+  story_types: ["us", "bug", "fix"],
+  severities: ["critical", "high", "medium", "low"],
+  limits: {max_retries: 2, max_attempts: 3},
+  // lane = faixa de interação (fonte única): consulta (cs-state ask) | avulsa (cs-state add task --quick) | completo.
+  classes: {
+    pergunta: {why: "nenhuma escrita", lane: "consulta", max_tasks: 0, review_required: false, min_gate_reviews: 0},
+    trivial: {why: "<=1 arquivo, diff numa frase, sem invariante tocado", lane: "avulsa", max_tasks: 1, single_literal_file: true,
+              no_invariants: true, review_required: false, min_gate_reviews: 0},
+    pequena: {why: "<=1 território, critérios claros", lane: "avulsa", max_dev_agents: 1, review_required: true, min_gate_reviews: 1},
+    feature: {why: ">1 território ou critério a definir", lane: "completo", review_required: true, min_gate_reviews: 1,
+              require_kinds_before_dev: ["product"], final_review: true},
+    risco: {why: "toca invariante/área congelada/segurança", lane: "completo", review_required: true, min_gate_reviews: 2,
+            require_kinds_before_dev: ["product"], final_review: true, user_confirmation: true},
+  },
+  machines: {
+    // M1 — sessão do orquestrador (uma por pedido do usuário)
+    session: {
+      field: "state",
+      states: ["IDLE", "TRIAGE", "PLANNING", "EXECUTING", "VERIFYING", "REPORTING"],
+      initial: "TRIAGE",
+      transitions: {
+        triage: {from: ["TRIAGE", "PLANNING", "EXECUTING"], to: "=", guards: ["class_valid", "why_present"]},
+        confirm: {from: ["TRIAGE", "PLANNING"], to: "=", guards: ["note_present"]},
+        answer: {from: ["TRIAGE"], to: "REPORTING", guards: ["class_is_question"]},
+        plan: {from: ["TRIAGE"], to: "PLANNING", guards: ["class_set", "class_not_question"]},
+        execute: {from: ["PLANNING"], to: "EXECUTING", guards: ["plan_recorded", "plan_fits_class", "waves_disjoint", "risk_confirmed"]},
+        replan: {from: ["EXECUTING", "VERIFYING"], to: "PLANNING", guards: []},
+        verify: {from: ["EXECUTING"], to: "VERIFYING", guards: ["no_delegation_in_flight", "all_tasks_closed"]},
+        review: {from: ["VERIFYING"], to: "=", guards: ["reviewer_is_gate", "verdict_valid", "findings_present"]},
+        report: {from: ["VERIFYING"], to: "REPORTING", guards: ["pipeline_satisfied"]},
+        close: {from: ["REPORTING"], to: "IDLE", guards: []},
+      },
+    },
+    // M2 — delegação (uma por despacho); dirige M3 via drives_task
+    delegation: {
+      field: "state",
+      states: ["PLANNED", "BRIEFED", "DISPATCHED", "RETURNED", "VERIFIED", "REVIEWED", "ACCEPTED", "REJECTED",
+               "ABSTAINED", "ESCALATED", "REROUTED", "DROPPED"],
+      initial: "PLANNED",
+      // ESCALATED/ABSTAINED esperam a DECISÃO HUMANA: não são terminais. Saídas: retomar (retry → BRIEFED, sem consumir
+      // tentativa), trocar de agente (reroute → REROUTED) ou descartar (drop → DROPPED).
+      terminal: ["ACCEPTED", "REROUTED", "DROPPED"],
+      awaiting_human: ["ESCALATED", "ABSTAINED"],
+      in_flight: ["DISPATCHED"],
+      transitions: {
+        ready: {from: ["PLANNED"], to: "BRIEFED", guards: ["brief_valid"]},
+        dispatch: {from: ["BRIEFED"], to: "DISPATCHED",
+                   guards: ["session_executing", "deps_accepted", "one_in_flight_per_agent", "no_parallel_collision",
+                            "class_dispatch_order", "budget_available", "model_declared"]},
+        submit: {from: ["DISPATCHED"], to: "RETURNED", guards: ["submission_complete", "files_in_allowed_paths"]},
+        "return": {from: ["DISPATCHED"], to: "REJECTED", guards: [], note: "retorno sem submission = protocol_failure"},
+        verify: {from: ["RETURNED"], to: "VERIFIED", on_guard_fail: "REJECTED",
+                 guards: ["command_exit_zero", "ac_tests_green", "diff_within_allowed_paths", "lessons_check_pass"]},
+        review: {from: ["VERIFIED", "REVIEWED"], to: "REVIEWED",
+                 guards: ["reviewer_is_gate", "reviewer_not_author", "verdict_valid", "findings_present"]},
+        accept: {from: ["VERIFIED", "REVIEWED"], to: "ACCEPTED", guards: ["verify_pass", "tree_unchanged", "reviews_satisfy_class"]},
+        reject: {from: ["RETURNED", "VERIFIED", "REVIEWED"], to: "REJECTED", guards: ["reason_present"]},
+        // de ESCALATED/ABSTAINED a retomada é decisão humana: retries_left não se aplica e os achados têm de ser a decisão
+        // (--findings ou --decision) — não vale o reject_reason antigo.
+        retry: {from: ["REJECTED", "ESCALATED", "ABSTAINED"], to: "BRIEFED", guards: ["retries_left", "findings_attached", "brief_valid"]},
+        escalate: {from: ["PLANNED", "BRIEFED", "DISPATCHED", "RETURNED", "VERIFIED", "REVIEWED", "REJECTED"], to: "ESCALATED",
+                   guards: ["reason_present"]},
+        reroute: {from: ["REJECTED", "PLANNED", "BRIEFED", "ESCALATED", "ABSTAINED"], to: "REROUTED",
+                  guards: ["reason_present", "new_agent_valid"]},
+        drop: {from: ["ESCALATED", "ABSTAINED", "REJECTED"], to: "DROPPED", guards: ["reason_present"],
+               note: "descarta a task por decisão humana (task DROPPED, fechada)"},
+        // verify que falhou por AMBIENTE (ferramenta/módulo ausente; engine/envfail.py): verificar de novo depois de
+        // consertar o ambiente (não consome tentativa) ou exceção com portão HUMANO (--by humano, --evidence) — nunca
+        // para falha de teste/asserção; review por gate continua obrigatória depois.
+        reverify: {from: ["REJECTED", "ESCALATED"], to: "RETURNED", guards: ["reverify_allowed"]},
+        waive_verify: {from: ["REJECTED", "ESCALATED"], to: "VERIFIED",
+                       guards: ["reason_present", "evidence_present", "waiver_by_human", "verify_failed_by_environment",
+                                "tree_unchanged"]},
+        abstain: {from: ["BRIEFED", "DISPATCHED", "RETURNED"], to: "ABSTAINED", guards: ["reason_present", "abstain_kind_valid"]},
+      },
+      drives_task: {
+        PLANNED: "DRAFT", BRIEFED: "READY", DISPATCHED: "IN_PROGRESS", RETURNED: "SUBMITTED", VERIFIED: "VERIFYING",
+        REVIEWED: "VERIFYING", ACCEPTED: "ACCEPTED", REJECTED: "REJECTED", ABSTAINED: "DRAFT", ESCALATED: "BLOCKED",
+        REROUTED: "DRAFT", DROPPED: "DROPPED",
+      },
+    },
+    // M3 — task (registro durável; muda só via M2 ou bloqueio automático por tentativas)
+    task: {
+      field: "status",
+      states: ["DRAFT", "READY", "IN_PROGRESS", "SUBMITTED", "VERIFYING", "ACCEPTED", "REJECTED", "BLOCKED", "DROPPED"],
+      terminal: ["ACCEPTED", "DROPPED"],
+      initial: "DRAFT",
+      pairs: [
+        ["DRAFT", "READY"], ["READY", "IN_PROGRESS"], ["IN_PROGRESS", "SUBMITTED"], ["SUBMITTED", "VERIFYING"],
+        ["VERIFYING", "VERIFYING"], ["VERIFYING", "ACCEPTED"], ["SUBMITTED", "REJECTED"], ["VERIFYING", "REJECTED"],
+        ["IN_PROGRESS", "REJECTED"], ["REJECTED", "READY"], ["REJECTED", "BLOCKED"], ["BLOCKED", "DRAFT"],
+        ["REJECTED", "DRAFT"], ["READY", "DRAFT"], ["IN_PROGRESS", "DRAFT"], ["SUBMITTED", "DRAFT"], ["DRAFT", "DRAFT"],
+        ["DRAFT", "BLOCKED"], ["READY", "BLOCKED"], ["IN_PROGRESS", "BLOCKED"], ["SUBMITTED", "BLOCKED"],
+        ["VERIFYING", "BLOCKED"], ["BLOCKED", "BLOCKED"],
+        // saídas do bloqueio por decisão humana (retry de ESCALATED) e descarte (drop)
+        ["BLOCKED", "READY"], ["BLOCKED", "DROPPED"], ["DRAFT", "DROPPED"], ["REJECTED", "DROPPED"],
+        // reverify (→ SUBMITTED) e waive_verify (→ VERIFYING) de delegação REJECTED/ESCALATED
+        ["REJECTED", "SUBMITTED"], ["BLOCKED", "SUBMITTED"], ["REJECTED", "VERIFYING"], ["BLOCKED", "VERIFYING"],
+      ],
+    },
+    // M4 — consulta (faixa `pergunta`): delegação SÓ LEITURA e descartável; sem task, sem story, sem review.
+    // Criada já BRIEFED por `cs-state ask`; o guard (pre-agent) a despacha; SubagentStop a fecha (ANSWERED).
+    consult: {
+      field: "state",
+      states: ["BRIEFED", "DISPATCHED", "ANSWERED", "CANCELLED"],
+      initial: "BRIEFED",
+      terminal: ["ANSWERED", "CANCELLED"],
+      transitions: {
+        dispatch: {from: ["BRIEFED"], to: "DISPATCHED", guards: ["consult_agent_free", "consult_model_declared"]},
+        answer: {from: ["DISPATCHED"], to: "ANSWERED", guards: []},
+        cancel: {from: ["BRIEFED", "DISPATCHED"], to: "CANCELLED", guards: ["reason_present"]},
+      },
+    },
+    // Processo (§8-septies)
+    epic: {
+      field: "state",
+      states: ["PROPOSED", "ACTIVE", "DONE", "DROPPED"],
+      initial: "PROPOSED",
+      terminal: ["DONE", "DROPPED"],
+      transitions: {
+        activate: {from: ["PROPOSED"], to: "ACTIVE", guards: ["epic_dor"]},
+        done: {from: ["ACTIVE"], to: "DONE", guards: ["epic_dod"]},
+        drop: {from: ["PROPOSED", "ACTIVE"], to: "DROPPED", guards: ["reason_present"]},
+      },
+    },
+    feature: {
+      field: "state",
+      states: ["BACKLOG", "READY", "IN_PROGRESS", "DONE", "DROPPED"],
+      initial: "BACKLOG",
+      terminal: ["DONE", "DROPPED"],
+      transitions: {
+        ready: {from: ["BACKLOG"], to: "READY", guards: ["feature_dor"]},
+        start: {from: ["READY"], to: "IN_PROGRESS", guards: ["parent_epic_active"]},
+        done: {from: ["IN_PROGRESS"], to: "DONE", guards: ["feature_dod"]},
+        drop: {from: ["BACKLOG", "READY", "IN_PROGRESS"], to: "DROPPED", guards: ["reason_present"]},
+      },
+    },
+    sprint: {
+      field: "state",
+      states: ["PLANNED", "ACTIVE", "REVIEW", "CLOSED"],
+      initial: "PLANNED",
+      terminal: ["CLOSED"],
+      transitions: {
+        plan: {from: ["PLANNED"], to: "=", guards: ["stories_have_dor"]},
+        start: {from: ["PLANNED"], to: "ACTIVE", guards: ["sprint_dor"]},
+        review: {from: ["ACTIVE"], to: "REVIEW", guards: []},
+        close: {from: ["REVIEW"], to: "CLOSED", guards: ["sprint_review_recorded"]},
+      },
+    },
+    story: {
+      field: "state",
+      states: ["BACKLOG", "READY", "IN_PROGRESS", "IN_REVIEW", "DONE", "REJECTED"],
+      initial: "BACKLOG",
+      terminal: ["DONE"],
+      transitions: {
+        ready: {from: ["BACKLOG"], to: "READY", guards: ["story_dor"]},
+        start: {from: ["READY"], to: "IN_PROGRESS", guards: []},
+        review: {from: ["IN_PROGRESS"], to: "IN_REVIEW", guards: ["story_tasks_accepted"]},
+        done: {from: ["IN_REVIEW"], to: "DONE", guards: ["story_dod"]},
+        reject: {from: ["IN_PROGRESS", "IN_REVIEW"], to: "REJECTED", guards: ["reason_present"]},
+        requeue: {from: ["REJECTED", "READY", "IN_PROGRESS", "IN_REVIEW"], to: "BACKLOG", guards: ["reason_present"]},
+      },
+    },
+  },
+  autonomy: {
+    states: ["ACTIVE", "ESCALATED", "DONE", "STOPPED"],
+    terminal: ["DONE", "STOPPED"],
+    // ESCALATED espera o humano: `cs-state autonomy resume --decision "..."` (→ ACTIVE) ou `autonomy stop` (→ STOPPED).
+    transitions: {resume: {from: ["ESCALATED"], to: "ACTIVE"}, stop: {from: ["ACTIVE", "ESCALATED"], to: "STOPPED"},
+                  escalate: {from: ["ACTIVE"], to: "ESCALATED"}, done: {from: ["ACTIVE"], to: "DONE"}},
+    escalation_conditions: ["invariant_or_frozen_touched", "material_ambiguity", "same_rejection_twice", "budget_exhausted",
+                            "risk_class_discovered", "acceptance_test_changed", "agent_conflict", "no_progress"],
+    max_stop_blocks: 200,
+    max_blocks_without_progress: 3,
+  },
+}

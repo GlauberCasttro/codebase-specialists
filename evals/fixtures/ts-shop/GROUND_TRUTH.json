@@ -1,0 +1,496 @@
+{
+ "description": "Monorepo npm workspaces: packages/shared (contratos), packages/api (express: catalog, inventory, orders), apps/web (React+Vite); node:test com type stripping.",
+ "product_dirs": [
+  "packages/shared/src",
+  "packages/api/src",
+  "packages/api/src/inventory",
+  "packages/api/src/orders",
+  "packages/api/src/catalog",
+  "packages/api/src/http",
+  "apps/web/src",
+  "apps/web/src/cart",
+  "docs/adr",
+  ".github/workflows"
+ ],
+ "fixture_paths": [
+  "packages/api/test/fixtures/"
+ ],
+ "bounded_contexts": [
+  {
+   "name": "shared-contracts",
+   "prefixes": [
+    "packages/shared/"
+   ],
+   "aliases": [
+    "shared",
+    "contracts",
+    "contratos"
+   ]
+  },
+  {
+   "name": "api",
+   "prefixes": [
+    "packages/api/src/"
+   ],
+   "aliases": [
+    "api",
+    "inventory",
+    "orders",
+    "checkout",
+    "estoque"
+   ]
+  },
+  {
+   "name": "web",
+   "prefixes": [
+    "apps/web/"
+   ],
+   "aliases": [
+    "web",
+    "storefront",
+    "frontend",
+    "front"
+   ]
+  }
+ ],
+ "acceptable_extra_territories": [
+  {
+   "name": "docs",
+   "prefixes": [
+    "docs/",
+    "README.md",
+    "AGENTS.md"
+   ]
+  },
+  {
+   "name": "build-ci",
+   "prefixes": [
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "tsconfig.base.json",
+    "eslint.config.mjs",
+    ".github/",
+    ".nvmrc",
+    ".gitignore"
+   ]
+  },
+  {
+   "name": "api-tests",
+   "prefixes": [
+    "packages/api/test/"
+   ]
+  }
+ ],
+ "commands": {
+  "test": {
+   "cmd": "npm test",
+   "equivalents": [
+    "npm run test --workspaces",
+    "node --test",
+    "npm run test"
+   ],
+   "requires_tools": [
+    "npm",
+    "node"
+   ],
+   "expected": "verified"
+  },
+  "lint": {
+   "cmd": "npm run lint",
+   "equivalents": [
+    "eslint ."
+   ],
+   "requires_tools": [
+    "node_modules/.bin/eslint"
+   ],
+   "expected": "verified_if_tools"
+  },
+  "typecheck": {
+   "cmd": "npm run typecheck",
+   "equivalents": [
+    "tsc -b"
+   ],
+   "requires_tools": [
+    "node_modules/.bin/tsc"
+   ],
+   "expected": "verified_if_tools"
+  }
+ },
+ "invariants": [
+  {
+   "id": "stock-never-negative",
+   "adr": "docs/adr/0002-stock-reservations.md",
+   "statement": "available de um SKU nunca fica negativo; take checa antes de mutar.",
+   "keywords_all": [
+    [
+     "negativ",
+     "negative"
+    ],
+    [
+     "stock",
+     "estoque"
+    ]
+   ],
+   "owner_prefixes": [
+    "packages/api/src/inventory/"
+   ]
+  },
+  {
+   "id": "web-no-api-import",
+   "adr": "docs/adr/0001-web-talks-to-api-over-http.md",
+   "statement": "apps/web nunca importa @shop/api; contratos em @shop/shared (lint).",
+   "keywords_all": [
+    [
+     "@shop/api"
+    ],
+    [
+     "@shop/shared",
+     "http"
+    ]
+   ],
+   "owner_prefixes": [
+    "apps/web/"
+   ]
+  },
+  {
+   "id": "erasable-ts-only",
+   "adr": null,
+   "statement": "Só sintaxe TS apagável (sem enum/namespace/parameter properties): node roda .ts com type stripping.",
+   "keywords_all": [
+    [
+     "enum"
+    ],
+    [
+     "strip",
+     "erasable",
+     "apag"
+    ]
+   ],
+   "owner_prefixes": [
+    "packages/"
+   ]
+  }
+ ],
+ "terms": [
+  {
+   "canonical": "Sku",
+   "kind": "business",
+   "def": {
+    "file": "packages/shared/src/sku.ts",
+    "line": 2,
+    "match": "export type Sku"
+   },
+   "never_use": [
+    "productCode",
+    "codigo_produto"
+   ],
+   "owner_prefixes": [
+    "packages/shared/"
+   ],
+   "mem_query": "Sku format AAA-0000"
+  },
+  {
+   "canonical": "Cart",
+   "kind": "business",
+   "def": {
+    "file": "packages/shared/src/cart.ts",
+    "line": 10,
+    "match": "export interface Cart {"
+   },
+   "never_use": [],
+   "owner_prefixes": [
+    "packages/shared/",
+    "apps/web/"
+   ],
+   "mem_query": "Cart lines unitPriceCents"
+  },
+  {
+   "canonical": "Order",
+   "kind": "business",
+   "def": {
+    "file": "packages/shared/src/order.ts",
+    "line": 9,
+    "match": "export interface Order"
+   },
+   "never_use": [],
+   "owner_prefixes": [
+    "packages/shared/",
+    "packages/api/src/orders/"
+   ],
+   "mem_query": "Order status totalCents"
+  },
+  {
+   "canonical": "Reservation",
+   "kind": "business",
+   "def": {
+    "file": "packages/api/src/inventory/reservations.ts",
+    "line": 7,
+    "match": "export interface Reservation"
+   },
+   "never_use": [
+    "hold",
+    "holdStock"
+   ],
+   "owner_prefixes": [
+    "packages/api/src/inventory/"
+   ],
+   "mem_query": "Reservation expires TTL"
+  },
+  {
+   "canonical": "priceCents",
+   "kind": "business",
+   "def": {
+    "file": "packages/api/src/catalog/catalog.ts",
+    "line": 6,
+    "match": "priceCents: number"
+   },
+   "never_use": [
+    "preco"
+   ],
+   "owner_prefixes": [
+    "packages/api/src/catalog/"
+   ],
+   "mem_query": "priceCents integer"
+  }
+ ],
+ "business_rules": [
+  {
+   "id": "stock-non-negative",
+   "rule": "Estoque disponível nunca fica negativo: take lança InsufficientStockError antes de mutar.",
+   "at": {
+    "file": "packages/api/src/inventory/stock.ts",
+    "line": 34,
+    "match": "if (quantity > current)"
+   },
+   "test": "packages/api/src/inventory/stock.test.ts::stock never goes negative",
+   "keywords_any": [
+    "negativ",
+    "InsufficientStock"
+   ],
+   "owner_prefixes": [
+    "packages/api/src/inventory/"
+   ],
+   "mem_query": "stock never negative insufficient"
+  },
+  {
+   "id": "reservation-ttl",
+   "rule": "Reserva expira em 15 minutos e devolve o estoque.",
+   "at": {
+    "file": "packages/api/src/inventory/reservations.ts",
+    "line": 5,
+    "match": "RESERVATION_TTL_MS = 15"
+   },
+   "test": "packages/api/src/inventory/stock.test.ts::reservation expires after 15 minutes",
+   "keywords_any": [
+    "15 min",
+    "15-minute",
+    "TTL",
+    "RESERVATION_TTL_MS"
+   ],
+   "owner_prefixes": [
+    "packages/api/src/inventory/"
+   ],
+   "mem_query": "reservation expires 15 minutes"
+  },
+  {
+   "id": "qty-per-line",
+   "rule": "Quantidade por linha do carrinho: inteiro 1..10 (MAX_QTY_PER_LINE).",
+   "at": {
+    "file": "packages/api/src/orders/rules.ts",
+    "line": 2,
+    "match": "MAX_QTY_PER_LINE = 10"
+   },
+   "test": "packages/api/src/orders/checkout.test.ts::quantity per line is limited to 10",
+   "keywords_any": [
+    "MAX_QTY_PER_LINE",
+    "1..10",
+    "10"
+   ],
+   "owner_prefixes": [
+    "packages/api/src/orders/"
+   ],
+   "mem_query": "quantity per line max 10"
+  },
+  {
+   "id": "order-transitions",
+   "rule": "Pedido: pending -> paid -> shipped; pending|paid -> cancelled; shipped/cancelled terminais.",
+   "at": {
+    "file": "packages/api/src/orders/status.ts",
+    "line": 4,
+    "match": "export const ORDER_TRANSITIONS"
+   },
+   "test": "packages/api/src/orders/checkout.test.ts::shipped orders cannot be cancelled",
+   "keywords_any": [
+    "shipped",
+    "cancel",
+    "transi"
+   ],
+   "owner_prefixes": [
+    "packages/api/src/orders/"
+   ],
+   "mem_query": "order transition shipped cancelled"
+  },
+  {
+   "id": "checkout-all-or-nothing",
+   "rule": "Checkout reserva todas as linhas ou nenhuma (libera o que reservou se uma falha).",
+   "at": {
+    "file": "packages/api/src/orders/checkout.ts",
+    "line": 19,
+    "match": "reservationIds.forEach((id) => book.release(id));"
+   },
+   "test": "packages/api/src/orders/checkout.test.ts::checkout is all-or-nothing",
+   "keywords_any": [
+    "all-or-nothing",
+    "tudo ou nada",
+    "release"
+   ],
+   "owner_prefixes": [
+    "packages/api/src/orders/"
+   ],
+   "mem_query": "checkout all or nothing release reservations"
+  },
+  {
+   "id": "sku-format",
+   "rule": "SKU = três letras maiúsculas, hífen, quatro dígitos (AAA-0000).",
+   "at": {
+    "file": "packages/shared/src/sku.ts",
+    "line": 4,
+    "match": "SKU_PATTERN ="
+   },
+   "test": "packages/shared/src/sku.test.ts::parseSku normalizes",
+   "keywords_any": [
+    "AAA-0000",
+    "SKU_PATTERN"
+   ],
+   "owner_prefixes": [
+    "packages/shared/"
+   ],
+   "mem_query": "SKU format pattern"
+  }
+ ],
+ "hotspots": [
+  "packages/api/src/inventory/stock.ts",
+  "packages/api/src/inventory/reservations.ts"
+ ],
+ "co_change": [
+  {
+   "a": "packages/api/src/inventory/stock.ts",
+   "b": "packages/api/src/inventory/reservations.ts",
+   "support": 3
+  }
+ ],
+ "coupled_pair": {
+  "a_prefixes": [
+   "packages/api/src/inventory/"
+  ],
+  "b_prefixes": [
+   "packages/api/src/orders/"
+  ],
+  "why": "checkout importa ReservationBook; mudanças de reserva quebram checkout"
+ },
+ "fix_commits_min": 3,
+ "revert": {
+  "subject_contains": "reading the inventory module directly"
+ },
+ "adrs": [
+  "docs/adr/0001-web-talks-to-api-over-http.md",
+  "docs/adr/0002-stock-reservations.md"
+ ],
+ "stack": {
+  "ecosystems": [
+   "node"
+  ],
+  "lockfile": "package-lock.json",
+  "runtime": {
+   "node": ">=22.18.0"
+  },
+  "packages": {
+   "express": "4.19.2",
+   "zod": "3.23.8",
+   "react": "18.3.1",
+   "react-dom": "18.3.1",
+   "vite": "5.4.2",
+   "typescript": "5.5.4",
+   "eslint": "9.9.0",
+   "typescript-eslint": "8.3.0"
+  },
+  "must_report": [
+   "express",
+   "react",
+   "typescript",
+   "vite"
+  ],
+  "historic_wrong_versions": {
+   "vite": "5.4.0",
+   "express": "^4.19.0",
+   "typescript": "~5.5.0"
+  }
+ },
+ "stack_must_not_include": [
+  "django",
+  "psycopg2",
+  "celery",
+  "spring",
+  "maven",
+  "java",
+  "python"
+ ],
+ "absent_patterns": [
+  {
+   "pattern": "jest",
+   "why": "testes são node:test"
+  },
+  {
+   "pattern": "redux",
+   "why": "estado do carrinho é função pura"
+  },
+  {
+   "pattern": "graphql",
+   "why": "api é REST/express"
+  },
+  {
+   "pattern": "next.js",
+   "why": "web é Vite"
+  },
+  {
+   "pattern": "prisma",
+   "why": "sem banco"
+  },
+  {
+   "pattern": "mongodb",
+   "why": "sem banco"
+  }
+ ],
+ "stale_doc_claim": {
+  "file": "README.md",
+  "line": 16,
+  "match": "npm run e2e",
+  "claim": "README cita npm run e2e (Playwright)",
+  "truth": "não existe script e2e no package.json nem Playwright no lockfile",
+  "keywords": [
+   "npm run e2e",
+   "playwright"
+  ]
+ },
+ "human_content": [
+  {
+   "file": "AGENTS.md",
+   "must_contain": "Talk to Marina (catalog owner) before changing `priceCents` semantics"
+  },
+  {
+   "file": "AGENTS.md",
+   "must_contain": "Never bump `express` to 5.x"
+  }
+ ],
+ "fixture": "ts-shop",
+ "_comment": "Verdade conhecida da fixture. NUNCA copiado para o alvo. Validar com: python3 evals/check_run.py --verify-ground-truth ts-shop",
+ "scenario_paths": {
+  "trivial": "README.md",
+  "risky": "packages/api/src/inventory/stock.ts",
+  "dev_a": "packages/api/src/inventory/stock.ts",
+  "dev_b": "packages/api/src/orders/checkout.ts",
+  "lesson_scope": "packages/api/src/inventory/**",
+  "lesson_file": "packages/api/src/inventory/stock.ts"
+ }
+}

@@ -1,0 +1,76 @@
+# go-polyglot (fleetd) — roteiro de histórico (ver build.sh)
+# Sinais: co-change migrations/ <-> internal/storage/ (par acoplado); fixes em dispatch/assign.go,
+# storage/deliveries.go e deploy/migrate.sh; revert de edição de migração aplicada; ADR 0001;
+# bump de go 1.21 -> 1.22.5 (README fica desatualizado de propósito) e pgx v5.5.5 -> v5.6.0.
+
+# 1. bootstrap (go 1.21, pgx 5.5.5)
+put go.mod go.sum Makefile .gitignore README.md cmd internal/tracking
+sed go.mod s|^go 1\.22$|go 1.21|
+sed go.mod /^toolchain/d
+sed go.mod s|v5\.6\.0|v5.5.5|
+sed go.sum s|v5\.6\.0|v5.5.5|g
+commit 2025-01-06T09:00:00-03:00 ana chore: bootstrap fleetd (chi, pgx, tracking ETA)
+
+# 2. schema base + storage (status ainda text, created_at sem UTC)
+put migrations/0001_init.up.sql migrations/0001_init.down.sql internal/storage/postgres.go internal/storage/deliveries.go
+sed internal/storage/deliveries.go s|::delivery_status||g
+sed internal/storage/deliveries.go /^const activeByCourier/,$d
+sed internal/storage/deliveries.go s|d.CreatedAt.UTC())|d.CreatedAt)|
+commit 2025-01-10T14:30:00-03:00 bruno feat(storage): deliveries table and pgx repository
+
+# 3. dispatch (bug: courier lotado ainda é escolhido)
+put internal/dispatch/status.go internal/dispatch/assign.go internal/dispatch/assign_test.go
+sed internal/dispatch/assign.go s|c.Active < MaxActivePerCourier|c.Active <= MaxActivePerCourier|
+sed internal/dispatch/assign_test.go /^func TestGoldenAssignments/,$d
+commit 2025-01-15T11:00:00-03:00 carla feat(dispatch): closest-courier assignment and delivery lifecycle
+
+# 4. fix capacidade
+sed internal/dispatch/assign.go s|c.Active <= MaxActivePerCourier|c.Active < MaxActivePerCourier|
+commit 2025-01-20T18:05:00-03:00 carla fix(dispatch): couriers at capacity were still being picked
+
+# 5. enum de status (co-change migrations + storage)
+put migrations/0002_delivery_status_enum.up.sql migrations/0002_delivery_status_enum.down.sql
+sed internal/storage/deliveries.go s|VALUES ($1, $2, $3)|VALUES ($1, $2::delivery_status, $3)|
+sed internal/storage/deliveries.go s|SET status = $2,|SET status = $2::delivery_status,|
+commit 2025-01-28T10:10:00-03:00 bruno feat(migrations): delivery_status enum mirrors dispatch.DeliveryStatus
+
+# 6. edição de migração aplicada -> revertida; ADR 0001
+sed migrations/0002_delivery_status_enum.up.sql s|'delivered', 'failed'|'delivered', 'failed', 'returned'|
+variant internal/dispatch/status.go returned
+commit 2025-02-11T16:00:00-03:00 diego feat(dispatch): returned status (edits 0002 in place)
+revert 2025-02-11T21:20:00-03:00 ana
+put docs/adr/0001-migrations-append-only.md
+commit 2025-02-12T09:30:00-03:00 ana docs(adr): 0001 migrations are append-only; enum values mirror Go
+
+# 7. deploy em bash + Dockerfile + Go 1.22.5 (README não foi atualizado)
+put deploy Dockerfile .dockerignore docs/runbooks
+sed deploy/migrate.sh /\[ "\$applied" = "\$sum" \] || die/d
+put go.mod
+sed go.mod s|v5\.6\.0|v5.5.5|
+commit 2025-03-03T10:00:00-03:00 diego feat(deploy): migrate-then-roll deploy scripts and distroless image (go 1.22.5)
+
+# 8. capacidade no banco (co-change migrations + storage)
+put migrations/0003_courier_capacity.up.sql migrations/0003_courier_capacity.down.sql internal/storage/deliveries.go
+sed internal/storage/deliveries.go s|d.CreatedAt.UTC())|d.CreatedAt)|
+commit 2025-03-18T15:45:00-03:00 bruno feat(migrations): courier capacity check and active-deliveries index
+
+# 9. fix UTC (storage)
+sed internal/storage/deliveries.go s|d.CreatedAt)|d.CreatedAt.UTC())|
+commit 2025-03-25T08:20:00-03:00 bruno fix(storage): created_at was stored in server local time; force UTC
+
+# 10. fix migrate.sh reaplicando migração editada
+put deploy/migrate.sh
+commit 2025-04-02T19:00:00-03:00 diego fix(deploy): abort when an applied migration file changed (sha256 check)
+
+# 11. http + lint + CI
+put internal/httpapi .golangci.yml .github
+commit 2025-04-10T13:00:00-03:00 carla feat(httpapi): POST /v1/deliveries; depguard keeps SQL in storage
+
+# 12. golden test, exemplo de parceiro, notas do time
+put internal/dispatch/assign_test.go internal/dispatch/testdata examples CLAUDE.md
+commit 2025-05-05T10:30:00-03:00 carla test(dispatch): golden assignment cases; partner python example
+
+# 13. bump pgx
+put go.mod go.sum
+commit 2025-06-01T10:00:00-03:00 bot chore(deps): bump github.com/jackc/pgx/v5 v5.5.5 -> v5.6.0
+tag v1.4.0

@@ -1,0 +1,7 @@
+#!/bin/sh
+# cs-precommit — enforcement E2 (após o fato) para plataformas sem hooks: arquivos staged × território.
+# Pode rodar via symlink em .git/hooks/pre-commit: ancora na raiz do repo.
+ROOT=${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}
+HERE="$ROOT/.swarm/bin"
+python3 "$HERE/../harness/validate.py" --root "$ROOT" || exit 1
+exec python3 "$HERE/../harness/guard.py" check-diff --staged --root "$ROOT"

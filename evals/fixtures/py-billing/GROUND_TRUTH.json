@@ -1,0 +1,593 @@
+{
+ "description": "Serviço Python de faturamento: invoices, payments, ledger + shared; unittest; uv.lock; ADRs.",
+ "product_dirs": [
+  "src/billing",
+  "src/billing/invoices",
+  "src/billing/payments",
+  "src/billing/ledger",
+  "src/billing/shared",
+  "tests",
+  "docs/adr",
+  "scripts"
+ ],
+ "fixture_paths": [
+  "tests/fixtures/"
+ ],
+ "bounded_contexts": [
+  {
+   "name": "invoices",
+   "prefixes": [
+    "src/billing/invoices/"
+   ],
+   "aliases": [
+    "invoice",
+    "invoicing",
+    "fatura",
+    "faturas"
+   ]
+  },
+  {
+   "name": "payments",
+   "prefixes": [
+    "src/billing/payments/"
+   ],
+   "aliases": [
+    "payment",
+    "pagamento",
+    "pagamentos"
+   ]
+  },
+  {
+   "name": "ledger",
+   "prefixes": [
+    "src/billing/ledger/"
+   ],
+   "aliases": [
+    "journal",
+    "accounting",
+    "contabil"
+   ]
+  }
+ ],
+ "acceptable_extra_territories": [
+  {
+   "name": "shared",
+   "prefixes": [
+    "src/billing/shared/",
+    "src/billing/__init__.py"
+   ]
+  },
+  {
+   "name": "tests",
+   "prefixes": [
+    "tests/"
+   ]
+  },
+  {
+   "name": "docs",
+   "prefixes": [
+    "docs/",
+    "README.md",
+    "CLAUDE.md"
+   ]
+  },
+  {
+   "name": "build",
+   "prefixes": [
+    "pyproject.toml",
+    "uv.lock",
+    "ruff.toml",
+    "Makefile",
+    ".gitignore",
+    "scripts/"
+   ]
+  }
+ ],
+ "commands": {
+  "test": {
+   "cmd": "make test",
+   "equivalents": [
+    "PYTHONPATH=src python3 -m unittest discover -s tests",
+    "python3 -m unittest discover -s tests",
+    "python -m unittest discover -s tests",
+    "unittest discover"
+   ],
+   "requires_tools": [
+    "make",
+    "python3"
+   ],
+   "expected": "verified"
+  },
+  "lint": {
+   "cmd": "make lint",
+   "equivalents": [
+    "ruff check src tests",
+    "ruff check"
+   ],
+   "requires_tools": [
+    "ruff"
+   ],
+   "expected": "verified_if_tools"
+  },
+  "money_check": {
+   "cmd": "make check-money",
+   "equivalents": [
+    "python3 scripts/check_no_float_money.py src/billing",
+    "check_no_float_money.py"
+   ],
+   "requires_tools": [
+    "make",
+    "python3"
+   ],
+   "expected": "verified"
+  }
+ },
+ "invariants": [
+  {
+   "id": "money-integer-cents",
+   "adr": "docs/adr/0001-money-as-integer-cents.md",
+   "statement": "Valores monetários são int de centavos (Money); float nunca entra no domínio; arredondamento half-even uma vez em Money.percent.",
+   "keywords_all": [
+    [
+     "centavo",
+     "cents",
+     "cent"
+    ],
+    [
+     "float"
+    ]
+   ],
+   "owner_prefixes": [
+    "src/billing/"
+   ],
+   "check": "make check-money"
+  },
+  {
+   "id": "ledger-append-only",
+   "adr": "docs/adr/0002-ledger-append-only.md",
+   "statement": "Journal só tem post/reverse; sem update/delete; correção por estorno, uma vez por lançamento.",
+   "keywords_all": [
+    [
+     "append-only",
+     "append only",
+     "estorno",
+     "reversal",
+     "reverse"
+    ],
+    [
+     "delete",
+     "apagar",
+     "update"
+    ]
+   ],
+   "owner_prefixes": [
+    "src/billing/ledger/"
+   ]
+  },
+  {
+   "id": "idempotent-capture",
+   "adr": "docs/adr/0003-idempotent-captures.md",
+   "statement": "capture é idempotente por idempotency_key: chave repetida não chama gateway nem posta lançamento.",
+   "keywords_all": [
+    [
+     "idempot"
+    ],
+    [
+     "idempotency_key",
+     "chave",
+     "key"
+    ]
+   ],
+   "owner_prefixes": [
+    "src/billing/payments/"
+   ]
+  }
+ ],
+ "terms": [
+  {
+   "canonical": "Invoice",
+   "kind": "business",
+   "def": {
+    "file": "src/billing/invoices/models.py",
+    "line": 41,
+    "match": "class Invoice:"
+   },
+   "never_use": [
+    "bill",
+    "get_bill"
+   ],
+   "owner_prefixes": [
+    "src/billing/invoices/"
+   ],
+   "mem_query": "Invoice definition"
+  },
+  {
+   "canonical": "InvoiceStatus",
+   "kind": "business",
+   "def": {
+    "file": "src/billing/invoices/models.py",
+    "line": 12,
+    "match": "class InvoiceStatus"
+   },
+   "never_use": [],
+   "owner_prefixes": [
+    "src/billing/invoices/"
+   ],
+   "mem_query": "InvoiceStatus DRAFT ISSUED PAID VOID"
+  },
+  {
+   "canonical": "Payment",
+   "kind": "business",
+   "def": {
+    "file": "src/billing/payments/service.py",
+    "line": 26,
+    "match": "class Payment:"
+   },
+   "never_use": [],
+   "owner_prefixes": [
+    "src/billing/payments/"
+   ],
+   "mem_query": "Payment captured refunded"
+  },
+  {
+   "canonical": "LedgerEntry",
+   "kind": "business",
+   "def": {
+    "file": "src/billing/ledger/entries.py",
+    "line": 26,
+    "match": "class LedgerEntry"
+   },
+   "never_use": [
+    "JournalEntry"
+   ],
+   "owner_prefixes": [
+    "src/billing/ledger/"
+   ],
+   "mem_query": "LedgerEntry postings"
+  },
+  {
+   "canonical": "Posting",
+   "kind": "business",
+   "def": {
+    "file": "src/billing/ledger/entries.py",
+    "line": 13,
+    "match": "class Posting"
+   },
+   "never_use": [],
+   "owner_prefixes": [
+    "src/billing/ledger/"
+   ],
+   "mem_query": "Posting debit credit account"
+  },
+  {
+   "canonical": "Money",
+   "kind": "technical",
+   "def": {
+    "file": "src/billing/shared/money.py",
+    "line": 29,
+    "match": "class Money"
+   },
+   "never_use": [],
+   "owner_prefixes": [
+    "src/billing/shared/"
+   ],
+   "mem_query": "Money cents"
+  },
+  {
+   "canonical": "idempotency_key",
+   "kind": "technical",
+   "def": {
+    "file": "src/billing/payments/service.py",
+    "line": 43,
+    "match": "def capture("
+   },
+   "never_use": [],
+   "owner_prefixes": [
+    "src/billing/payments/"
+   ],
+   "mem_query": "idempotency key capture"
+  }
+ ],
+ "business_rules": [
+  {
+   "id": "money-int-only",
+   "rule": "Money.cents precisa ser int (float e bool são rejeitados).",
+   "at": {
+    "file": "src/billing/shared/money.py",
+    "line": 36,
+    "match": "must be int"
+   },
+   "test": "tests/test_money.py::MoneyTest::test_rejects_float",
+   "keywords_any": [
+    "float",
+    "int"
+   ],
+   "owner_prefixes": [
+    "src/billing/shared/"
+   ],
+   "mem_query": "Money cents must be int float rejected"
+  },
+  {
+   "id": "invoice-transitions",
+   "rule": "Fatura: DRAFT -> ISSUED -> PAID | VOID; PAID e VOID são terminais; fatura paga nunca é anulada (vai por reembolso).",
+   "at": {
+    "file": "src/billing/invoices/models.py",
+    "line": 21,
+    "match": "ALLOWED_TRANSITIONS: Dict"
+   },
+   "test": "tests/test_invoices.py::InvoiceLifecycleTest::test_paid_invoice_cannot_be_voided",
+   "keywords_any": [
+    "DRAFT",
+    "ISSUED",
+    "PAID",
+    "VOID",
+    "transi"
+   ],
+   "owner_prefixes": [
+    "src/billing/invoices/"
+   ],
+   "mem_query": "invoice transition DRAFT ISSUED PAID VOID terminal"
+  },
+  {
+   "id": "invoice-number-on-issue",
+   "rule": "Número da fatura (INV-<ano>-<seq 6 dígitos>) só é atribuído no issue; sequência reinicia a cada ano.",
+   "at": {
+    "file": "src/billing/invoices/numbering.py",
+    "line": 16,
+    "match": "INV-%d-%06d"
+   },
+   "test": "tests/test_invoices.py::InvoiceLifecycleTest::test_number_assigned_only_on_issue",
+   "keywords_any": [
+    "INV-",
+    "issue",
+    "numera"
+   ],
+   "owner_prefixes": [
+    "src/billing/invoices/"
+   ],
+   "mem_query": "invoice number assigned on issue yearly sequence"
+  },
+  {
+   "id": "refund-limit",
+   "rule": "Soma dos reembolsos nunca excede o valor capturado (RefundExceedsCapture).",
+   "at": {
+    "file": "src/billing/payments/refunds.py",
+    "line": 9,
+    "match": "def check_refund"
+   },
+   "test": "tests/test_payments.py::PaymentServiceTest::test_partial_refunds_cannot_exceed_capture",
+   "keywords_any": [
+    "refund",
+    "reembolso"
+   ],
+   "owner_prefixes": [
+    "src/billing/payments/"
+   ],
+   "mem_query": "refund cannot exceed captured amount"
+  },
+  {
+   "id": "capture-idempotent",
+   "rule": "capture com idempotency_key repetida devolve o mesmo Payment sem chamar o gateway nem lançar no ledger.",
+   "at": {
+    "file": "src/billing/payments/service.py",
+    "line": 44,
+    "match": "if idempotency_key in self._by_key:"
+   },
+   "test": "tests/test_payments.py::PaymentServiceTest::test_capture_is_idempotent",
+   "keywords_any": [
+    "idempot"
+   ],
+   "owner_prefixes": [
+    "src/billing/payments/"
+   ],
+   "mem_query": "capture idempotency key repeated"
+  },
+  {
+   "id": "entry-balanced",
+   "rule": "Todo LedgerEntry é balanceado: soma de débitos == soma de créditos (LedgerImbalance).",
+   "at": {
+    "file": "src/billing/ledger/journal.py",
+    "line": 53,
+    "match": "if entry.total_debits() != entry.total_credits():"
+   },
+   "test": "tests/test_ledger.py::JournalTest::test_rejects_unbalanced_entry",
+   "keywords_any": [
+    "balance",
+    "débito",
+    "debit"
+   ],
+   "owner_prefixes": [
+    "src/billing/ledger/"
+   ],
+   "mem_query": "ledger entry debits equal credits imbalance"
+  },
+  {
+   "id": "reverse-once",
+   "rule": "Um lançamento só pode ser estornado uma vez (ImmutableEntry).",
+   "at": {
+    "file": "src/billing/ledger/journal.py",
+    "line": 32,
+    "match": "already reversed by"
+   },
+   "test": "tests/test_ledger.py::JournalTest::test_cannot_reverse_twice",
+   "keywords_any": [
+    "revers",
+    "estorn"
+   ],
+   "owner_prefixes": [
+    "src/billing/ledger/"
+   ],
+   "mem_query": "reverse entry only once"
+  },
+  {
+   "id": "late-fee",
+   "rule": "Multa 2% (uma vez) + juros 1% a.m. pro rata die sobre mês de 30 dias, em centavos.",
+   "at": {
+    "file": "src/billing/invoices/late_fees.py",
+    "line": 12,
+    "match": "LATE_FINE_BP = 200"
+   },
+   "test": "tests/test_late_fees.py::LateFeeTest::test_fine_and_one_day_of_interest",
+   "keywords_any": [
+    "multa",
+    "fine",
+    "juros",
+    "interest"
+   ],
+   "owner_prefixes": [
+    "src/billing/invoices/"
+   ],
+   "mem_query": "late fee fine interest per month"
+  }
+ ],
+ "hotspots": [
+  "src/billing/ledger/journal.py",
+  "src/billing/payments/service.py"
+ ],
+ "co_change": [
+  {
+   "a": "src/billing/payments/service.py",
+   "b": "src/billing/ledger/journal.py",
+   "support": 3
+  }
+ ],
+ "coupled_pair": {
+  "a_prefixes": [
+   "src/billing/payments/"
+  ],
+  "b_prefixes": [
+   "src/billing/ledger/"
+  ],
+  "why": "payments importa ledger (journal.post/entries) e 3 commits mudam os dois juntos"
+ },
+ "fix_commits_min": 5,
+ "revert": {
+  "subject_contains": "allow deleting draft entries"
+ },
+ "adrs": [
+  "docs/adr/0001-money-as-integer-cents.md",
+  "docs/adr/0002-ledger-append-only.md",
+  "docs/adr/0003-idempotent-captures.md"
+ ],
+ "stack": {
+  "ecosystems": [
+   "python"
+  ],
+  "lockfile": "uv.lock",
+  "runtime": {
+   "python": ">=3.9"
+  },
+  "packages": {
+   "httpx": "0.27.0",
+   "structlog": "24.4.0",
+   "python-dateutil": "2.9.0.post0",
+   "ruff": "0.6.4",
+   "coverage": "7.6.1",
+   "httpcore": "1.0.5",
+   "anyio": "4.4.0"
+  },
+  "must_report": [
+   "httpx",
+   "structlog",
+   "ruff"
+  ],
+  "historic_wrong_versions": {
+   "httpx": "0.26.0"
+  }
+ },
+ "stack_must_not_include": [
+  "dotnet",
+  ".net",
+  "nuget",
+  "csharp",
+  "c#",
+  "newtonsoft",
+  "dapper",
+  "jest",
+  "moment",
+  "csv-stringify",
+  "net6.0"
+ ],
+ "absent_patterns": [
+  {
+   "pattern": "pytest",
+   "why": "testes são unittest da stdlib"
+  },
+  {
+   "pattern": "sqlalchemy",
+   "why": "não há ORM nem banco"
+  },
+  {
+   "pattern": "django",
+   "why": "não é app web"
+  },
+  {
+   "pattern": "fastapi",
+   "why": "não há servidor HTTP"
+  },
+  {
+   "pattern": "celery",
+   "why": "sem filas"
+  },
+  {
+   "pattern": "poetry",
+   "why": "gerenciador é uv (uv.lock)"
+  }
+ ],
+ "stale_doc_claim": {
+  "file": "README.md",
+  "line": 14,
+  "match": "httpx 0.26.0",
+  "claim": "README diz httpx 0.26.0",
+  "truth": "uv.lock/pyproject pinam httpx 0.27.0",
+  "keywords": [
+   "0.26.0"
+  ]
+ },
+ "human_content": [
+  {
+   "file": "CLAUDE.md",
+   "must_contain": "Fale com a Carla (contabilidade) antes de mexer no plano de contas"
+  },
+  {
+   "file": "CLAUDE.md",
+   "must_contain": "não faça deploy de payments entre dia 28 e dia 2"
+  }
+ ],
+ "planted_bug": {
+  "id": "late-fee-truncation",
+  "file": "src/billing/invoices/late_fees.py",
+  "at": {
+   "file": "src/billing/invoices/late_fees.py",
+   "line": 26,
+   "match": "daily = Money(total.cents"
+  },
+  "summary": "Juros de atraso são truncados dia a dia (// por dia × dias) em vez de calculados no total com half-even; perde centavos.",
+  "repro": [
+   "PYTHONPATH=src python3 -c \"from billing.invoices.late_fees import late_fee; from billing.shared.money import Money; print(late_fee(Money(99999), 7).cents)\"",
+   "obtido 2231; esperado 2233 (multa 2000 + juros half_even(99999*100*7/300000)=233)"
+  ],
+  "expected_cents": {
+   "total": 99999,
+   "days": 7,
+   "fee": 2233
+  },
+  "buggy_cents": 2231,
+  "hidden_test": "evals/fixtures/py-billing-features/bug-late-fee/hidden_test_late_fee.py",
+  "severity": "high"
+ },
+ "features": {
+  "refund-percent": "evals/fixtures/py-billing-features/refund-percent",
+  "accept-float-amounts": "evals/fixtures/py-billing-features/accept-float-amounts"
+ },
+ "fixture": "py-billing",
+ "_comment": "Verdade conhecida da fixture. NUNCA copiado para o alvo. Validar com: python3 evals/check_run.py --verify-ground-truth py-billing",
+ "scenario_paths": {
+  "trivial": "README.md",
+  "risky": "src/billing/shared/money.py",
+  "dev_a": "src/billing/payments/service.py",
+  "dev_b": "src/billing/ledger/journal.py",
+  "lesson_scope": "src/billing/payments/**",
+  "lesson_file": "src/billing/payments/refunds.py"
+ }
+}

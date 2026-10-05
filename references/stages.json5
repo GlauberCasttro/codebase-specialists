@@ -1,0 +1,79 @@
+// stages.json5 — fonte única das etapas, sub-etapas e checklists da skill (ARCHITECTURE §8-terdecies).
+// Lido por `cs.py stage ...`. Cada etapa roda numa janela de contexto própria: começa por
+// `cs.py stage load <etapa>` (pacote ≤2k tokens montado do disco) e termina com `cs.py stage done <etapa>`,
+// que confere cada item com `check` e grava o handoff. A conversa anterior nunca é necessária.
+// Cada `check` prova o EFEITO da sub-etapa (iteração 3, auditoria 1.4 — stage/tests/test_check_audit.py tem um
+// cenário por check em que o subcomando antigo "passava" sem o efeito). `skippable: true` = pode ser pulada
+// explicitamente no caminho --fast com `cs.py stage skip <id> --reason "..."` (registrado; aparece no relatório).
+// Modo padrão = --fast (decisoes.modo_padrao, iteração 4): rt.1–rt.4 e validate.4 pulados por `stage skip`; a
+// execução certificada completa (`--full`) é pedido explícito. O relatório diz qual modo rodou.
+// ctx: "main" = o orquestrador faz; "sub" = um subagente por item/agente (protege a janela); "user" = toque humano.
+{
+  schema_version: 1,
+  order: ["init", "scan", "specialize", "round-table-deep-specialize", "validate", "approve"],
+  stages: {
+    init: {
+      goal: "alvo confirmado, plataformas escolhidas, estado de execução criado",
+      substages: [
+        {id: "init.1", do: "confirmar que o alvo é a RAIZ de um repo git e o working tree (recomendar limpo)", ctx: "main", check: "cs.py init --check-repo"},
+        {id: "init.2", do: "confirmar plataformas e mostrar o que será criado (4–6 linhas)", ctx: "user"},
+        {id: "init.3", do: "`cs.py init --platforms <as escolhidas>` (merge idempotente: não perde progresso)", ctx: "main", check: "cs.py init --check"},
+      ],
+    },
+    scan: {
+      goal: "fatos com evidência para todas as camadas L0–L10 + lacunas respondidas",
+      substages: [
+        {id: "scan.1", do: "estrutura: L0 inventário, L1 grafo de imports, L2 arquitetura declarada×real, L3 convenções", ctx: "main", check: "cs.py facts check --layers L0,L1,L2,L3"},
+        {id: "scan.2", do: "regras e história: L4 configs/CI/testes, L5 git, L6 racional", ctx: "main", check: "cs.py facts check --layers L4,L5,L6"},
+        {id: "scan.3", do: "execução e stack: L7 comandos executados, L8 versões instaladas", ctx: "main", check: "cs.py facts check --layers L7,L8"},
+        {id: "scan.4", do: "domínio e mapas: L9 glossário/regras de negócio, L10 docs + árvore/stack/deps/colisão", ctx: "main", check: "cs.py facts check --layers L9,L10"},
+        {id: "scan.5", do: "conferir 5–10 fatos contra o código; corrigir com llm_interpretation", ctx: "sub", check: "cs.py facts spotcheck --min 5"},
+        {id: "scan.6", do: "entrevista de lacunas (lotes ≤8, respostas literais; sem resposta → --answer-unknown vira fato gap.<id> citável)", ctx: "user", check: "cs.py interview status --no-pending"},
+      ],
+    },
+    specialize: {
+      goal: "roster aprovado e um cartão por agente, escrito só a partir de fatos e em camadas S0–S5",
+      substages: [
+        {id: "specialize.1", do: "derivar roster", ctx: "main", check: "cs.py team validate --stage derive"},
+        {id: "specialize.2", do: "ajustar o roster só por comando (`team roster move|rename|add|remove|set`, cada um revalida e invalida a aprovação) e aprovar com nomes concretos, território e porquê", ctx: "user", check: "cs.py team approved"},
+        {id: "specialize.3", do: "redigir cartão: 1 subagente por agente (fatos de `team facts <agente> --out`), rascunho com id de delegação; `team card set` recusa rascunho mais velho que o registrado", ctx: "sub", per: "agent", check: "cs.py team card-status --all-drafted"},
+        {id: "specialize.4", do: "separar em camadas: core ≤40 por `team core from-panel` (s0_core dos cartões) ou `team core set --file`; cartão ≤80, por caminho ≤60 (camadas.s2), playbook, memória (camadas.s5)", ctx: "main", check: "cs.py emit budget --require-core"},
+        {id: "specialize.5", do: "conferir a existência de toda referência dos cartões e do core em TODOS os modos (no --fast é a única conferência antes do verify): cada falta volta ao autor em .swarm/probes/existence-fix/<agente>.json5; o autor conserta e grava com `team card revise <agente> --file` (conserto de existência, aceito sem painel)", ctx: "main", check: "cs.py probes existence"},
+      ],
+    },
+    "round-table-deep-specialize": {
+      goal: "cartões criticados por pares e cético, só objeções confirmadas aplicadas",
+      substages: [
+        {id: "rt.1", do: "`panel plan` (gera knowledge/deps.json5 se faltar); por cartão: 2 revisores adjacentes no grafo + 1 cético (sobre `panel pack <agente> --role cetico --out <dir>`: cópia sem .swarm/) devolvem JSON de objeções gravado por `panel record`", ctx: "sub", per: "agent", check: "cs.py panel status --all-reviewed", skippable: true},
+        {id: "rt.2", do: "conferir cada afirmação citada (existência); cada falta vai ao autor como objeção confirmada no consolidado e tem de sumir até rt.4", ctx: "main", check: "cs.py probes existence --feed", skippable: true},
+        {id: "rt.3", do: "consolidar (`panel consolidate`) e subir as regras ao core (`team core from-panel`); cada autor recebe só objeções confirmadas", ctx: "main", check: "cs.py panel consolidate --check --core", skippable: true},
+        {id: "rt.4", do: "autor revisa uma vez (inclui as faltas de existência)", ctx: "sub", per: "agent", check: "cs.py team card-status --all-revised", skippable: true},
+      ],
+    },
+    validate: {
+      goal: "time provado por sonda, harness instalado e gates G1–G16 verdes",
+      substages: [
+        {id: "validate.1", do: "emitir artefatos por plataforma: `emit --dry-run`, mostrar o bloco `outside` ao usuário, depois `emit --allow-outside`", ctx: "main", check: "cs.py emit validate"},
+        {id: "validate.2", do: "gerar sondas e filtrar pelo baseline sem cartão", ctx: "sub", check: "cs.py probes baseline-filter --check"},
+        {id: "validate.3", do: "exame por agente: guiado sobre `probes exam-pack <agente> --out <alvo>/.swarm/tmp/exam/<agente>` (cópia = clone local do alvo com histórico git, sem .swarm/; `git -C <out>/repo log|show` responde sonda de commit) — pontue com `probes check <agente> --answers <out>/answers.json5`, guiado ANTES do fechado (`probes check <agente> --closed`, só sinal); 1 subagente por agente", ctx: "sub", per: "agent", check: "cs.py probes check --all --examined"},
+        {id: "validate.4", do: "refino só do reprovado (≤2 ciclos): `team card revise`, `probes generate --rotate --agent <a>`, baseline e exame dele de novo. Sem refino possível (ciclos esgotados, validate.4 pulado no --fast, rotação esgotada): `probes check <a> --allow-non-specialist --reason \"...\"` (ou `--all --final --allow-non-specialist`) registra nao-especialista — e o verify decide NO-GO", ctx: "sub", per: "failed-agent", check: "cs.py probes check --all --final", skippable: true},
+        {id: "validate.5", do: "instalar harness com as plataformas do run: `harness install --platforms ... --git-hook --dry-run`, mostrar o bloco `outside` ao usuário, depois o mesmo comando com `--allow-outside`; semear memória, selftest dos guards", ctx: "main", check: "cs.py harness selftest"},
+        {id: "validate.6", do: "rodar gates (`cs.py verify`): GO só com TODOS os agentes especialista e G1–G16 verdes; qualquer nao-especialista (aceito ou não) = NO-GO; a decisão final é do founder em approve", ctx: "main", check: "cs.py verify --recorded"},
+      ],
+    },
+    approve: {
+      goal: "founder decide GO/NO-GO com o relatório; estado final gravado",
+      substages: [
+        {id: "approve.1", do: "relatório (`cs.py report`): decisão, tabela do time e placar, garantias por plataforma, lacunas, pulos, como usar", ctx: "main", check: "cs.py report --check"},
+        {id: "approve.2", do: "decisão do founder GO|NO-GO (`approve --by X --decision ...`; sem humano: `--simulated`)", ctx: "user", check: "cs.py approve --check --recorded"},
+        {id: "approve.4", do: "sanitize ANTES do save final: `cs.py sanitize` (plano com tamanhos; não escreve) e `cs.py sanitize --apply` — apaga `tmp/` inteiro e todo `__pycache__` da pasta, grava `<pasta>/.gitignore` (tmp/, memory/index/, __pycache__/, backups/); script deixado em `tmp/` sai no relatório como DEFEITO (contorno manual); diz o tamanho que fica e o que entra no commit", ctx: "main", check: "cs.py sanitize --check"},
+        {id: "approve.3", do: "salvar sessão e congelar baseline para drift", ctx: "main", check: "cs-session save --check"},
+      ],
+    },
+  },
+  limits: {
+    handoff_max_tokens: 2000,     // pacote de entrada de cada etapa
+    stage_new_window: true,       // recomendação: /clear ou nova sessão entre etapas
+    substage_resume: true,        // queda no meio: `cs.py stage load` retoma na sub-etapa pendente
+  },
+}

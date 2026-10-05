@@ -1,0 +1,154 @@
+// premissas.json5 — evidência de pesquisa por trás de cada decisão da skill (lido uma vez, antes da primeira etapa).
+// Fonte principal: o documento de especialização profunda de um harness anterior (v8) (EP-v8), que traz o número e o
+// paper; aqui o número é copiado de lá, não reconferido no PDF. EP-v8 §7: vários números de 2026 vêm de preprints com
+// amostra pequena ou de resumos — trate como sinal. `fonte: "não localizada"` = número usado no desenho sem fonte primária.
+// aplicada_em: § de references/ARCHITECTURE.md ou id de sub-etapa de references/stages.json5.
+{
+  schema_version: 1,
+  premissas: [
+    {id: "PR-01", premissa: "Persona genérica de especialista não melhora o agente; o que melhora são fatos não deriváveis com evidência.",
+     evidencia: "Persona expert (\"você é sênior em X\") não melhora acurácia e às vezes piora: MMLU 71,6% → 68,0% com persona expert.",
+     fonte: "arXiv 2311.10054, 2512.05858, 2603.18507 (via EP-v8 §3)",
+     aplicada_em: ["§1 premissa 1", "specialize.3", "SKILL.md princípio 1"]},
+
+    {id: "PR-02", premissa: "Arquivo de contexto gerado por LLM custa mais e não ajuda; só entra o que difere do default e foi verificado.",
+     evidencia: "Context file gerado por LLM: −0,5 a −2% de sucesso e +20–23% de custo; escrito por dev: +2,4% (não significativo). O que deve conter: comandos validados executando, convenções que diferem do default, rationale, gotchas; não overview/árvore/deps.",
+     fonte: "arXiv 2602.11988 (ETH); code.claude.com/docs best-practices e memory (via EP-v8 §3)",
+     aplicada_em: ["§8-ter", "specialize.3", "specialize.4"]},
+
+    {id: "PR-03", premissa: "Regra verificável vira check executado pelo harness; prosa é o último recurso.",
+     evidencia: "Conformidade sobe de 67% para 88,3% quando instruções viram checks (ContextCov).",
+     fonte: "arXiv 2603.00822 (via EP-v8 §3)",
+     aplicada_em: ["§1 premissa 2", "§8-duodecies", "specialize.3", "SKILL.md princípio 3"]},
+
+    {id: "PR-04", premissa: "Conhecimento de stack vem da versão instalada (lockfile + introspecção), não da versão citada.",
+     evidencia: "Grounding de API pela versão instalada: código executável 42,6% → 66,4%; avisar a versão sem dar a doc não ajuda.",
+     fonte: "arXiv 2604.09515; LibEvoBench 2606.25402 (via EP-v8 §3)",
+     aplicada_em: ["§1 premissa 3", "§5 L8", "scan.3"]},
+
+    {id: "PR-05", premissa: "Ferramenta no laço (compilador/type-check/teste após editar) é a maior redução de erro medida.",
+     evidencia: "Compilador/type-check no laço: erro de compilação 65,9% → 20,7% (pós-geração).",
+     fonte: "arXiv 2607.13921 (via EP-v8 §3)",
+     aplicada_em: ["§1 premissa 4", "harness.md §4 post-edit", "scan.3"]},
+
+    {id: "PR-06", premissa: "Debate livre entre agentes não é deliberação: a mesa redonda é crítica independente com checagem mecânica e veto por dado.",
+     evidencia: "Debate livre multiagente: ganho ≈ voto; mudanças correto→incorreto superam o inverso; agente fraco degrada o grupo.",
+     fonte: "NeurIPS 2025 (arXiv 2508.17536); arXiv 2509.05396 (via EP-v8 §3)",
+     aplicada_em: ["§1 premissa 6", "§7 fase 5", "rt.1", "rt.2", "rt.3", "rt.4"]},
+
+    {id: "PR-07", premissa: "Julgamento de mérito (POR-QUÊ) vai a painel de juízes heterogêneos, não a um juiz só.",
+     evidencia: "Painel de 3 famílias distintas de modelo supera 1 juiz grande e custa 7× menos.",
+     fonte: "PoLL, arXiv 2404.18796 (via EP-v8 §3)",
+     aplicada_em: ["probes.md §3", "validate.3", "rt.1 (cético de outro modelo)"]},
+
+    {id: "PR-08", premissa: "Especialização é provada por sonda com gabarito mecânico, incluindo negativas; nunca declarada.",
+     evidencia: "Sondas de compreensão com gabarito mecânico existem e são reprodutíveis: RepoQA (tree-sitter), CodeQueries (CodeQL, inclui negativas), RepoProbe (fatos atômicos).",
+     fonte: "arXiv 2406.06025; 2209.08372; 2608.04783 (via EP-v8 §3)",
+     aplicada_em: ["§1 premissa 5", "§9 G4", "validate.2", "validate.3"]},
+
+    {id: "PR-09", premissa: "Toda âncora citada precisa existir (Existence Ratio = 1,0), checada por verificador.",
+     evidencia: "Existence Ratio de âncoras citadas: 95,7% com verificador vs 61,1% sem.",
+     fonte: "DocAgent, arXiv 2504.08725 (via EP-v8 §3)",
+     aplicada_em: ["§9 G2", "rt.2", "probes.md §6"]},
+
+    {id: "PR-10", premissa: "Conhecimento curado a partir do repo vale; conteúdo autogerado genérico não.",
+     evidencia: "Skills curadas: +16,6 pp (em engenharia de software só +4,5 pp); skills autogeradas ≈ 0.",
+     fonte: "SkillsBench, arXiv 2602.12670 (via EP-v8 §3)",
+     aplicada_em: ["§9 G3 anti-template", "specialize.3"]},
+
+    {id: "PR-11", premissa: "Aderência cai ao longo da sessão e com contexto inchado: carregar pouco, sob demanda, e uma janela por etapa.",
+     evidencia: "Aderência decai na sessão: OR 0,944 por função gerada (−5,6%/passo); a estrutura do arquivo de instruções não muda isso. Context rot: o recall cai conforme a janela enche (sem número).",
+     fonte: "arXiv 2605.10039 (via EP-v8 §3); context rot: AVALIACAO-PROTOCOLO-v8.md §2.3 (resumo de 'effective context engineering', Anthropic — número não localizado)",
+     aplicada_em: ["§8-ter", "§8-terdecies", "harness.md §4 SubagentStart", "stages.json5 limits"]},
+
+    {id: "PR-12", premissa: "Regras minadas do histórico (PRs, reverts, correções) com proveniência são fonte de especialização.",
+     evidencia: "Ferramentas que validam especialização mineram regras de PRs/reverts com ≥2 evidências, ~5 regras por agente, proveniência inline; replay de commits reais como eval.",
+     fonte: "github.com/CruGlobal/agent-review; BMAD bmad-project-context; CodebuffAI/codebuff BuffBench (via EP-v8 §3)",
+     aplicada_em: ["§5 L5", "specialize.3 footguns", "§8-duodecies promoção count≥2"]},
+
+    {id: "PR-13", premissa: "O conhecimento do especialista está em grande parte fora do código (o porquê) e o tácito exige laço com quem tem a teoria.",
+     evidencia: "Naur 1985: reconstruir a 'teoria' de um programa só da documentação é impossível; expertise = mapear código↔domínio, justificar o porquê com fonte, responder a modificação de forma coerente.",
+     fonte: "Naur 1985 'Programming as Theory Building' (via EP-v8 §2, P1/P2/P6)",
+     aplicada_em: ["§5 L6", "scan.6 entrevista", "probes.md tipo why"]},
+
+    {id: "PR-14", premissa: "Times funcionam por núcleo compartilhado enxuto + especialização diferenciada + diretório de quem-sabe-o-quê.",
+     evidencia: "Transactive Memory Systems: modelo compartilhado enxuto + especialização diferenciada + diretório de quem sabe o quê; 'todos especialistas em tudo' = núcleo comum do repo + profundidade por território.",
+     fonte: "Wegner/Lewis TMS; Cannon-Bowers/Salas 1993 (via EP-v8 §2, P8)",
+     aplicada_em: ["§8-ter S0/S1", "rt.3 regras sobem para o core", "SKILL.md princípio 2"]},
+
+    {id: "PR-15", premissa: "99% só existe como precisão seletiva: verificação não-burlável + revisão diversa + abstenção calibrada.",
+     evidencia: "Nenhum sistema público chega a 99% incondicional em tarefas reais (topo em tarefas frescas ≈ 64% pass@1; mantenedores rejeitam ~metade do que passa no grader). Abstenção é a principal alavanca de 95%→99% de precisão, pagando cobertura. Contribuições por elo são extrapolações.",
+     fonte: "EP-v8 §0 e §5.6 (síntese própria; fonte primária dos números 64% e ~metade não localizada)",
+     aplicada_em: ["§1 premissa 7", "§8-quinquies ABSTAINED", "validate.3 (nao_sei)"]},
+
+    {id: "PR-16", premissa: "Teste de aceite fora do alcance do implementador e hook que bloqueia edição de teste/config.",
+     evidencia: "Sem isso, reward hacking chega a 76%; teste fail-to-pass prévio ataca 24–46% das falhas (requisito implícito).",
+     fonte: "não localizada (números citados em EP-v8 §5.6 sem referência primária)",
+     aplicada_em: ["§8-sexies", "§8-septies DoR vermelho", "harness.md §2 protected_paths"]},
+
+    {id: "PR-17", premissa: "Para afirmar ≥99% de precisão com 95% de confiança é preciso volume: ~300 aceites consecutivos sem falso aceite.",
+     evidencia: "Regra do três: 0 falhas em n testes → limite superior de 95% ≈ 3/n; reportar limite inferior de Wilson.",
+     fonte: "regra do três / intervalo de Wilson (estatística padrão; via EP-v8 §5.6)",
+     aplicada_em: ["approve.1 (relatório honesto)"]},
+
+    {id: "PR-18", premissa: "Subagente aninhado precisa ser desligado no runtime para manter delegação de nível único.",
+     evidencia: "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH: padrão 3 camadas desde v2.1.219; `1` desliga o aninhamento.",
+     fonte: "https://code.claude.com/docs/en/env-vars (consultado 2026-10-02); EP-v8 §5.7 item 13",
+     aplicada_em: ["harness.md §4 pre-agent"]},
+
+    {id: "PR-19", premissa: "Instalação de pacote fora do lockfile precisa de bloqueio: alucinação de pacote persiste.",
+     evidencia: "Alucinação de pacote ainda ~5% nos modelos de fronteira.",
+     fonte: "não localizada (citada em EP-v8 §5.5 sem referência)",
+     aplicada_em: ["§5 L8"]},
+
+    {id: "PR-20", premissa: "Lições de engenharia medidas em produção nos harness anteriores (um harness anterior, v8) são restrições de projeto.",
+     evidencia: "Fixture tratada como produto contaminou roster/stack/docs; invariante entregue a um dono só deixou o QA sem BIZ-2; cartões genéricos passaram no gate lexical (linhas idênticas ao template: architect 92%, reviewer 86%; 10/10 achados altos confirmados por verificador cego); vereditos fora do enum viraram estado corrompido.",
+     fonte: "postmortem do INIT de um harness anterior (v8) (M1, M9); EP-v8 §0 e §1; ARCHITECTURE.md §8",
+     aplicada_em: ["§8", "§9 G1/G2/G3", "scan.1 (L0 exclui fixture)", "specialize.3 regra 11"]},
+
+    {id: "PR-21", premissa: "Recomendação de modelo que não vira parâmetro do despacho treina o roteador com execução que nunca aconteceu.",
+     evidencia: "Model-router do servico-parametros (1.835 eventos, 92 decisões): o defeito da TASK-01-138 daquele projeto; daí treino só com procedência declarada-no-despacho ou medida.",
+     fonte: "medição interna citada em ARCHITECTURE.md §8-undecies (dados brutos não localizados nesta skill)",
+     aplicada_em: ["§8-undecies", "harness.md §7"]},
+
+    {id: "PR-22", premissa: "Multi-agente custa caro; delegar só onde o valor paga e comprimir o retorno ao orquestrador.",
+     evidencia: "Multi-agente custa 3–15× tokens; retornos detalhados estouram o contexto do lead — exigir sumário.",
+     fonte: "AVALIACAO-PROTOCOLO-v8.md §2.2 (resumo de material da Anthropic sobre sistemas multiagente; número primário não localizado)",
+     aplicada_em: ["stages.json5 ctx:\"sub\" grava só o próprio arquivo e devolve 1 linha", "prompts.json5 execucao.escrita"]},
+
+    {id: "PR-23", premissa: "Concorrência de subagentes tem teto prático abaixo do teto declarado: lotes de até 3, em primeiro plano, com recuo registrado.",
+     evidencia: "Iteração 2 (3 evals): com ≤8 simultâneos as sessões bateram no limite de subagentes e em 429 da API; um redator redespachado antes do lote voltar sobrescreveu rascunho já gravado. Iteração 3 (ts-shop): lotes em segundo plano devolviam o controle a cada lote; o coordenador passou para primeiro plano.",
+     fonte: "medição interna — rodada de avaliação iteration-2 (cli_e_fluxo)",
+     aplicada_em: ["prompts.json5 execucao.concorrencia/limite", "SKILL.md princípio 6"]},
+
+    {id: "PR-24", premissa: "O cartão é mapa, não memória: o exame em modo fechado (sem repo) é sinal, não placar de especialista.",
+     evidencia: "Iteração 2, py-billing: no modo fechado os 9 agentes ficaram abaixo do baseline e 7 alucinaram; no modo guiado (com repo) passaram no G4.",
+     fonte: "medição interna — rodada de avaliação iteration-2 (refino_e_sondas)",
+     aplicada_em: ["probes.md §10", "prompts.json5 validate.3 modo_fechado"]},
+
+    {id: "PR-25", premissa: "O examinado não pode alcançar o gabarito: exame e juízes rodam num clone local do alvo com histórico e sem .swarm/.",
+     evidencia: "Iteração 2: um grep do examinado no modo guiado imprimiu linhas de .swarm/probes/bank.json5. Iteração 3 (3 evals): a cópia sem .git deixou as sondas de sha sem resposta (11/11 falhas discriminativas do py-billing --fast) e `git log` na cópia subia ao repo pai.",
+     fonte: "medição interna — rodada de avaliação iteration-2 (refino_e_sondas)",
+     aplicada_em: ["probes.md §10", "prompts.json5 validate.3"]},
+
+    {id: "PR-26", premissa: "Mesa redonda e refino não mudam a qualidade medida do time; mudam a certificação. Por isso o modo padrão é --fast e a execução certificada completa (--full) é pedido explícito.",
+     evidencia: "Iteração 3, py-billing: [Q] 13/13 tanto na execução completa quanto na --fast (230k contra 326k tokens do orquestrador); nos 3 alvos a execução completa ficou em 13/13 [Q] e as decisões foram dominadas por defeitos da skill, não pela mesa redonda.",
+     fonte: "medição interna — rodada de avaliação iteration-3",
+     aplicada_em: ["SKILL.md Modos", "ARCHITECTURE.md §8 (etapas)"]},
+
+    {id: "PR-27", premissa: "Subagente grava só o próprio arquivo de saída; o orquestrador registra pela CLI em série. Devolver o JSON inteiro dobra tokens; gravar no arquivo de outro corrompe a mesa redonda.",
+     evidencia: "Iteração 3: nos 3 alvos os redatores gravaram o próprio rascunho para não trazer 9–11 cartões ao contexto do orquestrador (desvio do prompt); em go-polyglot um revisor regravou 5 saídas de outros revisores.",
+     fonte: "medição interna — rodada de avaliação iteration-3",
+     aplicada_em: ["SKILL.md princípio 5", "prompts.json5 execucao.escrita/saida_path"]},
+
+    {id: "PR-28", premissa: "O veredito tem de ser função do estado: GO só com todos os agentes especialistas e gates verdes; qualquer nao-especialista é NO-GO.",
+     evidencia: "Iteração 3: go-polyglot saiu GO com ops aceito como nao-especialista, enquanto py-billing e ts-shop, com o mesmo tipo de estado, saíram NO-GO.",
+     fonte: "medição interna — rodada de avaliação iteration-3",
+     aplicada_em: ["ARCHITECTURE.md §9", "SKILL.md approve", "harness.md §8"]},
+
+    {id: "PR-29", premissa: "Teste que confere o valor esperado/derivado de uma constante prova a regra; o scan nunca afirma \"não prova\" por palpite — diz \"não determinável\".",
+     evidencia: "Iteração 3: o L9 dizia \"não prova esta regra\" em 12 fatos de regra que o GROUND_TRUTH dá como testadas (py 7, ts 3, go 2), ex.: tests/test_late_fees.py:15 == 6100 e eta_test.go `if got := ETA(8, 0); got != time.Hour`. Iteração 4: 0 (8 viraram `asserted`, 4 validações de exceção ambígua viraram \"não determinável\").",
+     fonte: "medição interna — iteration-3 notes.md (py-billing, go-polyglot) + scripts/scan/tests/test_precision_iter4.py",
+     aplicada_em: ["scripts/scan/coverage.py nível asserted", "scripts/scan/l9_domain.py _cov_text"]},
+  ],
+}

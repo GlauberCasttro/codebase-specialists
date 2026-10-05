@@ -1,0 +1,20 @@
+// routing.json5 — configuração do model router (cs-route). Copiado para .swarm/harness/ por cs.py harness install.
+{
+  platform: "claude-code",
+  platforms: {
+    "claude-code": {tiers: ["haiku", "sonnet", "opus"]},
+    cursor: {tiers: ["inherit"]},
+    copilot: {tiers: ["inherit"]},
+    codex: {tiers: ["inherit"]},
+  },
+  cost: [0.04, 0.2, 1.0],
+  reward_by_tier: [1.0, 0.7, 0.4],
+  veto_threshold: 0.35,
+  veto_min_samples: 5,
+  exploration_rate: 0.1,
+  bands: {baixo: 0.35, medio: 0.65},
+  start_table: {pergunta: 0, trivial: 0, pequena: 1, feature: 1, risco: 2},
+  class_weight: {pergunta: 0.0, trivial: 0.05, pequena: 0.3, feature: 0.55, risco: 0.9},
+  act_adjust: {dev: 0.0, qa: -0.05, review: -0.05, arch: 0.1, po: 0.0},
+  trainable_procedencia: ["declarada-no-despacho", "medida"],
+}

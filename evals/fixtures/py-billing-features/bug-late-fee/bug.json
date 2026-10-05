@@ -1,0 +1,9 @@
+{
+  "id": "bug-late-fee",
+  "report": "bug.md",
+  "target_file": "src/billing/invoices/late_fees.py",
+  "hidden_test": "hidden_test_late_fee.py",
+  "hidden_test_cmd": "PYTHONPATH=src python3 -m unittest {hidden}",
+  "regression_cmd": "make test",
+  "expect": "fixed"
+}

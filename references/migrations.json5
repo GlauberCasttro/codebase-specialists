@@ -1,0 +1,51 @@
+// catálogo de migrações da skill — lido por `cs.py upgrade` (plano) e `cs.py upgrade --apply`; mantido à mão
+// Regra de manutenção: toda mudança na skill que afete repositórios já gerados sobe VERSION e ganha uma entrada
+// aqui (`to` = nova versão). scripts/doctests/tests/test_version_migrations.py reprova VERSION sem entrada.
+// Schema: {version, migrations: [{to, why, actions: [{kind, ...}]}]} — `to` estritamente crescente; a última = version.
+// kinds:
+//   harness        reinstala o motor/guards/wrappers (chama `cs.py harness install` com as plataformas do run)
+//   emit           reemite os artefatos por plataforma (chama `cs.py emit`)
+//   scan           refaz só as camadas pedidas: {kind: "scan", layers: ["L2"], no_exec?: true}
+//   facts-refresh  confere frescor (`cs.py facts check`) e refaz só se velho: {layers?: [...]} (default: todas)
+//   schema         conversor idempotente de team.json5/board: {script: "<caminho relativo à skill>"}
+//   cards | probes só quando a migração exige; SEMPRE avisam que haverá reexame: {argv?: [args do cs.py]}
+//   rename-dir     move a pasta gerada legada desta skill (.specialists/ → .swarm/) e reescreve os caminhos no
+//                  mecanismo (hooks, settings, Makefile, emitidos, .swarm/bin, .swarm/harness, .git/hooks/pre-commit);
+//                  dados/histórico (board, eventos, memória, ledgers append-only) vão intactos. from/to opcionais e
+//                  FIXOS: qualquer outra pasta é recusada (exit 2). .swarm/ já ocupada junto do legado → exit 3
+//   state-tree     converte o board plano legado (.swarm/state/board.json5) na árvore de pastas
+//                  (backlog/ state/ archive/ + .swarm/events.jsonl) chamando `cs-state migrate state-tree` do motor;
+//                  idempotente, backup do board/events legados em .swarm/backups/; sem parâmetros
+// Nunca refeito num upgrade (salvo migração explícita): entrevista, roster aprovado, cartões aprovados,
+// memória de lições, board/eventos.
+{
+ version: "0.7.0",
+ migrations: [
+  {
+   to: "0.5.0",
+   why: "primeira versão versionada (estado atual): alvos legados sem skill_version recebem o motor do harness e os artefatos emitidos da versão atual, sem refazer entrevista, roster, cartões, memória nem board",
+   actions: [
+    {kind: "harness"},
+    {kind: "emit"}
+   ]
+  },
+  {
+   to: "0.6.0",
+   why: "a pasta gerada passa de .specialists/ para .swarm/ (SWARM-DIR-3): move o legado, reescreve os caminhos do mecanismo e reinstala harness e artefatos emitidos já apontando para .swarm/, sem refazer entrevista, roster, cartões, memória nem board",
+   actions: [
+    {kind: "rename-dir", from: ".specialists", to: ".swarm"},
+    {kind: "harness"},
+    {kind: "emit"}
+   ]
+  },
+  {
+   to: "0.7.0",
+   why: "o estado do harness passa de board plano para árvore de pastas (backlog/ state/ archive/, campanha-iter10): reinstala o motor, migra o board legado com `cs-state migrate state-tree` (idempotente, com backup; histórico de eventos preservado byte a byte) e reemite os artefatos (skills de board/new/close/reopen/park/move), sem refazer entrevista, roster, cartões nem memória",
+   actions: [
+    {kind: "harness"},
+    {kind: "state-tree"},
+    {kind: "emit"}
+   ]
+  }
+ ]
+}

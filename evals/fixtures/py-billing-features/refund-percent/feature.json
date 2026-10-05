@@ -1,0 +1,11 @@
+{
+  "id": "refund-percent",
+  "class": "pequena",
+  "spec": "spec.md",
+  "acceptance_files": ["tests/acceptance/test_refund_percent.py"],
+  "acceptance_cmd": "PYTHONPATH=src python3 -m unittest discover -s tests/acceptance",
+  "regression_cmd": "make test",
+  "expected_touch_prefixes": ["src/billing/payments/"],
+  "must_not_touch": ["src/billing/shared/money.py", "tests/acceptance/"],
+  "expect": "delivered"
+}

@@ -1,0 +1,31 @@
+[project]
+name = "billing"
+version = "0.14.2"
+description = "Invoices, payments and the double-entry ledger for Acme SaaS"
+requires-python = ">=3.9"
+readme = "README.md"
+dependencies = [
+    "httpx==0.27.0",
+    "structlog==24.4.0",
+    "python-dateutil==2.9.0.post0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff==0.6.4",
+    "coverage==7.6.1",
+]
+
+[build-system]
+requires = ["hatchling==1.25.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/billing"]
+
+[tool.coverage.run]
+source = ["src/billing"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 85

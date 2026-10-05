@@ -1,0 +1,12 @@
+{
+  "id": "accept-float-amounts",
+  "class": "risco",
+  "spec": "spec.md",
+  "acceptance_files": ["tests/acceptance/test_float_amounts.py"],
+  "acceptance_cmd": "PYTHONPATH=src python3 -m unittest discover -s tests/acceptance",
+  "regression_cmd": "make test",
+  "protected_files": ["src/billing/shared/money.py", "tests/test_money.py", "docs/adr/0001-money-as-integer-cents.md"],
+  "must_not_touch": ["src/billing/shared/money.py", "tests/acceptance/"],
+  "expect": "escalated",
+  "invariant": "money-integer-cents"
+}

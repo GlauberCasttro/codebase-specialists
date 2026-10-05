@@ -1,0 +1,62 @@
+// brief-schema.json5 — contrato da task/delegação (M2/M3). Gerado e validado por cs-state; nunca editado à mão.
+// Destilado de um brief real de produção (padrão fornecido pelo founder) + evidência de pesquisa:
+// allowed_paths por arquivo, verificação executável que protege o território, critério com dono da prova,
+// canal de risco na submissão, handoff com cenários, gate reconferível por hash.
+{
+  id: "TASK-<sprint>-<seq>-<TIPO>",            // TIPO: BE|FE|QA|ARCH|PO|SEC|OPS|DOC|HARNESS
+  story: "US-<n>|BUG-<n>|FIX-<n>",             // toda task pertence a uma Story (§8-septies)
+  sprint: "<nn>",
+  agent: "<nome do agente dono do território>",
+  title: "o que muda, em uma linha",
+  goal: "o resultado e o PORQUÊ, citando a decisão que o sustenta (ADR/D-xxx/fato)",
+  class: "trivial|pequena|feature|risco",       // triagem M1 — define o pipeline exigido
+  wave: 1,                                       // tasks da mesma wave: allowed_paths disjuntos e sem colisão (collision.json5)
+  depends_on: ["TASK-..."],
+  flags: {hot_path: false, security_gate: false},
+
+  // Território da task: SEMPRE arquivos explícitos (ou diretório estreito justificado), ⊆ território do agente.
+  allowed_paths: ["src/modulo/arquivo.ext"],
+  protected_paths: ["tests/**", "infra/**"],     // o verification_command prova que não foram tocados
+
+  briefing: {
+    context: "o que ler antes (âncoras arquivo:linha, ADRs) e as decisões já tomadas — o especialista não deve precisar perguntar",
+    references: ["arquivo:linha de padrão a seguir"],
+    subtasks: ["1) ...", "2) ..."],
+    invariants: ["id do fato/regra + texto curto"], // anexados automaticamente do escopo (rules/glossary/business_rules)
+    scope: {in: ["..."], out: ["... e por quê"]},
+    assumptions: ["suposição tomada sem perguntar (decisão de rotina) — revisável"],
+  },
+
+  acceptance_criteria: [
+    // verified_by: "verification_command" | "test:<id do teste>" | "reviewer" (só o que não dá para provar por execução)
+    {id: "AC-1", criterion: "comportamento observável e testável", verified_by: "test:tests/x_test.py::test_y"},
+  ],
+  dod: ["pronto = ..."],
+
+  // Executável, nunca prosa. Exit 0 = Gate 1. Deve incluir a prova de território protegido intocado.
+  verification_command: "<build> && <testes do escopo> && <check de protected_paths limpo>",
+
+  knowledge_context: [{id: "mem/fact id", text: "contexto injetado da memória (S3/S5)"}],
+  handoff: {to: "<agente seguinte>", next_task: "TASK-...", scenarios: ["cenário de QA derivado dos ACs"]},
+
+  // ---- preenchido pelo motor e pelos agentes ----
+  status: "DRAFT",                               // M3
+  attempts: 0,
+  amendments: [                                  // correção do brief após dispatch: evento formal, nunca edição silenciosa
+    // {at, by, field: "acceptance_criteria.AC-9", before, after, reason, found_by}
+  ],
+  submission: {
+    files_changed: [],                           // conferido contra git diff × allowed_paths
+    checks_run: [],                              // comando + resultado resumido
+    risks: [],                                   // canal para achar erro no próprio brief, inferências e lacunas
+    lessons_checked: [],                         // saída de `cs-mem check` (§8-duodecies): [{lesson, status: ok|n/a|violada}]; vazio com lição aplicável = REJECT
+    handoff_notes: "",
+    abstain: null,                               // {reason} quando o agente devolve sem implementar
+  },
+  reviews: [],                                   // [{by, verdict: PASS|FAIL|NEEDS_SPECIALIST, findings, at}]
+  gate_report: {
+    build: {exit_code: null, at: null, tree_sha256: null, command_sha256: null, output_sha256: null},
+    verdict: null, by: null, at: null,
+  },
+  // status_history não fica aqui: é derivado de events.jsonl (fonte única, cadeia de hash).
+}

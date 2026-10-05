@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+.coverage
+htmlcov/
+dist/
+.ruff_cache/

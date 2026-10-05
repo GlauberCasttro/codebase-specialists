@@ -1,0 +1,18 @@
+target-version = "py39"
+line-length = 100
+src = ["src", "tests"]
+extend-exclude = ["tests/fixtures"]
+
+[lint]
+select = ["E", "F", "I", "B", "UP", "N", "TID"]
+ignore = ["UP007"]
+
+[lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[lint.flake8-tidy-imports.banned-api]
+"decimal.getcontext".msg = "do not mutate the global decimal context; quantize explicitly (ADR 0001)"
+"datetime.datetime.utcnow".msg = "naive datetimes are forbidden; inject billing.shared.clock"
+
+[lint.isort]
+known-first-party = ["billing"]

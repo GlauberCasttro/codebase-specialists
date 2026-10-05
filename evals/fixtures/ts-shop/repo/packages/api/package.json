@@ -1,0 +1,19 @@
+{
+  "name": "@shop/api",
+  "version": "2.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.ts",
+    "start": "node src/server.ts",
+    "test": "node --test \"src/**/*.test.ts\""
+  },
+  "dependencies": {
+    "@shop/shared": "2.3.0",
+    "express": "^4.19.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21"
+  }
+}

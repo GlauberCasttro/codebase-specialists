@@ -1,0 +1,107 @@
+# py-billing — roteiro de histórico (ver build.sh para as ops)
+# Sinais plantados: hotspots em payments/service.py e ledger/journal.py; co-change recorrente
+# payments/service.py <-> ledger/journal.py; 5 commits "fix"; 1 revert (delete no ledger);
+# ADRs 0001-0003; bump de dependência (httpx 0.26.0 -> 0.27.0); release 0.14.2.
+
+# 1. bootstrap (Money ainda com bug de float em percent; httpx 0.26.0; versão 0.14.1; sem check-money)
+put pyproject.toml uv.lock ruff.toml Makefile README.md .gitignore src/billing/__init__.py src/billing/shared
+sed src/billing/shared/money.py s|Money(_div_half_even(self.cents \* basis_points, BASIS_POINTS), self.currency)|Money(int(self.cents * basis_points / BASIS_POINTS), self.currency)|
+sed pyproject.toml s|httpx==0\.27\.0|httpx==0.26.0|
+sed uv.lock s|0\.27\.0|0.26.0|g
+sed pyproject.toml s|^version = "0\.14\.2"|version = "0.14.1"|
+sed uv.lock s|^version = "0\.14\.2"|version = "0.14.1"|
+sed src/billing/__init__.py s|0\.14\.2|0.14.1|
+sed Makefile s|^lint: check-money|lint:|
+sed Makefile s| check-money||
+sed Makefile /^check-money:/,/check_no_float_money/d
+commit 2025-03-03T09:12:00-03:00 ana chore: bootstrap billing service (uv, ruff, Makefile, shared Money)
+
+# 2. ADR 0001
+put docs/adr/0001-money-as-integer-cents.md
+commit 2025-03-04T15:40:00-03:00 ana docs(adr): 0001 money as integer cents\n\nfloat sums diverged R$ 0,03 from the gateway statement in the 2024 close.
+
+# 3. invoices v0 (void sem guarda de PAID)
+put src/billing/invoices/__init__.py src/billing/invoices/numbering.py src/billing/invoices/repository.py tests/test_money.py
+variant src/billing/invoices/models.py inv-v0
+variant src/billing/invoices/service.py inv-v0
+variant tests/test_invoices.py inv-v0
+commit 2025-03-11T10:05:00-03:00 bruno feat(invoices): draft -> issued -> paid lifecycle with yearly numbering
+
+# 4. ledger (com dois bugs: aceita débito > crédito; reverse não troca lados)
+put src/billing/ledger
+variant tests/test_ledger.py ledger-v0
+sed src/billing/ledger/journal.py s|if entry.total_debits() != entry.total_credits():|if entry.total_debits() < entry.total_credits():|
+sed src/billing/ledger/journal.py s|swapped = tuple(Posting(p.account, p.credit, p.debit)|swapped = tuple(Posting(p.account, p.debit, p.credit)|
+commit 2025-03-20T14:22:00-03:00 carla feat(ledger): double-entry journal with reversal
+
+# 5. payments (sem idempotência, cobra subtotal, reembolso sem limite, sem log) + ajuste no journal
+put src/billing/payments tests/test_payments.py
+sed src/billing/payments/refunds.py s|    return captured - already_refunded|    return captured|
+sed src/billing/payments/service.py s|amount = invoice.total|amount = invoice.subtotal|
+sed src/billing/payments/service.py /if idempotency_key in self._by_key:/,/return self._by_key\[idempotency_key\]/d
+sed src/billing/payments/service.py /self._by_key\[idempotency_key\] = payment/d
+sed src/billing/payments/service.py /log.info("payment captured"/d
+sed src/billing/ledger/journal.py s|"debits %d != credits %d" % (entry.total_debits(), entry.total_credits())|"unbalanced entry"|
+commit 2025-04-01T11:30:00-03:00 bruno feat(payments): capture and refund mirrored in the ledger
+
+# 6. fix float em Money.percent (hotspot shared/money.py)
+put src/billing/shared/money.py
+commit 2025-04-03T09:02:00-03:00 ana fix(money): percent() used float division and lost a cent on ISS\n\nISS of 5% on R$ 0,30 gave 1 cent instead of 2 (half-even). See ADR 0001.
+
+# 7. fix co-change payments + ledger
+sed src/billing/payments/service.py s|amount = invoice.subtotal|amount = invoice.total|
+sed src/billing/ledger/journal.py s|if entry.total_debits() < entry.total_credits():|if entry.total_debits() != entry.total_credits():|
+commit 2025-04-08T17:45:00-03:00 bruno fix(payments): capture ignored ISS and journal accepted debits > credits\n\nCash was debited with the subtotal while REVENUE+TAX were credited; the journal only\nchecked debits < credits, so the imbalance slipped through.
+
+# 8. delete no ledger -> revertido no mesmo dia
+variant src/billing/ledger/journal.py ledger-delete
+variant tests/test_ledger.py ledger-delete
+commit 2025-04-10T10:15:00-03:00 diego feat(ledger): allow deleting draft entries posted by mistake
+revert 2025-04-10T18:40:00-03:00 carla
+
+# 9. corrige reverse (ainda com o bug de swap) e grava ADR 0002
+sed src/billing/ledger/journal.py s|swapped = tuple(Posting(p.account, p.debit, p.credit)|swapped = tuple(Posting(p.account, p.credit, p.debit)|
+commit 2025-04-11T09:20:00-03:00 carla fix(ledger): reverse() must swap debit and credit
+put docs/adr/0002-ledger-append-only.md tests/test_ledger.py
+commit 2025-04-11T16:00:00-03:00 carla docs(adr): 0002 ledger is append-only; corrections only by reversal
+
+# 10. idempotência (co-change payments + ledger) + ADR 0003
+put src/billing/ledger/journal.py
+put src/billing/payments/service.py
+sed src/billing/payments/service.py /log.info("payment captured"/d
+put docs/adr/0003-idempotent-captures.md
+commit 2025-06-02T13:10:00-03:00 bruno feat(payments): idempotent capture by key (ADR 0003)\n\nMay incident: 14 customers double-charged after gateway webhook retries.
+
+# 11. bug de reembolso parcial (hotspot payments)
+put src/billing/payments/refunds.py
+commit 2025-06-19T08:55:00-03:00 diego fix(payments): partial refunds could exceed the captured amount
+
+# 12. invoices: guarda de PAID em void (fix) e tabela de transições (refactor)
+variant src/billing/invoices/service.py inv-v1
+variant tests/test_invoices.py inv-v1
+commit 2025-07-07T15:33:00-03:00 bruno fix(invoices): paid invoices could be voided instead of refunded
+put src/billing/invoices/models.py src/billing/invoices/service.py tests/test_invoices.py
+commit 2025-07-21T10:00:00-03:00 bruno refactor(invoices): explicit ALLOWED_TRANSITIONS table; PAID and VOID are terminal
+
+# 13. lint do invariante e log estruturado (co-change payments + shared)
+put Makefile scripts/check_no_float_money.py
+commit 2025-08-05T11:11:00-03:00 ana chore(lint): make check-money enforces ADR 0001 (no float on money)
+put src/billing/payments/service.py src/billing/shared/log.py
+commit 2025-08-12T16:45:00-03:00 diego feat(payments): structured log of captures (cents, never decimals)
+
+# 13b. multa/juros por atraso (contém o BUG plantado: juros truncados dia a dia)
+put src/billing/invoices/late_fees.py tests/test_late_fees.py
+commit 2025-08-20T14:05:00-03:00 bruno feat(invoices): late fee = 2% fine + 1% a month interest pro rata die
+
+# 14. aliases legados (termos a nunca usar) e fixtures de importação
+put src/billing/invoices/repository.py src/billing/ledger/entries.py tests/fixtures CLAUDE.md
+commit 2025-08-28T09:40:00-03:00 carla chore(import): keep legacy get_bill/JournalEntry aliases for the 2024 CSV importer
+
+# 15. bump de dependência e release
+put pyproject.toml uv.lock
+sed pyproject.toml s|^version = "0\.14\.2"|version = "0.14.1"|
+sed uv.lock s|^version = "0\.14\.2"|version = "0.14.1"|
+commit 2025-09-02T10:00:00-03:00 bot chore(deps): bump httpx 0.26.0 -> 0.27.0
+put pyproject.toml uv.lock src/billing/__init__.py README.md
+commit 2025-09-15T12:00:00-03:00 bot chore(release): 0.14.2
+tag v0.14.2

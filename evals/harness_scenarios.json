@@ -1,0 +1,2315 @@
+{
+ "_comment": "Contrato entre check_run.py e a CLI do harness. Nomes e flags conferidos contra references/harness.md §3 e o código (scripts/harness/engine/state.py, router.py, session.py, scripts/memory/mem.py, scripts/stage/cli.py) em 2026-10-02. Cada cenário roda numa CÓPIA temporária do alvo. Se a CLI mudar de nome/flags, ajuste AQUI (não no check_run.py). Placeholders: {T} alvo (cópia), {SKILL} raiz da skill, {AGENT_DEV}/{AGENT_DEV2} donos de scenario_paths.dev_a/dev_b, {AGENT_GATE} primeiro agente gate, {AGENT_LESSON} dono de scenario_paths.lesson_file, {PATH_*} = scenario_paths.* do GROUND_TRUTH, {TEST_CMD} = comando de teste do GROUND_TRUTH, {i} = índice em repeat. Tipos de passo: tool | hook | write | git_commit | assert_file | assert_jsonl | repeat | save_stdout/compare. Atenção: argparse sai com exit 2 em flag errada — todo passo expect=fail leva stdout_any com a mensagem de recusa esperada, para não passar por erro de uso. cs-state escreve no board com campo `state` (não `status`); cs-route e cs-state não têm saída JSON (j5/texto): asserções por texto.",
+ "tools": {
+  "cs": [
+   [
+    "python3",
+    "{SKILL}/scripts/cs.py",
+    "--target",
+    "{T}"
+   ]
+  ],
+  "state": [
+   [
+    "{T}/.swarm/bin/cs-state"
+   ],
+   [
+    "python3",
+    "{T}/.swarm/harness/state.py",
+    "--root",
+    "{T}"
+   ],
+   [
+    "python3",
+    "{SKILL}/scripts/harness/engine/state.py",
+    "--root",
+    "{T}"
+   ]
+  ],
+  "session": [
+   [
+    "{T}/.swarm/bin/cs-session"
+   ],
+   [
+    "python3",
+    "{T}/.swarm/harness/session.py",
+    "--root",
+    "{T}"
+   ],
+   [
+    "python3",
+    "{SKILL}/scripts/harness/engine/session.py",
+    "--root",
+    "{T}"
+   ]
+  ],
+  "mem": [
+   [
+    "{T}/.swarm/bin/cs-mem"
+   ],
+   [
+    "python3",
+    "{T}/.swarm/harness/mem.py",
+    "--root",
+    "{T}"
+   ],
+   [
+    "python3",
+    "{SKILL}/scripts/memory/mem.py",
+    "--root",
+    "{T}"
+   ]
+  ],
+  "route": [
+   [
+    "{T}/.swarm/bin/cs-route"
+   ],
+   [
+    "python3",
+    "{T}/.swarm/harness/router.py",
+    "--root",
+    "{T}"
+   ],
+   [
+    "python3",
+    "{SKILL}/scripts/harness/engine/router.py",
+    "--root",
+    "{T}"
+   ]
+  ],
+  "stage": [
+   [
+    "python3",
+    "{SKILL}/scripts/cs.py",
+    "--target",
+    "{T}",
+    "stage"
+   ]
+  ],
+  "validate": [
+   [
+    "python3",
+    "{SKILL}/scripts/cs.py",
+    "--target",
+    "{T}",
+    "harness",
+    "validate",
+    "--strict"
+   ],
+   [
+    "python3",
+    "{SKILL}/scripts/harness/engine/validate.py",
+    "--root",
+    "{T}",
+    "--strict"
+   ]
+  ],
+  "selftest": [
+   [
+    "python3",
+    "{SKILL}/scripts/cs.py",
+    "--target",
+    "{T}",
+    "harness",
+    "selftest"
+   ],
+   [
+    "python3",
+    "{SKILL}/scripts/harness/engine/selftest.py",
+    "--root",
+    "{T}"
+   ]
+  ]
+ },
+ "scenarios": [
+  {
+   "id": "G9.session-roundtrip",
+   "gate": "G9",
+   "modes": [
+    "setup"
+   ],
+   "text": "[G9] cs-session: save grava resume.json5; load com carimbo batendo imprime <=2.000 tokens e é idempotente; após commit novo, load mostra o delta",
+   "steps": [
+    {
+     "tool": "session",
+     "args": [
+      "save",
+      "--did",
+      "eval: montou o time",
+      "--next",
+      "eval: rodar sonda"
+     ],
+     "expect": "ok"
+    },
+    {
+     "assert_file": {
+      "path": ".swarm/session/resume.json5",
+      "json5": true
+     }
+    },
+    {
+     "tool": "session",
+     "args": [
+      "load"
+     ],
+     "expect": "ok",
+     "max_tokens": 2000,
+     "save_stdout": "L1"
+    },
+    {
+     "tool": "session",
+     "args": [
+      "load"
+     ],
+     "expect": "ok",
+     "save_stdout": "L2"
+    },
+    {
+     "compare": [
+      "L1",
+      "L2"
+     ],
+     "op": "eq"
+    },
+    {
+     "write": {
+      "path": "{PATH_TRIVIAL}",
+      "append": "\n<!-- eval: commit novo -->\n"
+     }
+    },
+    {
+     "git_commit": "docs: eval delta marker"
+    },
+    {
+     "tool": "session",
+     "args": [
+      "load"
+     ],
+     "expect": "ok",
+     "max_tokens": 2000,
+     "stdout_any": [
+      "eval delta marker",
+      "delta",
+      "Delta",
+      "novo"
+     ],
+     "stdout_differs_from": "L1"
+    }
+   ]
+  },
+  {
+   "id": "G10.dispatch-without-brief",
+   "gate": "G10",
+   "modes": [
+    "setup"
+   ],
+   "text": "[G10] hook PreToolUse(Task|Agent) bloqueia despacho sem id de delegação BRIEFED",
+   "steps": [
+    {
+     "hook": "PreToolUse",
+     "payload": {
+      "tool_name": "Task",
+      "tool_input": {
+       "description": "implementa a feature X",
+       "subagent_type": "{AGENT_DEV}",
+       "prompt": "faça X",
+       "model": "sonnet"
+      }
+     },
+     "expect": "block"
+    },
+    {
+     "hook": "PreToolUse",
+     "payload": {
+      "tool_name": "Agent",
+      "tool_input": {
+       "description": "implementa a feature X",
+       "subagent_type": "{AGENT_DEV}",
+       "prompt": "faça X",
+       "model": "sonnet"
+      }
+     },
+     "expect": "block"
+    }
+   ]
+  },
+  {
+   "id": "G10.parallel-collision",
+   "gate": "G10",
+   "modes": [
+    "setup"
+   ],
+   "text": "[G10] despacho paralelo com colisão (mesmo arquivo, ou par em do_not_parallelize) é bloqueado",
+   "steps": [
+    {
+     "tool": "state",
+     "args": [
+      "session",
+      "start",
+      "--request",
+      "eval"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "session",
+      "triage",
+      "--class",
+      "pequena",
+      "--why",
+      "eval"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "epic",
+      "--title",
+      "eval epic",
+      "--objective",
+      "eval",
+      "--metric",
+      "eval"
+     ],
+     "expect": "ok",
+     "capture": {
+      "EPIC": "(EPIC-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "feature",
+      "--epic",
+      "{EPIC}",
+      "--title",
+      "eval feat",
+      "--spec",
+      "README.md",
+      "--accept-cmd",
+      "false"
+     ],
+     "expect": "ok",
+     "capture": {
+      "FEAT": "(FEAT-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "feature",
+      "ready",
+      "--id",
+      "{FEAT}"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "story",
+      "--type",
+      "us",
+      "--feature",
+      "{FEAT}",
+      "--title",
+      "Como dev, quero eval, para medir",
+      "--as-a",
+      "dev",
+      "--i-want",
+      "eval",
+      "--so-that",
+      "medir",
+      "--criterion",
+      "AC-1|Dado o alvo Quando roda o eval Então passa|cmd:true"
+     ],
+     "expect": "ok",
+     "capture": {
+      "US": "(US-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "story",
+      "ready",
+      "--id",
+      "{US}"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "task",
+      "--story",
+      "{US}",
+      "--agent",
+      "{AGENT_DEV}",
+      "--title",
+      "eval A",
+      "--goal",
+      "eval: eval A",
+      "--allowed-path",
+      "{PATH_DEV_A}",
+      "--verify-cmd",
+      "{TEST_CMD}",
+      "--ac",
+      "AC-1|a suíte de testes do repositório termina com exit 0|verification_command",
+      "--ref",
+      "{PATH_DEV_A}:1",
+      "--out",
+      "resto do repositório",
+      "--wave",
+      "1",
+      "--ready"
+     ],
+     "expect": "ok",
+     "capture": {
+      "TA": "(T-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "task",
+      "--story",
+      "{US}",
+      "--agent",
+      "{AGENT_DEV}",
+      "--title",
+      "eval B",
+      "--goal",
+      "eval: eval B",
+      "--allowed-path",
+      "{PATH_DEV_A}",
+      "--verify-cmd",
+      "{TEST_CMD}",
+      "--ac",
+      "AC-1|a suíte de testes do repositório termina com exit 0|verification_command",
+      "--ref",
+      "{PATH_DEV_A}:1",
+      "--out",
+      "resto do repositório",
+      "--wave",
+      "2",
+      "--ready"
+     ],
+     "expect": "ok",
+     "capture": {
+      "TB": "(T-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "session",
+      "plan"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "session",
+      "execute"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "dispatch",
+      "{TA}",
+      "--model",
+      "sonnet"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "dispatch",
+      "{TB}",
+      "--model",
+      "sonnet"
+     ],
+     "expect": "fail",
+     "stdout_any": [
+      "colide",
+      "sobrepost",
+      "em voo",
+      "collision",
+      "allowed_paths"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "G12.bug-needs-failing-test",
+   "gate": "G12",
+   "modes": [
+    "setup"
+   ],
+   "text": "[G12] Bug sem teste que falha não vira READY",
+   "steps": [
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "epic",
+      "--title",
+      "eval epic",
+      "--objective",
+      "eval",
+      "--metric",
+      "eval"
+     ],
+     "expect": "ok",
+     "capture": {
+      "EPIC": "(EPIC-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "feature",
+      "--epic",
+      "{EPIC}",
+      "--title",
+      "eval feat",
+      "--spec",
+      "README.md",
+      "--accept-cmd",
+      "false"
+     ],
+     "expect": "ok",
+     "capture": {
+      "FEAT": "(FEAT-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "feature",
+      "ready",
+      "--id",
+      "{FEAT}"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "story",
+      "--type",
+      "bug",
+      "--feature",
+      "{FEAT}",
+      "--title",
+      "eval bug",
+      "--repro",
+      "passo 1",
+      "--severity",
+      "high",
+      "--environment",
+      "local"
+     ],
+     "expect": "ok",
+     "capture": {
+      "BUG": "(BUG-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "story",
+      "ready",
+      "--id",
+      "{BUG}"
+     ],
+     "expect": "fail",
+     "stdout_any": [
+      "failing-test",
+      "teste que reproduz"
+     ]
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "story",
+      "--type",
+      "bug",
+      "--feature",
+      "{FEAT}",
+      "--title",
+      "eval bug verde",
+      "--repro",
+      "passo 1",
+      "--severity",
+      "high",
+      "--environment",
+      "local",
+      "--failing-test",
+      "cmd:true"
+     ],
+     "expect": "ok",
+     "capture": {
+      "BUG2": "(BUG-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "story",
+      "ready",
+      "--id",
+      "{BUG2}"
+     ],
+     "expect": "fail",
+     "stdout_any": [
+      "não reproduz",
+      "passa hoje"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "G12.fix-needs-fixes",
+   "gate": "G12",
+   "modes": [
+    "setup"
+   ],
+   "text": "[G12] Fix sem `fixes:` não vira READY",
+   "steps": [
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "epic",
+      "--title",
+      "eval epic",
+      "--objective",
+      "eval",
+      "--metric",
+      "eval"
+     ],
+     "expect": "ok",
+     "capture": {
+      "EPIC": "(EPIC-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "feature",
+      "--epic",
+      "{EPIC}",
+      "--title",
+      "eval feat",
+      "--spec",
+      "README.md",
+      "--accept-cmd",
+      "false"
+     ],
+     "expect": "ok",
+     "capture": {
+      "FEAT": "(FEAT-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "feature",
+      "ready",
+      "--id",
+      "{FEAT}"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "story",
+      "--type",
+      "fix",
+      "--feature",
+      "{FEAT}",
+      "--title",
+      "eval fix",
+      "--proving-test",
+      "cmd:true"
+     ],
+     "expect": "ok",
+     "capture": {
+      "FIX": "(FIX-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "story",
+      "ready",
+      "--id",
+      "{FIX}"
+     ],
+     "expect": "fail",
+     "stdout_any": [
+      "fixes"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "G12.feature-close-guards",
+   "gate": "G12",
+   "modes": [
+    "setup"
+   ],
+   "text": "[G12] Feature não fecha com story aberta nem sem rodar os testes de aceite",
+   "steps": [
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "epic",
+      "--title",
+      "eval epic",
+      "--objective",
+      "eval",
+      "--metric",
+      "eval"
+     ],
+     "expect": "ok",
+     "capture": {
+      "EPIC": "(EPIC-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "epic",
+      "activate",
+      "--id",
+      "{EPIC}"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "feature",
+      "--epic",
+      "{EPIC}",
+      "--title",
+      "eval feat",
+      "--spec",
+      "README.md",
+      "--accept-cmd",
+      "false"
+     ],
+     "expect": "ok",
+     "capture": {
+      "FEAT": "(FEAT-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "feature",
+      "ready",
+      "--id",
+      "{FEAT}"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "story",
+      "--type",
+      "us",
+      "--feature",
+      "{FEAT}",
+      "--title",
+      "Como dev, quero eval, para medir",
+      "--as-a",
+      "dev",
+      "--i-want",
+      "eval",
+      "--so-that",
+      "medir",
+      "--criterion",
+      "AC-1|Dado o alvo Quando roda o eval Então passa|cmd:true"
+     ],
+     "expect": "ok",
+     "capture": {
+      "US": "(US-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "story",
+      "ready",
+      "--id",
+      "{US}"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "feature",
+      "start",
+      "--id",
+      "{FEAT}"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "feature",
+      "done",
+      "--id",
+      "{FEAT}"
+     ],
+     "expect": "fail",
+     "stdout_any": [
+      "stories não DONE",
+      "story",
+      "{US}"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "G12.sprint-close-returns",
+   "gate": "G12",
+   "modes": [
+    "setup"
+   ],
+   "text": "[G12] Sprint fecha devolvendo stories não entregues ao backlog com motivo",
+   "steps": [
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "epic",
+      "--title",
+      "eval epic",
+      "--objective",
+      "eval",
+      "--metric",
+      "eval"
+     ],
+     "expect": "ok",
+     "capture": {
+      "EPIC": "(EPIC-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "feature",
+      "--epic",
+      "{EPIC}",
+      "--title",
+      "eval feat",
+      "--spec",
+      "README.md",
+      "--accept-cmd",
+      "false"
+     ],
+     "expect": "ok",
+     "capture": {
+      "FEAT": "(FEAT-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "feature",
+      "ready",
+      "--id",
+      "{FEAT}"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "story",
+      "--type",
+      "us",
+      "--feature",
+      "{FEAT}",
+      "--title",
+      "Como dev, quero eval, para medir",
+      "--as-a",
+      "dev",
+      "--i-want",
+      "eval",
+      "--so-that",
+      "medir",
+      "--criterion",
+      "AC-1|Dado o alvo Quando roda o eval Então passa|cmd:true"
+     ],
+     "expect": "ok",
+     "capture": {
+      "US": "(US-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "story",
+      "ready",
+      "--id",
+      "{US}"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "sprint",
+      "--goal",
+      "eval",
+      "--budget",
+      "tasks=2"
+     ],
+     "expect": "ok",
+     "capture": {
+      "SPRINT": "(SPRINT-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "sprint",
+      "plan",
+      "--id",
+      "{SPRINT}",
+      "--stories",
+      "{US}"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "sprint",
+      "start",
+      "--id",
+      "{SPRINT}"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "sprint",
+      "review",
+      "--id",
+      "{SPRINT}"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "sprint",
+      "close",
+      "--id",
+      "{SPRINT}",
+      "--reason",
+      "fim do timebox"
+     ],
+     "expect": "ok"
+    },
+    {
+     "assert_file": {
+      "path": ".swarm/state/board.json5",
+      "json5": true,
+      "where": {
+       "id": "{US}",
+       "state": "BACKLOG"
+      },
+      "min": 1
+     }
+    },
+    {
+     "assert_file": {
+      "path": ".swarm/state/board.json5",
+      "json5": true,
+      "where": {
+       "id": "{US}"
+      },
+      "min": 2,
+      "require_key_any": [
+       "reason",
+       "returned_reason",
+       "motivo"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "G14.routing",
+   "gate": "G14",
+   "modes": [
+    "setup"
+   ],
+   "text": "[G14] trivial→tier barato, risco→topo, despacho sem model bloqueado pelo hook, outcome sem procedência não treina (priors intactos), retry sobe um tier (gate ≥ autor é coberto pelo selftest/hook de revisão)",
+   "steps": [
+    {
+     "tool": "state",
+     "args": [
+      "session",
+      "start",
+      "--request",
+      "eval"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "session",
+      "triage",
+      "--class",
+      "pequena",
+      "--why",
+      "eval"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "epic",
+      "--title",
+      "eval epic",
+      "--objective",
+      "eval",
+      "--metric",
+      "eval"
+     ],
+     "expect": "ok",
+     "capture": {
+      "EPIC": "(EPIC-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "feature",
+      "--epic",
+      "{EPIC}",
+      "--title",
+      "eval feat",
+      "--spec",
+      "README.md",
+      "--accept-cmd",
+      "false"
+     ],
+     "expect": "ok",
+     "capture": {
+      "FEAT": "(FEAT-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "feature",
+      "ready",
+      "--id",
+      "{FEAT}"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "story",
+      "--type",
+      "us",
+      "--feature",
+      "{FEAT}",
+      "--title",
+      "Como dev, quero eval, para medir",
+      "--as-a",
+      "dev",
+      "--i-want",
+      "eval",
+      "--so-that",
+      "medir",
+      "--criterion",
+      "AC-1|Dado o alvo Quando roda o eval Então passa|cmd:true"
+     ],
+     "expect": "ok",
+     "capture": {
+      "US": "(US-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "story",
+      "ready",
+      "--id",
+      "{US}"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "task",
+      "--story",
+      "{US}",
+      "--agent",
+      "{AGENT_DEV}",
+      "--title",
+      "eval trivial",
+      "--goal",
+      "eval: eval trivial",
+      "--allowed-path",
+      "{PATH_DEV_A}",
+      "--verify-cmd",
+      "{TEST_CMD}",
+      "--ac",
+      "AC-1|a suíte de testes do repositório termina com exit 0|verification_command",
+      "--ref",
+      "{PATH_DEV_A}:1",
+      "--out",
+      "resto do repositório",
+      "--wave",
+      "1",
+      "--class",
+      "trivial",
+      "--ready"
+     ],
+     "expect": "ok",
+     "capture": {
+      "TT": "(T-[0-9]+)"
+     }
+    },
+    {
+     "tool": "route",
+     "args": [
+      "recommend",
+      "{TT}"
+     ],
+     "expect": "ok",
+     "stdout_any": [
+      "tier: haiku"
+     ]
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "task",
+      "--story",
+      "{US}",
+      "--agent",
+      "{AGENT_DEV}",
+      "--title",
+      "eval risco",
+      "--goal",
+      "eval: eval risco",
+      "--allowed-path",
+      "{PATH_DEV_A}",
+      "--verify-cmd",
+      "{TEST_CMD}",
+      "--ac",
+      "AC-1|a suíte de testes do repositório termina com exit 0|verification_command",
+      "--ref",
+      "{PATH_DEV_A}:1",
+      "--out",
+      "resto do repositório",
+      "--wave",
+      "2",
+      "--class",
+      "risco",
+      "--ready"
+     ],
+     "expect": "ok",
+     "capture": {
+      "TR": "(T-[0-9]+)"
+     }
+    },
+    {
+     "tool": "route",
+     "args": [
+      "recommend",
+      "{TR}"
+     ],
+     "expect": "ok",
+     "stdout_any": [
+      "tier: opus"
+     ]
+    },
+    {
+     "hook": "PreToolUse",
+     "payload": {
+      "tool_name": "Agent",
+      "tool_input": {
+       "description": "{TT}.d1: eval trivial",
+       "subagent_type": "{AGENT_DEV}",
+       "prompt": "eval"
+      }
+     },
+     "expect": "block"
+    },
+    {
+     "tool": "route",
+     "args": [
+      "outcome",
+      "{TT}",
+      "--success"
+     ],
+     "expect": "ok",
+     "stdout_any": [
+      "treina: False"
+     ]
+    },
+    {
+     "tool": "route",
+     "args": [
+      "stats"
+     ],
+     "expect": "ok",
+     "stdout_any": [
+      "samples: {}"
+     ]
+    },
+    {
+     "tool": "route",
+     "args": [
+      "stats"
+     ],
+     "expect": "ok",
+     "stdout_any": [
+      "untrained_outcomes: 1"
+     ]
+    },
+    {
+     "tool": "state",
+     "args": [
+      "session",
+      "plan"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "session",
+      "execute"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "dispatch",
+      "{TT}",
+      "--model",
+      "haiku"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "--actor",
+      "{AGENT_DEV}",
+      "submit",
+      "{TT}",
+      "--files-changed",
+      "{PATH_DEV_A}",
+      "--check",
+      "{TEST_CMD}",
+      "--risk",
+      "nenhum",
+      "--handoff-notes",
+      "eval"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "reject",
+      "{TT}",
+      "--reason",
+      "eval: retry sobe tier"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "retry",
+      "{TT}",
+      "--findings",
+      "eval"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "route",
+     "args": [
+      "recommend",
+      "{TT}"
+     ],
+     "expect": "ok",
+     "stdout_any": [
+      "tier: sonnet"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "G15.correction-injected",
+   "gate": "G15",
+   "modes": [
+    "setup"
+   ],
+   "fixtures": [
+    "py-billing"
+   ],
+   "text": "[G15] correção humana registrada para o dono do escopo aparece no pacote do próximo despacho (cs-state brief) e no checklist do cs-mem check",
+   "steps": [
+    {
+     "tool": "mem",
+     "args": [
+      "correct",
+      "--agent",
+      "{AGENT_LESSON}",
+      "--wrong",
+      "usar float para valor monetário",
+      "--right",
+      "centavos inteiros (Money.cents int)",
+      "--why",
+      "ADR 0001: conciliação ao centavo",
+      "--paths",
+      "{PATH_LESSON_SCOPE}",
+      "--check",
+      "python3 scripts/check_no_float_money.py src/billing"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "session",
+      "start",
+      "--request",
+      "eval"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "session",
+      "triage",
+      "--class",
+      "pequena",
+      "--why",
+      "eval"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "epic",
+      "--title",
+      "eval epic",
+      "--objective",
+      "eval",
+      "--metric",
+      "eval"
+     ],
+     "expect": "ok",
+     "capture": {
+      "EPIC": "(EPIC-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "feature",
+      "--epic",
+      "{EPIC}",
+      "--title",
+      "eval feat",
+      "--spec",
+      "README.md",
+      "--accept-cmd",
+      "false"
+     ],
+     "expect": "ok",
+     "capture": {
+      "FEAT": "(FEAT-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "feature",
+      "ready",
+      "--id",
+      "{FEAT}"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "story",
+      "--type",
+      "us",
+      "--feature",
+      "{FEAT}",
+      "--title",
+      "Como dev, quero eval, para medir",
+      "--as-a",
+      "dev",
+      "--i-want",
+      "eval",
+      "--so-that",
+      "medir",
+      "--criterion",
+      "AC-1|Dado o alvo Quando roda o eval Então passa|cmd:true"
+     ],
+     "expect": "ok",
+     "capture": {
+      "US": "(US-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "story",
+      "ready",
+      "--id",
+      "{US}"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "task",
+      "--story",
+      "{US}",
+      "--agent",
+      "{AGENT_LESSON}",
+      "--title",
+      "eval lição",
+      "--goal",
+      "eval: eval lição",
+      "--allowed-path",
+      "{PATH_LESSON_FILE}",
+      "--verify-cmd",
+      "{TEST_CMD}",
+      "--ac",
+      "AC-1|a suíte de testes do repositório termina com exit 0|verification_command",
+      "--ref",
+      "{PATH_LESSON_FILE}:1",
+      "--out",
+      "resto do repositório",
+      "--wave",
+      "1",
+      "--ready"
+     ],
+     "expect": "ok",
+     "capture": {
+      "TL": "(T-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "brief",
+      "{TL}"
+     ],
+     "expect": "ok",
+     "stdout_any": [
+      "centavos inteiros"
+     ]
+    },
+    {
+     "tool": "mem",
+     "args": [
+      "check",
+      "--agent",
+      "{AGENT_LESSON}",
+      "--files",
+      "{PATH_LESSON_FILE}",
+      "--no-run"
+     ],
+     "expect": "any",
+     "stdout_any": [
+      "centavos inteiros"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "G15.check-rejects-repeat",
+   "gate": "G15",
+   "modes": [
+    "setup"
+   ],
+   "fixtures": [
+    "py-billing"
+   ],
+   "text": "[G15] submissão que repete o erro é devolvida por cs-mem check citando a lição",
+   "steps": [
+    {
+     "tool": "mem",
+     "args": [
+      "correct",
+      "--agent",
+      "{AGENT_LESSON}",
+      "--wrong",
+      "usar float para valor monetário",
+      "--right",
+      "centavos inteiros (Money.cents int)",
+      "--why",
+      "ADR 0001",
+      "--paths",
+      "{PATH_LESSON_SCOPE}",
+      "--check",
+      "python3 scripts/check_no_float_money.py src/billing"
+     ],
+     "expect": "ok"
+    },
+    {
+     "write": {
+      "path": "{PATH_LESSON_FILE}",
+      "append": "\n\ndef eval_bad(x):\n    return float(x)\n"
+     }
+    },
+    {
+     "tool": "mem",
+     "args": [
+      "check",
+      "--agent",
+      "{AGENT_LESSON}",
+      "--files",
+      "{PATH_LESSON_FILE}"
+     ],
+     "expect": "fail",
+     "stdout_any": [
+      "centavos inteiros"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "G15.second-occurrence-promotes",
+   "gate": "G15",
+   "modes": [
+    "setup"
+   ],
+   "fixtures": [
+    "py-billing"
+   ],
+   "text": "[G15] segunda ocorrência da mesma correção promove a lição (status promoted + proposta de regra/check)",
+   "steps": [
+    {
+     "tool": "mem",
+     "args": [
+      "correct",
+      "--agent",
+      "{AGENT_LESSON}",
+      "--wrong",
+      "usar float para valor monetário",
+      "--right",
+      "centavos inteiros (Money.cents int)",
+      "--why",
+      "ADR 0001",
+      "--paths",
+      "{PATH_LESSON_SCOPE}"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "mem",
+     "args": [
+      "correct",
+      "--agent",
+      "{AGENT_LESSON}",
+      "--wrong",
+      "usou float para valor monetário de novo",
+      "--right",
+      "centavos inteiros (Money.cents int)",
+      "--why",
+      "ADR 0001",
+      "--paths",
+      "{PATH_LESSON_SCOPE}"
+     ],
+     "expect": "ok"
+    },
+    {
+     "assert_file": {
+      "path": ".swarm/memory/agents/{AGENT_LESSON}.json5",
+      "path_alt": ".swarm/state/memory/agents/{AGENT_LESSON}.json5",
+      "json5": true,
+      "where": {
+       "status": "promoted"
+      },
+      "min": 1,
+      "require_key_any": [
+       "proposal",
+       "proposed_rule",
+       "proposed_check",
+       "promoted_to",
+       "promotion"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "G15.cap-and-budget",
+   "gate": "G15",
+   "modes": [
+    "setup"
+   ],
+   "fixtures": [
+    "py-billing"
+   ],
+   "text": "[G15] com 200 lições sintéticas: <=30 ativas por agente e injeção <=5 lições / <=1.500 caracteres",
+   "steps": [
+    {
+     "repeat": 200,
+     "step": {
+      "tool": "mem",
+      "args": [
+       "correct",
+       "--agent",
+       "{AGENT_LESSON}",
+       "--wrong",
+       "erro sintético zq{i}x token{i}",
+       "--right",
+       "faça o certo número wq{i}y",
+       "--why",
+       "eval {i}",
+       "--paths",
+       "{PATH_LESSON_SCOPE}"
+      ],
+      "expect": "any"
+     }
+    },
+    {
+     "assert_file": {
+      "path": ".swarm/memory/agents/{AGENT_LESSON}.json5",
+      "path_alt": ".swarm/state/memory/agents/{AGENT_LESSON}.json5",
+      "json5": true,
+      "where": {
+       "status": "active"
+      },
+      "max": 30
+     }
+    },
+    {
+     "tool": "mem",
+     "args": [
+      "check",
+      "--agent",
+      "{AGENT_LESSON}",
+      "--files",
+      "{PATH_LESSON_FILE}",
+      "--no-run"
+     ],
+     "expect": "any",
+     "max_items_regex": {
+      "rx": "(?m)^\\s*\\d+\\)",
+      "max": 5
+     },
+     "max_chars": 1500
+    }
+   ]
+  },
+  {
+   "id": "G15.archived-stale-not-injected",
+   "gate": "G15",
+   "modes": [
+    "setup"
+   ],
+   "fixtures": [
+    "py-billing"
+   ],
+   "text": "[G15] lição arquivada ou stale (evidência mudou + revalidate) não é injetada",
+   "steps": [
+    {
+     "tool": "mem",
+     "args": [
+      "correct",
+      "--agent",
+      "{AGENT_LESSON}",
+      "--wrong",
+      "chamar gateway sem idempotency_key",
+      "--right",
+      "sempre passar idempotency_key qk7",
+      "--why",
+      "ADR 0003",
+      "--paths",
+      "{PATH_LESSON_SCOPE}"
+     ],
+     "expect": "ok",
+     "capture": {
+      "L1": "\"id\":\\s*\"([^\"]+)\""
+     }
+    },
+    {
+     "json5_set": {
+      "path": ".swarm/memory/agents/{AGENT_LESSON}.json5",
+      "path_alt": ".swarm/state/memory/agents/{AGENT_LESSON}.json5",
+      "where": {
+       "id": "{L1}"
+      },
+      "set": {
+       "status": "archived"
+      }
+     }
+    },
+    {
+     "tool": "mem",
+     "args": [
+      "check",
+      "--agent",
+      "{AGENT_LESSON}",
+      "--files",
+      "{PATH_LESSON_FILE}",
+      "--no-run"
+     ],
+     "expect": "any",
+     "stdout_none": [
+      "qk7"
+     ]
+    },
+    {
+     "tool": "mem",
+     "args": [
+      "correct",
+      "--agent",
+      "{AGENT_LESSON}",
+      "--wrong",
+      "esquecer refundable",
+      "--right",
+      "checar refundable rk9",
+      "--why",
+      "refund limit",
+      "--paths",
+      "{PATH_LESSON_FILE}",
+      "--evidence",
+      "{PATH_LESSON_FILE}:1"
+     ],
+     "expect": "ok"
+    },
+    {
+     "write": {
+      "path": "{PATH_LESSON_FILE}",
+      "append": "\n# eval: muda o fingerprint da evidência\n"
+     }
+    },
+    {
+     "tool": "mem",
+     "args": [
+      "revalidate"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "mem",
+     "args": [
+      "check",
+      "--agent",
+      "{AGENT_LESSON}",
+      "--files",
+      "{PATH_LESSON_FILE}",
+      "--no-run"
+     ],
+     "expect": "any",
+     "stdout_none": [
+      "rk9"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "G15.recurrence-stats",
+   "gate": "G15",
+   "modes": [
+    "setup"
+   ],
+   "fixtures": [
+    "py-billing"
+   ],
+   "text": "[G15] cs-mem stats reporta taxa de recorrência por agente",
+   "steps": [
+    {
+     "tool": "mem",
+     "args": [
+      "correct",
+      "--agent",
+      "{AGENT_LESSON}",
+      "--wrong",
+      "usar float para valor monetário",
+      "--right",
+      "centavos inteiros (Money.cents int)",
+      "--why",
+      "ADR 0001: conciliação ao centavo",
+      "--paths",
+      "{PATH_LESSON_SCOPE}",
+      "--check",
+      "python3 scripts/check_no_float_money.py src/billing"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "mem",
+     "args": [
+      "correct",
+      "--agent",
+      "{AGENT_LESSON}",
+      "--wrong",
+      "usar float para valor monetário",
+      "--right",
+      "centavos inteiros (Money.cents int)",
+      "--why",
+      "ADR 0001: conciliação ao centavo",
+      "--paths",
+      "{PATH_LESSON_SCOPE}",
+      "--check",
+      "python3 scripts/check_no_float_money.py src/billing"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "mem",
+     "args": [
+      "stats"
+     ],
+     "expect": "ok",
+     "stdout_any": [
+      "recurrence",
+      "recorr"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "G8.lesson-after-reject",
+   "gate": "G8",
+   "modes": [
+    "setup"
+   ],
+   "text": "[G8] REJECT vira lição do agente (state/memory/agents/<a>.json5, injetada por cs-mem check) e episódios por evento da task",
+   "steps": [
+    {
+     "tool": "state",
+     "args": [
+      "session",
+      "start",
+      "--request",
+      "eval"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "session",
+      "triage",
+      "--class",
+      "pequena",
+      "--why",
+      "eval"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "epic",
+      "--title",
+      "eval epic",
+      "--objective",
+      "eval",
+      "--metric",
+      "eval"
+     ],
+     "expect": "ok",
+     "capture": {
+      "EPIC": "(EPIC-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "feature",
+      "--epic",
+      "{EPIC}",
+      "--title",
+      "eval feat",
+      "--spec",
+      "README.md",
+      "--accept-cmd",
+      "false"
+     ],
+     "expect": "ok",
+     "capture": {
+      "FEAT": "(FEAT-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "feature",
+      "ready",
+      "--id",
+      "{FEAT}"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "story",
+      "--type",
+      "us",
+      "--feature",
+      "{FEAT}",
+      "--title",
+      "Como dev, quero eval, para medir",
+      "--as-a",
+      "dev",
+      "--i-want",
+      "eval",
+      "--so-that",
+      "medir",
+      "--criterion",
+      "AC-1|Dado o alvo Quando roda o eval Então passa|cmd:true"
+     ],
+     "expect": "ok",
+     "capture": {
+      "US": "(US-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "story",
+      "ready",
+      "--id",
+      "{US}"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "add",
+      "task",
+      "--story",
+      "{US}",
+      "--agent",
+      "{AGENT_DEV}",
+      "--title",
+      "eval reject",
+      "--goal",
+      "eval: eval reject",
+      "--allowed-path",
+      "{PATH_DEV_A}",
+      "--verify-cmd",
+      "{TEST_CMD}",
+      "--ac",
+      "AC-1|a suíte de testes do repositório termina com exit 0|verification_command",
+      "--ref",
+      "{PATH_DEV_A}:1",
+      "--out",
+      "resto do repositório",
+      "--wave",
+      "1",
+      "--ready"
+     ],
+     "expect": "ok",
+     "capture": {
+      "TX": "(T-[0-9]+)"
+     }
+    },
+    {
+     "tool": "state",
+     "args": [
+      "session",
+      "plan"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "session",
+      "execute"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "dispatch",
+      "{TX}",
+      "--model",
+      "sonnet"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "--actor",
+      "{AGENT_DEV}",
+      "submit",
+      "{TX}",
+      "--files-changed",
+      "{PATH_DEV_A}",
+      "--check",
+      "{TEST_CMD}",
+      "--risk",
+      "nenhum",
+      "--handoff-notes",
+      "eval"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "state",
+     "args": [
+      "reject",
+      "{TX}",
+      "--reason",
+      "eval: esqueceu de atualizar o teste do território zk3"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "mem",
+     "args": [
+      "consolidate",
+      "--task",
+      "{TX}"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "mem",
+     "args": [
+      "check",
+      "--agent",
+      "{AGENT_DEV}",
+      "--files",
+      "{PATH_DEV_A}",
+      "--no-run"
+     ],
+     "expect": "any",
+     "stdout_any": [
+      "zk3"
+     ]
+    },
+    {
+     "assert_jsonl": {
+      "path": ".swarm/memory/episodes.jsonl",
+      "contains": "{TX}",
+      "min": 2
+     }
+    }
+   ]
+  },
+  {
+   "id": "G16.stage-load-budget",
+   "gate": "G16",
+   "modes": [
+    "setup"
+   ],
+   "text": "[G16] stage load de cada etapa cabe em 2.000 tokens (etapa não liberada pode recusar, também curta)",
+   "steps": [
+    {
+     "assert_file": {
+      "path": ".swarm/run.json5",
+      "json5": true
+     }
+    },
+    {
+     "tool": "stage",
+     "args": [
+      "status"
+     ],
+     "expect": "ok",
+     "max_tokens": 2000
+    },
+    {
+     "tool": "stage",
+     "args": [
+      "load",
+      "init"
+     ],
+     "expect": "any",
+     "max_tokens": 2000
+    },
+    {
+     "tool": "stage",
+     "args": [
+      "load",
+      "scan"
+     ],
+     "expect": "any",
+     "max_tokens": 2000
+    },
+    {
+     "tool": "stage",
+     "args": [
+      "load",
+      "specialize"
+     ],
+     "expect": "any",
+     "max_tokens": 2000
+    },
+    {
+     "tool": "stage",
+     "args": [
+      "load",
+      "round-table-deep-specialize"
+     ],
+     "expect": "any",
+     "max_tokens": 2000
+    },
+    {
+     "tool": "stage",
+     "args": [
+      "load",
+      "validate"
+     ],
+     "expect": "any",
+     "max_tokens": 2000
+    },
+    {
+     "tool": "stage",
+     "args": [
+      "load",
+      "approve"
+     ],
+     "expect": "any",
+     "max_tokens": 2000
+    }
+   ]
+  },
+  {
+   "id": "G16.failed-check-blocks",
+   "gate": "G16",
+   "modes": [
+    "setup"
+   ],
+   "text": "[G16] stage done com check falhando não fecha a etapa e a etapa seguinte recusa começar",
+   "steps": [
+    {
+     "assert_file": {
+      "path": ".swarm/run.json5",
+      "json5": true
+     }
+    },
+    {
+     "tool": "stage",
+     "args": [
+      "check",
+      "init.2",
+      "--answer",
+      "claude-code"
+     ],
+     "expect": "any"
+    },
+    {
+     "tool": "stage",
+     "args": [
+      "done",
+      "init"
+     ],
+     "expect": "any"
+    },
+    {
+     "delete": ".swarm/facts/inventory.json5"
+    },
+    {
+     "tool": "stage",
+     "args": [
+      "done",
+      "scan"
+     ],
+     "expect": "fail",
+     "stdout_any": [
+      "inventory",
+      "L0"
+     ]
+    },
+    {
+     "tool": "stage",
+     "args": [
+      "load",
+      "specialize"
+     ],
+     "expect": "fail",
+     "stdout_any": [
+      "scan"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "G16.resume-mid-scan",
+   "gate": "G16",
+   "modes": [
+    "setup"
+   ],
+   "fresh_target": true,
+   "text": "[G16] retomada no meio do scan recomeça na sub-etapa pendente (scan.2), sem repetir a feita",
+   "steps": [
+    {
+     "tool": "cs",
+     "args": [
+      "init",
+      "--platforms",
+      "claude-code"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "stage",
+     "args": [
+      "check",
+      "init.2",
+      "--answer",
+      "claude-code"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "stage",
+     "args": [
+      "done",
+      "init"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "stage",
+     "args": [
+      "load",
+      "scan"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "cs",
+     "args": [
+      "scan",
+      "--layers",
+      "L0,L1,L2,L3",
+      "--no-exec"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "stage",
+     "args": [
+      "check",
+      "scan.1"
+     ],
+     "expect": "ok"
+    },
+    {
+     "tool": "stage",
+     "args": [
+      "load",
+      "scan"
+     ],
+     "expect": "ok",
+     "max_tokens": 2000,
+     "stdout_any": [
+      "resume_at: \"scan.2\""
+     ],
+     "stdout_regex_none": [
+      "resume_at: \"scan\\.1\""
+     ]
+    }
+   ]
+  },
+  {
+   "id": "G16.fresh-subagent-disk-only",
+   "gate": "G16",
+   "modes": [
+    "setup"
+   ],
+   "clean_env": true,
+   "text": "[G16] etapa retomada em processo novo, só com o disco (env limpo): load funciona e todo path citado existe",
+   "steps": [
+    {
+     "assert_file": {
+      "path": ".swarm/run.json5",
+      "json5": true
+     }
+    },
+    {
+     "tool": "stage",
+     "args": [
+      "load",
+      "approve"
+     ],
+     "expect": "ok",
+     "max_tokens": 2000,
+     "paths_exist": true
+    }
+   ]
+  }
+ ]
+}

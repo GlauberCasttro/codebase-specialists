@@ -1,0 +1,72 @@
+# ts-shop — roteiro de histórico (ver build.sh)
+# Sinais: hotspot packages/api/src/inventory/stock.ts e reservations.ts (co-change recorrente);
+# fixes de enum (type stripping), estoque negativo e reservas expiradas; revert do import web -> api;
+# ADR 0001/0002; bump do vite 5.4.0 -> 5.4.2 no lockfile.
+
+# 1. bootstrap
+put package.json package-lock.json tsconfig.base.json tsconfig.json .gitignore .nvmrc README.md
+variant eslint.config.mjs eslint-v0
+sed package-lock.json s|vite-5\.4\.2\.tgz|vite-5.4.0.tgz|
+sed package-lock.json s|"version": "5\.4\.2"|"version": "5.4.0"|
+commit 2025-04-01T09:00:00-03:00 ana chore: bootstrap npm workspaces (shared, api, web)
+
+# 2. contratos com enum (vai quebrar o boot do node)
+put packages/shared
+variant packages/shared/src/order.ts enum
+commit 2025-04-03T10:20:00-03:00 bruno feat(shared): Sku, Cart and Order contracts
+
+# 3. estoque + reservas (take muta antes de checar)
+put packages/api/package.json packages/api/tsconfig.json packages/api/src/inventory/stock.test.ts
+variant packages/api/src/inventory/stock.ts stock-v0
+variant packages/api/src/inventory/reservations.ts rv0
+commit 2025-04-08T15:00:00-03:00 carla feat(api): stock ledger and 15-minute reservations
+
+# 4. fix enum -> union + regra de lint
+put packages/shared/src/order.ts
+variant eslint.config.mjs eslint-v1
+commit 2025-04-09T08:30:00-03:00 carla fix(shared): node type stripping crashed on enum OrderStatus; use a string union\n\nnode --test and node src/server.ts only strip erasable syntax. Lint now forbids enum,\nnamespace and parameter properties.
+
+# 5. checkout + http
+put packages/api/src/orders packages/api/src/catalog packages/api/src/http packages/api/src/server.ts
+commit 2025-04-15T11:45:00-03:00 bruno feat(api): checkout with all-or-nothing reservations and order status rules
+
+# 6. web
+put apps/web/package.json apps/web/tsconfig.json apps/web/vite.config.ts apps/web/index.html apps/web/src/main.tsx apps/web/src/cart
+variant apps/web/src/App.tsx web-v0
+commit 2025-04-18T16:10:00-03:00 diego feat(web): storefront cart with integer-cent prices
+
+# 7. web importando a api direto -> revert
+variant apps/web/src/App.tsx web-direct
+commit 2025-04-21T10:00:00-03:00 diego feat(web): show stock by reading the inventory module directly
+revert 2025-04-21T19:30:00-03:00 ana
+
+# 8. ADR 0001 + lint de fronteira + cliente http
+put docs/adr/0001-web-talks-to-api-over-http.md eslint.config.mjs apps/web/src/api.ts apps/web/src/App.tsx
+commit 2025-04-22T09:15:00-03:00 ana docs(adr): 0001 web talks to the api over HTTP only (lint-enforced)
+
+# 9. estoque negativo em corrida (co-change stock + reservations)
+put packages/api/src/inventory/stock.ts
+variant packages/api/src/inventory/reservations.ts rv1
+commit 2025-05-29T22:40:00-03:00 carla fix(inventory): stock could go negative when two reservations raced\n\ntake() now checks before mutating; available never drops below zero.
+put docs/adr/0002-stock-reservations.md
+commit 2025-05-30T10:00:00-03:00 carla docs(adr): 0002 reservations expire in 15 minutes; stock never negative
+
+# 10. reservas expiradas não devolviam estoque (co-change reservations + stock test)
+variant packages/api/src/inventory/reservations.ts rv2
+sed packages/api/src/inventory/stock.ts s|  /\*\* Decrement atomically; checks BEFORE mutating so concurrent callers cannot overdraw. \*/|  /** Decrement atomically; checks BEFORE mutating. */|
+commit 2025-06-12T09:30:00-03:00 bruno fix(inventory): expired reservations never returned stock
+put packages/api/src/inventory/stock.ts
+commit 2025-06-12T09:41:00-03:00 bruno docs(inventory): explain why take() checks before mutating
+
+# 11. CI, fixtures de importação, alias legado, AGENTS.md
+put .github
+commit 2025-06-20T14:00:00-03:00 ana ci: lint, typecheck and node:test on every PR
+put packages/api/test
+commit 2025-07-02T11:00:00-03:00 diego test(api): legacy ERP export samples for the import job
+put packages/api/src/inventory/reservations.ts AGENTS.md
+commit 2025-07-15T17:20:00-03:00 diego chore(inventory): keep holdStock() alias for mobile app v1
+
+# 12. bump vite; README final
+put package-lock.json README.md
+commit 2025-08-01T10:00:00-03:00 bot chore(deps): bump vite 5.4.0 -> 5.4.2
+tag v2.3.0

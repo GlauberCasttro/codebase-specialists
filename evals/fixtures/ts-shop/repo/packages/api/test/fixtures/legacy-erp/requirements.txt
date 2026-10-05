@@ -1,0 +1,4 @@
+# export from the old ERP (sample data for the import job; not used by this repo)
+Django==3.2.25
+psycopg2-binary==2.9.9
+celery==5.2.7

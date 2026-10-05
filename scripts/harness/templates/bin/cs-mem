@@ -1,0 +1,6 @@
+#!/bin/sh
+# cs-mem — CLI do harness (gerado por `cs.py harness install`; funciona em qualquer plataforma).
+# Raiz: $CLAUDE_PROJECT_DIR, senão o projeto onde este arquivo está instalado (.swarm/bin/..).
+HERE=$(cd "$(dirname "$0")" 2>/dev/null && pwd -P)
+ROOT=${CLAUDE_PROJECT_DIR:-$(cd "$HERE/../.." 2>/dev/null && pwd -P)}
+exec python3 "$HERE/../harness/mem.py" --root "$ROOT" "$@"

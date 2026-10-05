@@ -1,0 +1,8 @@
+{
+  "name": "legacy-invoice-export",
+  "version": "1.2.0",
+  "private": true,
+  "scripts": { "test": "jest", "export": "node export.js" },
+  "dependencies": { "csv-stringify": "6.4.0", "moment": "2.29.4" },
+  "devDependencies": { "jest": "29.7.0" }
+}

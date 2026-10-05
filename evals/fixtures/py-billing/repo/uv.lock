@@ -1,0 +1,167 @@
+version = 1
+requires-python = ">=3.9"
+
+[[package]]
+name = "anyio"
+version = "4.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "idna" },
+    { name = "sniffio" },
+    { name = "exceptiongroup" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d0/anyio-4.4.0.tar.gz", hash = "sha256:17f69010904146890701732ade4c4de774c5323760331426f17649dd4cb64b4d" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/92/anyio-4.4.0-py3-none-any.whl", hash = "sha256:bd6a9e46b49bbbc0053aa3052df4847600237dde024db487df776ee7c2d07a43" },
+]
+
+[[package]]
+name = "certifi"
+version = "2024.8.30"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f1/certifi-2024.8.30.tar.gz", hash = "sha256:54465833c87492b78ae92b73f45f840759e500a2fa430c99ba8e5acf94134c2d" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ec/certifi-2024.8.30-py3-none-any.whl", hash = "sha256:c6b12bf1dc9b01016996040d99664c179b80e2d3a308e8f8b7a61cee48e868d4" },
+]
+
+[[package]]
+name = "coverage"
+version = "7.6.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/05/coverage-7.6.1.tar.gz", hash = "sha256:a706f5d601e9c0e0b9a51233e7e41c564258b3547d815e2ecab44fae0bd49692" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f1/coverage-7.6.1-py3-none-any.whl", hash = "sha256:4225ecb9733128afe62f6d998dd5e5e4ef19311cc6767758ee8785e365e622ed" },
+]
+
+[[package]]
+name = "exceptiongroup"
+version = "1.2.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/cf/exceptiongroup-1.2.2.tar.gz", hash = "sha256:79cdf3460a8a17a5d055c18f3995efb31e6f36be3473760fcc838d0995bd62a9" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a3/exceptiongroup-1.2.2-py3-none-any.whl", hash = "sha256:335b730d550fccfb5af14cf1cb17a140ff975fb67d98af069fd91e2cbde31276" },
+]
+
+[[package]]
+name = "h11"
+version = "0.14.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d5/h11-0.14.0.tar.gz", hash = "sha256:013ec44a4433ac557aec827ea55223a9d654561256a7c078a9c701fa3dc7e50d" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c0/h11-0.14.0-py3-none-any.whl", hash = "sha256:5167284bf1c7590cbacd5912b0468fb6eb7a36fe5db54533a40009e6cb3abcb7" },
+]
+
+[[package]]
+name = "httpcore"
+version = "1.0.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "certifi" },
+    { name = "h11" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0d/httpcore-1.0.5.tar.gz", hash = "sha256:448c7d991627b99ebbdacc555489eb60253a8f00ae4962a166a108b4ecda393b" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/43/httpcore-1.0.5-py3-none-any.whl", hash = "sha256:4eff9a76c024b987333a427acd617fdb0a691245f3d0a7a6cbc3c0ae907b7501" },
+]
+
+[[package]]
+name = "httpx"
+version = "0.27.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "certifi" },
+    { name = "httpcore" },
+    { name = "idna" },
+    { name = "sniffio" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/aa/httpx-0.27.0.tar.gz", hash = "sha256:b1de8ccf026912c30e7b39113c12163e430fa237c2cb31a20dac0b8b8f07dd6a" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c2/httpx-0.27.0-py3-none-any.whl", hash = "sha256:1ab0679d1c653c54c864a0402fdacd37bcbc4d930e8adbc67dd73dccf60ac6c1" },
+]
+
+[[package]]
+name = "idna"
+version = "3.8"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f2/idna-3.8.tar.gz", hash = "sha256:96debca887aa20fc7b3e5e57726d42fc12ae06de7d3fa5195d199b41095e27fc" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/69/idna-3.8-py3-none-any.whl", hash = "sha256:8c708c98bd4b5371083165101609fbece5ca6391bf331029cc6649607b7ecb5b" },
+]
+
+[[package]]
+name = "python-dateutil"
+version = "2.9.0.post0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "six" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9d/python_dateutil-2.9.0.post0.tar.gz", hash = "sha256:443dcf86638f7b779cfe9905c35c35e4a0603cd6c8b6e953f1ff637940ac5f25" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/24/python_dateutil-2.9.0.post0-py3-none-any.whl", hash = "sha256:d39210e7569acb491b0ad22bb14085423f406b287711a8e76151708bb2da26f7" },
+]
+
+[[package]]
+name = "ruff"
+version = "0.6.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/28/ruff-0.6.4.tar.gz", hash = "sha256:639b036908bac6af9a6df061392fdaa885aebbbe650898f7d55f7f3c02e576de" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a4/ruff-0.6.4-py3-none-any.whl", hash = "sha256:3b934e74c8354d314b6f0445ea49fd219dc24d6e162fb5004a7c2f714d1b2728" },
+]
+
+[[package]]
+name = "six"
+version = "1.16.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b8/six-1.16.0.tar.gz", hash = "sha256:8a87c7a66f63307102ea326cd034ecc3825f6861db9c0f3b003359d9d886abf6" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ff/six-1.16.0-py3-none-any.whl", hash = "sha256:408c4d942e730a45fd237f358ed05fb25466a6540fc894e20d407228b9e17c43" },
+]
+
+[[package]]
+name = "sniffio"
+version = "1.3.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/3d/sniffio-1.3.1.tar.gz", hash = "sha256:3b6c6710ad3de650e45c713830d2c8dfa3d66f0dd89a7b42a4d18ceb946b7eab" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/42/sniffio-1.3.1-py3-none-any.whl", hash = "sha256:dddef7217ceb4add4240edb70cdfa8f53946e982df9d50d40c6ba103fc7feb29" },
+]
+
+[[package]]
+name = "structlog"
+version = "24.4.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/8e/structlog-24.4.0.tar.gz", hash = "sha256:07bbc1579060e6e7dc1c186222523c8854d3eb9b20be90180ad0444efc8ec332" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a9/structlog-24.4.0-py3-none-any.whl", hash = "sha256:df282ed3c649fc564fe7eaf31b434effc6c274ed882680c634ebbc4f351daa8d" },
+]
+
+[[package]]
+name = "billing"
+version = "0.14.2"
+source = { editable = "." }
+dependencies = [
+    { name = "httpx" },
+    { name = "python-dateutil" },
+    { name = "structlog" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "coverage" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = "==0.27.0" },
+    { name = "python-dateutil", specifier = "==2.9.0.post0" },
+    { name = "structlog", specifier = "==24.4.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "coverage", specifier = "==7.6.1" },
+    { name = "ruff", specifier = "==0.6.4" },
+]
