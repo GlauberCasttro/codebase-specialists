@@ -1,0 +1,7 @@
+#!/bin/sh
+# cs-auto — piloto do modo autônomo `mandato` (M5) (gerado por `cs.py harness install`; qualquer plataforma).
+# Raiz: $CLAUDE_PROJECT_DIR, senão o projeto onde este arquivo está instalado (.swarm/bin/..).
+# Portões humanos (aprovar/emendar/resolver/parar/abortar) exigem --by <humano>; o guard bloqueia o modelo.
+HERE=$(cd "$(dirname "$0")" 2>/dev/null && pwd -P)
+ROOT=${CLAUDE_PROJECT_DIR:-$(cd "$HERE/../.." 2>/dev/null && pwd -P)}
+exec python3 "$HERE/../harness/auto.py" --root "$ROOT" "$@"

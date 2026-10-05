@@ -11,9 +11,12 @@ especialistas que conhece o código** — e prova que conhece.
   `especialista` se passar.
 - **Harness** instalado no alvo: estado em JSON5, gates, guards de escrita, memória com busca BM25 e sessão
   retomável.
-- Emite para **Claude Code, Cursor, GitHub Copilot e Codex/AGENTS.md**.
+- Emite para **Claude Code, Cursor, GitHub Copilot e Codex/AGENTS.md**; as skills de estado (`/auto-*` e demais)
+  também são geradas para Cursor, Copilot e Codex.
+- **Modo autônomo (`cs-auto`)**: mandato com orçamento e corte, máquina de estados, ramo travado, pausa e portão
+  humano (ver [`docs/11-modo-autonomo.md`](docs/11-modo-autonomo.md)).
 
-Versão: ver [`VERSION`](VERSION).
+Versão: **0.8.0** (ver [`VERSION`](VERSION)).
 
 ## Requisitos
 

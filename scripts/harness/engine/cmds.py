@@ -390,11 +390,16 @@ def knowledge_context(root, spec, ap):
 
 def _ready_event(ctx, task, d):
     import router
+    import tree
+    got = {}
 
     def extra(to, probs):
         rec = router.recommend(ctx, task, d, act="dev")
+        got["route"] = rec
         return [["set", ref("deleg", d["id"]), "route", rec]]
-    return transition(ctx, "deleg", d["id"], "ready", {}, extra)
+    ev = transition(ctx, "deleg", d["id"], "ready", {}, extra)
+    return tree.sync_m2_event(ctx.board, ev, task["id"], ctx.actor, "ready", agent=d.get("agent"),
+                              route=got.get("route"))
 
 
 def ready(root, actor, tid):
@@ -639,6 +644,10 @@ def diff_check(ctx, task, deleg, files_changed):
                   or (dd.get("updated_at") or "") >= since)]
     for f in files_changed:
         if f not in changed:
+            if ctx.board.get("mandatos"):
+                import auto  # M5: arquivo comum já entregue (idêntico) por nó ACEITO da sub-onda anterior
+                if auto.mandate_shared_file(ctx.board, task, f):
+                    continue
             P.append("declarado em files_changed mas não alterado segundo git: %s" % f)
     prot = task.get("protected_paths") or []
     for f in sorted(changed):
@@ -718,10 +727,15 @@ def retry(root, actor, tid, findings=None, decision=None):
             if human:
                 rec.update({"decision": True, "from": d["state"]})
                 ops.append(["set", ref("task", t["id"]), "block_reason", None])
+            got["route"] = router.recommend(ctx, t, nd, act="dev")
             return ops + [["append", ref("deleg", d["id"]), "findings_in", rec],
-                          ["set", ref("deleg", d["id"]), "route", router.recommend(ctx, t, nd, act="dev")],
+                          ["set", ref("deleg", d["id"]), "route", got["route"]],
                           ["set", ref("deleg", d["id"]), "route_override", None]]
-        return [transition(ctx, "deleg", d["id"], "retry", {"findings": findings}, extra)]
+        got = {}
+        ev = transition(ctx, "deleg", d["id"], "retry", {"findings": findings}, extra)
+        import tree  # modo árvore: o arquivo da task acompanha a delegação vigente (agent/route), com de/para no evento
+        return [tree.sync_m2_event(ctx.board, ev, t["id"], ctx.actor, "retry", agent=d.get("agent"),
+                                   route=got.get("route"))]
     return engine.commit(root, actor, build)
 
 
@@ -765,7 +779,9 @@ def reroute(root, actor, tid, agent, reason, allowed_paths=None, decision=None):
                 br["invariants"] = engine.required_invariants(ctx, ap)
                 ops.append(["set", ref("task", t["id"]), "briefing", br])
             return ops
-        return [transition(ctx, "deleg", d["id"], "reroute", {"reason": reason, "agent": agent, "allowed_paths": ap}, extra)]
+        ev = transition(ctx, "deleg", d["id"], "reroute", {"reason": reason, "agent": agent, "allowed_paths": ap}, extra)
+        import tree  # modo árvore: arquivo da task com o agente novo; route nulo até o `ready` da nova delegação
+        return [tree.sync_m2_event(ctx.board, ev, t["id"], ctx.actor, "reroute", agent=agent, route=None)]
     return engine.commit(root, actor, build)
 
 

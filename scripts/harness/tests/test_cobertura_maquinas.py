@@ -34,6 +34,18 @@ recusa; depois restaura. Isso está documentado no relatório como achado (guard
 
 Recusa da CLI = exit 1 (hcore.Refused); recusa do hook pre-* = exit 2 (cs-guard BLOQUEOU). Exit 2 do argparse NÃO conta.
 Este arquivo não edita o motor nem os testes existentes; só lê.
+
+EXTENSÃO M5 (rodada interna M5, mudança oficial — ver registro interno): a máquina `mandato`
+(modo autônomo) mora em `machines.machines` e entra no MESMO universo e nos MESMOS critérios. Acréscimos, sem afrouxar
+nada do que já existia:
+  * `to: "^"` (volta ao estado de onde veio) — a aresta conta quando o destino gravado é um estado da máquina;
+  * recusa INTERNA — o motor tenta uma transição por engine.transition, captura o Refused e segue por outra; conta como
+    RECUSA quando o evento vencedor grava `data.guardas_recusadas: [{transicao, guarda, problema}]` com aquela guarda;
+  * transição de CRIAÇÃO (`from: []`, ex.: mandato.propose) — não há entidade antes, o observador não vê
+    engine.evaluate: aresta = (máquina, transição, None) pelo evento gravado; guarda OK = `data.guardas` do evento;
+    guarda RECUSA = exit 1 sem recusa de outra máquina e a linha `guarda <nome>:` no stderr;
+  * cenários m5_* (m5_cenarios.py) pela CLI real `cs-auto` (engine/auto.py) e pelos hooks reais;
+  * exclusões M5 (só guardas sem caminho legal de recusa) entram apenas quando `mandato` existe em machines.json5.
 """
 import collections
 import json
@@ -56,6 +68,7 @@ import j5  # noqa: E402
 from test_faixas_aceite import agent_payload  # noqa: E402
 
 STATE = os.path.join(fixture.ENGINE, "state.py")
+AUTO = os.path.join(fixture.ENGINE, "auto.py")
 GUARD = os.path.join(fixture.ENGINE, "guard.py")
 MACHINES = os.path.join(fixture.HARNESS, "machines.json5")
 A = fixture.A
@@ -158,7 +171,7 @@ def universe(M=None):
     for mname, m in sorted(M["machines"].items()):
         for tname, t in sorted((m.get("transitions") or {}).items()):
             trans.add((mname, tname))
-            for f in t.get("from") or []:
+            for f in t.get("from") or [None]:  # from: [] = transição de CRIAÇÃO (aresta de None)
                 edges.add((mname, tname, f))
             for g in t.get("guards") or []:
                 guards.add((mname, tname, g))
@@ -289,8 +302,9 @@ class H(object):
             tdef = Ms[m]["transitions"][t]
             normal_to = r["from"] if tdef["to"] == "=" else tdef["to"]
             ev = written.get(("%s.%s" % (m, t), r["entity"]))
+            volta = tdef["to"] == "^" and r.get("to") in (Ms[m].get("states") or [])  # "^": volta à origem
             if r.get("to") is not None and ev is not None:
-                if r["to"] == normal_to and not r.get("problems"):
+                if (r["to"] == normal_to or volta) and not r.get("problems"):
                     _mark("edge", (m, t, r["from"]), self.name)
                     for g, p in r["guards"].items():
                         if not p:
@@ -306,6 +320,29 @@ class H(object):
                 for g, p in r["guards"].items():
                     if p and any(x[:80] in err for x in p):
                         _mark("guard_no", (m, t, g), self.name)
+            if r.get("to") is None:
+                # recusa INTERNA (M5): Refused capturado pelo motor e gravado no evento vencedor
+                rec = [x for e in events if str(e.get("type") or "").startswith(m + ".")
+                       for x in ((e.get("data") or {}).get("guardas_recusadas") or []) if isinstance(x, dict)]
+                for g, p in r["guards"].items():
+                    if p and any(x.get("transicao") == t and x.get("guarda") == g for x in rec):
+                        _mark("guard_no", (m, t, g), self.name)
+        # transições de CRIAÇÃO (from: []): evento gravado + data.guardas; recusa pelo stderr `guarda <nome>:`
+        refused_rec = any(r.get("to") is None and not r.get("error") for r in recs)
+        for mname, mdef in Ms.items():
+            for tname, tdef in (mdef.get("transitions") or {}).items():
+                if tdef.get("from"):
+                    continue
+                for e in events:
+                    if e.get("type") == "%s.%s" % (mname, tname):
+                        _mark("edge", (mname, tname, None), self.name)
+                        for g in (e.get("data") or {}).get("guardas") or []:
+                            if g in (tdef.get("guards") or []):
+                                _mark("guard_ok", (mname, tname, g), self.name)
+                if code == 1 and not is_hook and not refused_rec:
+                    for g in tdef.get("guards") or []:
+                        if ("guarda %s:" % g) in err:
+                            _mark("guard_no", (mname, tname, g), self.name)
         # replay das ops de estado: pares da task (máquina por pares) e ATALHOS — mudança de estado de máquina com
         # transições nomeadas gravada sem passar por engine.evaluate (guardas não avaliadas). Informativo.
         st = dict(st0)
@@ -340,9 +377,16 @@ class H(object):
         a = ["--root", root] + (["--actor", actor] if actor else []) + list(args)
         return self._run(root, STATE, a)
 
-    def hook(self, root, mode, payload):
-        return self._run(root, GUARD, [mode], stdin=json.dumps(payload).encode("utf-8"),
-                         env_extra={"CLAUDE_PROJECT_DIR": root})
+    def hook(self, root, mode, payload, env_extra=None):
+        e = {"CLAUDE_PROJECT_DIR": root}
+        e.update(env_extra or {})
+        return self._run(root, GUARD, [mode], stdin=json.dumps(payload).encode("utf-8"), env_extra=e)
+
+    def auto(self, root, *args, **kw):
+        """`cs-auto` (piloto do mandato M5) pela CLI real, observada como as demais."""
+        actor = kw.get("actor")
+        a = ["--root", root] + (["--actor", actor] if actor else []) + list(args)
+        return self._run(root, AUTO, a, env_extra=kw.get("env_extra"))
 
     # ---------------------------------------------------------------- asserções
     def ok(self, root, *args, **kw):
@@ -1055,8 +1099,23 @@ def _mk(name):
     return t
 
 
+import m5_cenarios  # noqa: E402  (extensão M5: cenários do mandato pela CLI real)
+
+for _fn in m5_cenarios.CENARIOS:
+    scenario(_fn)
+if "mandato" in (load_machines().get("machines") or {}):
+    EXCLUSOES.update(m5_cenarios.EXCLUSOES_M5)
+
 for _n in SCENARIOS:
     setattr(TestCenarios, "test_%s" % _n, _mk(_n))
+
+
+class TestM5Presente(unittest.TestCase):
+    """O modo autônomo novo (M5 `mandato`) mora em machines.machines: entra na vivacidade e nesta cobertura."""
+
+    def test_mandato_declarado_em_machines(self):
+        self.assertIn("mandato", load_machines().get("machines") or {},
+                      "machines.json5 → machines.mandato ausente (desenho do modo autônomo §5)")
 
 
 def _excl(key):
@@ -1070,14 +1129,14 @@ def coverage_report():
     trans_hit = {(m, t) for (m, t, f) in edges_hit}
     g_ok = {g for g in guards if g in MATRIX["guard_ok"]}
     g_no = {g for g in guards if g in MATRIX["guard_no"]}
-    miss_edges = sorted(e for e in edges - edges_hit if not _excl(("aresta",) + e))
+    miss_edges = sorted((e for e in edges - edges_hit if not _excl(("aresta",) + e)), key=str)
     miss_trans = sorted(t for t in trans - trans_hit
                         if not all(_excl(("aresta",) + e) for e in edges if e[:2] == t))
     miss_gok = sorted(g for g in guards - g_ok if not _excl(("guarda_ok",) + g))
     miss_gno = sorted(g for g in guards - g_no if not _excl(("guarda_recusa",) + g))
     stale = sorted(k for k in EXCLUSOES if (k[0] == "aresta" and k[1:] not in edges) or
                    (k[0] != "aresta" and k[1:] not in guards))
-    extra = sorted(e for e in ok_edges if e not in edges)  # observado mas fora de machines.json5 (não deveria existir)
+    extra = sorted((e for e in ok_edges if e not in edges), key=str)  # observado mas fora de machines.json5 (não deveria existir)
     return {"trans": (len(trans_hit), len(trans)), "edges": (len(edges_hit), len(edges)), "g_ok": (len(g_ok), len(guards)),
             "g_no": (len(g_no), len(guards)), "miss_edges": miss_edges, "miss_trans": miss_trans, "miss_gok": miss_gok,
             "miss_gno": miss_gno, "stale": stale, "extra": extra, "excl": sorted(EXCLUSOES)}
@@ -1126,13 +1185,13 @@ class TestZZCobertura(unittest.TestCase):
                  "  guardas vistas RECUSA  : %d/%d" % rep["g_no"],
                  "  cenários               : %d (%d falharam)  [%.0fs]" % (len(RESULTS), len(failed), time.time() - t0),
                  "  exclusões              : %d" % len(rep["excl"])]
-        lines += ["    - %s: %s" % ("/".join(k), EXCLUSOES[k][:110]) for k in rep["excl"]]
+        lines += ["    - %s: %s" % ("/".join(str(y) for y in k), EXCLUSOES[k][:110]) for k in rep["excl"]]
         for title, key in (("transição nunca exercitada", "miss_trans"), ("aresta nunca exercitada", "miss_edges"),
                            ("guarda nunca vista OK", "miss_gok"), ("guarda nunca vista RECUSANDO", "miss_gno"),
                            ("exclusão obsoleta (não existe mais em machines.json5)", "stale"),
                            ("aresta observada FORA de machines.json5", "extra")):
             for x in rep[key]:
-                lines.append("  FALTA %s: %s" % (title, "/".join(x)))
+                lines.append("  FALTA %s: %s" % (title, "/".join(str(y) for y in x)))
         for k, who in sorted(MATRIX["atalho"].items()):
             lines.append("  ATALHO (estado mudou sem avaliar guardas): %s %s via evento %s [%s]" % (k[0], k[1], k[2], who))
         for n in failed:

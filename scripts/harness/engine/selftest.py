@@ -286,10 +286,13 @@ def run(root, drift=False):
     res["results"].append({"probe": "harness único (nenhum outro harness nem resíduo no alvo)", "ok": not sig,
                            "msg": "; ".join("%s (%s)" % x for x in sig[:5])})
     res["ok"] = all(r["ok"] for r in res["results"])
-    try:
-        hcore.write_json5(hcore.state_paths(root)["selftest"], res, "resultado do selftest (G6) — escrito por selftest.py")
-    except OSError:
-        pass
+    # U-4: sem a pasta de estado (alvo legado ou não instalado) o resultado NÃO cria .swarm/ do nada (resíduo que
+    # bloquearia o `cs.py upgrade`): só imprime.
+    if os.path.isdir(os.path.join(root, hcore.STATE_DIR)):
+        try:
+            hcore.write_json5(hcore.state_paths(root)["selftest"], res, "resultado do selftest (G6) — escrito por selftest.py")
+        except OSError:
+            pass
     return res
 
 

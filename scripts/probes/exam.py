@@ -174,7 +174,7 @@ def _copy_pointer(target, agent):
 
 def remove_exam_copy(target, agent):
     """Apaga a cópia isolada (`<out>/repo/`, clone com `.git` próprio) do exame de `agent` logo após o
-    `probes check` dele — 15 clones acumulados em `.swarm/tmp/exam/` somaram 86 MB num repositório-piloto (projeto-legado)
+    `probes check` dele — 15 clones acumulados em `.swarm/tmp/exam/` somaram 86 MB no repositório-piloto (projeto-legado)
     (2026-10-03). Só apaga o que `exam-pack --out` criou: `<out>/exam.json5` do MESMO agente e `<out>/repo`, nunca
     o alvo nem um ancestral dele. → caminho apagado ou None. Nunca levanta (a pontuação já foi gravada)."""
     import shutil

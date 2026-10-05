@@ -101,10 +101,12 @@ def needs_shell(cmd):
 
 
 def run_cmd(root, cmd, timeout, shell=None):
-    """Executa sem shell quando possível. Registra exit, duração, sha da saída (bytes) e do comando."""
-    if shell is None:
-        shell = needs_shell(cmd)
-    argv = ["/bin/sh", "-c", cmd] if shell else shlex.split(cmd)
+    """Executa SEMPRE via shell (/bin/sh -c) no cwd do alvo (H-1): atribuição de variável (`PYTHONPATH=src python3 …`),
+    `&&`, aspas e pipes funcionam e o exit code REAL é propagado (127 só quando o programa de fato não existe).
+    `shell` fica na assinatura por compatibilidade; o comando nunca é quebrado por shlex/execve.
+    Registra exit, duração, sha da saída (bytes) e do comando."""
+    shell = True
+    argv = ["/bin/sh", "-c", cmd]
     t0 = time.time()
     timed_out = False
     try:
@@ -372,7 +374,11 @@ def _nonempty(v):
 
 @guard("reason_present")
 def g_reason(ctx, kind, ent, a):
-    return [] if _nonempty(a.get("reason")) else ["--reason é obrigatório (motivo gravado no evento)"]
+    if _nonempty(a.get("reason")):
+        return []
+    if kind == "mandato":  # M5: recusa nomeia a guarda (stderr `guarda <nome>: <problema>`)
+        return ["guarda reason_present: --reason é obrigatório (motivo gravado no evento do mandato)"]
+    return ["--reason é obrigatório (motivo gravado no evento)"]
 
 
 @guard("note_present")
@@ -519,6 +525,9 @@ def g_risk(ctx, kind, ent, a):
 
 @guard("no_delegation_in_flight")
 def g_no_flight(ctx, kind, ent, a):
+    if kind == "mandato":
+        import auto
+        return auto.g_no_flight(ctx, kind, ent, a)
     fl = [d["id"] for t in session_tasks(ctx, ent["id"]) for d in t.get("delegations") or []
           if d["state"] in ("DISPATCHED", "RETURNED", "VERIFIED", "REVIEWED", "BRIEFED")]
     return ["delegações ainda abertas: %s" % ", ".join(fl)] if fl else []
@@ -746,7 +755,11 @@ def g_order(ctx, kind, ent, a):
 @guard("budget_available")
 def g_budget(ctx, kind, ent, a):
     import autonomy
-    return autonomy.budget_problems(ctx)
+    P = autonomy.budget_problems(ctx)
+    if ctx.board.get("mandatos"):
+        import auto  # M5: nó do mandato só despacha em RUNNING, fora de ramo congelado e abaixo do corte de 80%
+        P += auto.dispatch_problems(ctx, ent)
+    return P
 
 
 @guard("model_declared")
@@ -1085,6 +1098,9 @@ def g_findings_att(ctx, kind, ent, a):
 
 @guard("new_agent_valid")
 def g_new_agent(ctx, kind, ent, a):
+    if kind == "mandato":
+        import auto
+        return auto.g_new_agent(ctx, kind, ent, a)
     na = a.get("agent")
     task = hcore.task_of_deleg(ctx.board, ent["id"])
     if not na or not hcore.team_agent(ctx.team, na):
@@ -1295,6 +1311,30 @@ def g_story_dod(ctx, kind, ent, a):
     return ["vermelho: %s exit=%s" % (r["cmd"], r["exit_code"]) for r in runs if r["exit_code"] != 0]
 
 
+# ---- M5 mandato (modo autônomo): guardas registradas AQUI (engine.GUARDS, decorador @guard) — a implementação mora
+# em auto.py (carregado sob demanda, sem import circular). Guardas compartilhadas com outras máquinas
+# (reason_present, new_agent_valid, no_delegation_in_flight) despacham por `kind == "mandato"` na própria função.
+M5_GUARDS = ("target_exists", "class_allowed", "spec_present", "acceptance_executable", "acceptance_red", "no_open_mandate",
+             "not_trivial", "by_human", "dag_acyclic", "dag_covers_acceptance", "nodes_in_territory", "nodes_fit_horizon",
+             "plan_within_budget", "waves_computed", "lessons_consulted", "regression_green", "pending_nodes",
+             "replan_trigger", "replans_left", "acceptance_all_green", "final_review_pass", "next_feature_queued",
+             "replan_cites_evidence", "accepted_nodes_untouched", "plan_diff_recorded", "escalation_condition",
+             "package_recorded", "choice_in_package", "decision_present", "in_flight_marked", "stamp_matches",
+             "wrap_trigger", "report_generated", "open_items_returned")
+
+
+def _m5_guard(name):
+    def fn(ctx, kind, ent, a):
+        import auto
+        return auto.M5_GUARD_IMPL[name](ctx, kind, ent, a)
+    fn.__name__ = "g_m5_" + name
+    return fn
+
+
+for _g in M5_GUARDS:
+    guard(_g)(_m5_guard(_g))
+
+
 # ================================================================ transição + commit
 class Event(object):
     def __init__(self, typ, entity, ops, data=None):
@@ -1330,6 +1370,11 @@ def evaluate(ctx, kind, ent, tname, a):
             continue
         probs.extend(fn(ctx, kind, ent, a))
     to = t["to"] if t["to"] != "=" else cur
+    if to == "^":  # volta ao estado de onde veio (gravado em `anterior` ao entrar na espera/pausa)
+        to = ent.get("anterior")
+        if not to:
+            raise Refused("%s %s: transição %r volta à origem, mas a origem não foi gravada (anterior ausente)" % (
+                mname, ent["id"], tname))
     if probs:
         if t.get("on_guard_fail"):
             return t["on_guard_fail"], probs
@@ -1473,6 +1518,9 @@ def commit(root, actor, build, post=True):
             if p.get("tree"):
                 import tree  # materializa as pastas (backlog/state/archive) e o INDEX.md a partir da projeção
                 tree.materialize(root, tree_before or {}, board)
+            if any(str(r["type"]).startswith("mandato.") for r in written):
+                import auto  # visão do mandato (M5): mandato.json5, plano.vN.json5, pacotes de escalada, relatório
+                auto.materialize(root, board)
     if post and written:
         after_commit(root, board, written)
     return ctx, written

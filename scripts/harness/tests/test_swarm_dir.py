@@ -1,4 +1,4 @@
-"""ORÁCULO campanha-iter9 — pasta `.swarm/` + harness único (plano da rodada, "P1 da rodada 1 — renomear
+"""ORÁCULO rodada interna 9 — pasta `.swarm/` + harness único (plano da rodada, "P1 da rodada 1 — renomear
 a pasta gerada de `.specialists/` para `.swarm/`"; decisão de produto C4: "um harness não pode existir junto com o
 outro"). Cenários SWARM-DIR-1..4 + constante única + check de harness único. Contrato fixado em ESPEC.md.
 
@@ -414,7 +414,10 @@ class TestSwarmDir1InitNovo(unittest.TestCase):
             p = os.path.join(sw, "bin", b)
             self.assertTrue(os.path.isfile(p) and os.access(p, os.X_OK), "wrapper ausente: .swarm/bin/" + b)
         self.assertTrue(os.path.isfile(os.path.join(sw, "run.json5")), ".swarm/run.json5 (cs.py init)")
-        self.assertTrue(os.path.isfile(os.path.join(sw, "state", "board.json5")))
+        for z in ("backlog", "state", "archive"):  # estado nasce em ÁRVORE (rodada interna 13), sem board plano
+            self.assertTrue(os.path.isdir(os.path.join(sw, z)), "zona da árvore ausente: .swarm/" + z)
+        self.assertTrue(os.path.isfile(os.path.join(sw, "events.jsonl")), ".swarm/events.jsonl (cadeia do estado)")
+        self.assertFalse(os.path.lexists(os.path.join(sw, "state", "board.json5")), "board plano legado criado")
         self.assertTrue(os.path.isfile(os.path.join(sw, "harness", "guard.py")))
 
     def test_nenhum_nome_legado_no_alvo(self):

@@ -115,3 +115,10 @@ Correções do mesmo upgrade: **U-1** (alvo pausado antes de `validate.5`): o se
 ainda não foi instalado, nada é restaurado e `current_stage` e o status das etapas ficam iguais ao legado;
 **U-2** (backup): `.git` aninhado e `tmp/` ficam fora do backup, listados em `excluded` no `manifest.json5`, e o
 backup do `pre-commit` é guardado sob outro nome, de modo que `cs.py sanitize --check` passa depois.
+
+## Migração 0.8.0: modo autônomo
+
+A entrada `to: "0.8.0"` do catálogo declara só `harness` e `emit`. O `harness` reinstala motor, guards e wrappers
+(passa a incluir o `cs-auto` e o hook PreCompact, que pausa um mandato em andamento) e o `emit` reemite os artefatos,
+incluindo as 9 skills `/auto-*`. Nada de entrevista, roster, cartões, memória ou board é refeito; sem mandato
+aberto o PreCompact não faz nada. Veja [11-modo-autonomo.md](11-modo-autonomo.md).

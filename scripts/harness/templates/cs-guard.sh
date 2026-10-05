@@ -7,6 +7,7 @@ MODE="$1"
 PY=$(command -v python3 2>/dev/null)
 if [ -z "$PY" ] || [ ! -f "$ENGINE" ]; then
   case "$MODE" in
+    pre-compact) exit 0 ;;
     pre-*) echo "cs-guard: python3 ou motor ausente ($ENGINE) — bloqueado (fail-closed)" >&2; exit 2 ;;
     *) exit 0 ;;
   esac

@@ -26,13 +26,20 @@ CLAUDE_SKILL_KEYS = {"name", "description", "when_to_use", "argument-hint", "arg
                      "license", "compatibility"}
 CURSOR_RULE_KEYS = {"description", "globs", "alwaysApply"}
 CURSOR_AGENT_KEYS = {"name", "description", "model", "readonly", "is_background"}
+CURSOR_SKILL_KEYS = {"name", "description", "disable-model-invocation", "license", "compatibility", "metadata"}
+COPILOT_SKILL_KEYS = {"name", "description", "argument-hint", "user-invokable", "disable-model-invocation",
+                      "license", "compatibility", "metadata"}
+CODEX_SKILL_KEYS = {"name", "description", "license", "compatibility", "metadata"}
+PORTABLE_SKILL_KEYS = {"cursor.skill": CURSOR_SKILL_KEYS, "copilot.skill": COPILOT_SKILL_KEYS,
+                       "codex.skill": CODEX_SKILL_KEYS}
 COPILOT_AGENT_KEYS = {"name", "description", "target", "tools", "model", "disable-model-invocation",
                       "user-invocable", "mcp-servers", "metadata"}
 CODEX_SANDBOX = {"read-only", "workspace-write"}
 CODEX_MAX_BYTES = 32 * 1024
 COPILOT_MAX_CHARS = 30000
 GEN_DIRS = (".claude/agents", ".claude/rules", ".claude/skills", ".cursor/rules", ".cursor/agents",
-            ".github/agents", ".github/instructions", ".codex/agents", ".swarm/playbooks",
+            ".cursor/skills", ".github/agents", ".github/instructions", ".github/skills", ".codex/agents",
+            ".agents/skills", ".swarm/playbooks",
             ".swarm/territories", ".swarm/knowledge")
 
 
@@ -179,6 +186,33 @@ def check_claude_skill(rep, art, text, team, agent):
     return body
 
 
+def check_portable_skill(rep, art, text, team, agent):
+    """Skill de estado/mandato em Cursor (.cursor/skills), Copilot (.github/skills) ou Codex (.agents/skills)."""
+    fm, body = _fm(rep, art.path, text)
+    if fm is None:
+        return None
+    _unknown(rep, art.path, fm, PORTABLE_SKILL_KEYS[art.kind])
+    dirname = Path(art.path).parent.name
+    if fm.get("name") != dirname:
+        rep.fail(art.path, "name %r difere do diretório %r" % (fm.get("name"), dirname))
+    _desc(rep, art.path, fm, limit=1024)
+    human = dirname in P.STATE_SKILLS_HUMAN
+    dmi = fm.get("disable-model-invocation")
+    if art.kind == "codex.skill":
+        says = P.HUMAN_ONLY_TEXT.casefold() in body.casefold()
+        if human and not says:
+            rep.fail(art.path, "skill humana no Codex (sem disable-model-invocation) deve dizer '%s'"
+                     % P.HUMAN_ONLY_TEXT)
+        if not human and says:
+            rep.fail(art.path, "skill de consulta/criação não pode dizer '%s'" % P.HUMAN_ONLY_TEXT)
+    else:
+        if human and dmi is not True:
+            rep.fail(art.path, "skill que muda estado deve ter disable-model-invocation: true")
+        if not human and dmi is True:
+            rep.fail(art.path, "skill de consulta/criação deve ser invocável pelo modelo")
+    return body
+
+
 def check_plain(rep, art, text, team, agent):
     return _strip_marker(text)
 
@@ -297,6 +331,7 @@ CHECKERS = {
     "cursor.rule.territory": check_cursor_rule, "cursor.agent": check_cursor_agent,
     "copilot.instructions.path": check_copilot_path, "copilot.agent": check_copilot_agent,
     "codex.agent": check_codex_agent,
+    "cursor.skill": check_portable_skill, "copilot.skill": check_portable_skill, "codex.skill": check_portable_skill,
     "shared.playbooks": check_json5, "shared.territory": check_json5,
     "maps.tree": check_json5, "maps.stack": check_json5, "maps.s5-memoria": check_json5,
     "maps.invariants": check_json5,
@@ -373,7 +408,7 @@ def _orphans(rep, root, arts, platforms):
     expected = {a.path for a in arts}
     governed = P.manifest_platforms(platforms)
     prefixes = {"claude-code": (".claude/",), "cursor": (".cursor/",), "copilot": (".github/",),
-                "codex": (".codex/",), P.SHARED: (".swarm/playbooks", ".swarm/territories"),
+                "codex": (".codex/", ".agents/"), P.SHARED: (".swarm/playbooks", ".swarm/territories"),
                 P.MAPS: (".swarm/knowledge",)}
     roots = [d for d in GEN_DIRS if any(d.startswith(p) for g in governed for p in prefixes.get(g, ()))]
     for d in roots:

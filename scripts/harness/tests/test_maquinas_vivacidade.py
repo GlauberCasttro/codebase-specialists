@@ -7,6 +7,9 @@ Regras:
 2. Estados que significam "esperando decisão humana" NUNCA são terminais e têm saída para retomar, trocar de agente
    e descartar: delegação ESCALATED e ABSTAINED.
 3. Todo estado é alcançável a partir do inicial.
+4. (M5, rodada interna M5) O modo autônomo `mandato` mora em `machines` e cumpre 1–3; `to: "^"` (volta ao estado de onde
+   veio) é expandido para os estados que levam à origem. AWAITING_HUMAN e PAUSED do mandato nunca são terminais;
+   AWAITING_HUMAN sai para retomar (RUNNING), emendar (PROPOSED), encerrar (WRAPPING_UP) e abortar (ABORTED).
 """
 import os
 import sys
@@ -19,6 +22,9 @@ from cslib import json5io  # noqa: E402
 
 MACHINES = os.path.join(SCRIPTS, "harness", "machines.json5")
 AGUARDANDO_HUMANO = {"delegation": {"ESCALATED", "ABSTAINED"}}
+# M5: estados de espera do mandato e as saídas mínimas da espera humana
+MANDATO_ESPERA = {"AWAITING_HUMAN", "PAUSED"}
+MANDATO_SAIDAS_HUMANAS = {"RUNNING", "PROPOSED", "WRAPPING_UP", "ABORTED"}
 # máquinas cujos estados são escritos por outra máquina (sem transições próprias) ou estado ocioso legítimo
 CONDUZIDAS = {"task"}
 OCIOSOS = {("session", "IDLE")}
@@ -31,13 +37,24 @@ def load():
 def edges(mv):
     tr = mv.get("transitions", {})
     items = tr.items() if isinstance(tr, dict) else [(t.get("name"), t) for t in tr]
-    out = []
+    raw = []
     for name, t in items:
         if not isinstance(t, dict):
             continue
         fr = t.get("from")
         for f in (fr if isinstance(fr, list) else [fr]):
-            out.append((name, f, f if t.get("to") == "=" else t.get("to")))
+            raw.append((name, f, t.get("to")))
+    into = {}  # estado → origens das transições que levam a ele (para expandir "^")
+    for name, f, to in raw:
+        if to not in ("=", "^"):
+            into.setdefault(to, set()).add(f)
+    out = []
+    for name, f, to in raw:
+        if to == "^":
+            for prev in sorted(x for x in into.get(f, ()) if x is not None):
+                out.append((name, f, prev))
+        else:
+            out.append((name, f, f if to == "=" else to))
     return out
 
 
@@ -81,6 +98,21 @@ class VivacidadeTest(unittest.TestCase):
                         stack.append(to)
             inalcancaveis = set(mv.get("states", [])) - seen
             self.assertFalse(inalcancaveis, "%s: estados inalcançáveis %s" % (name, sorted(inalcancaveis)))
+
+
+    def test_mandato_m5_presente_e_espera_nunca_tranca(self):
+        machines = load()
+        self.assertIn("mandato", machines, "M5 `mandato` mora em machines.machines (coberta por este oráculo)")
+        mv = machines["mandato"]
+        terminal = set(mv.get("terminal") or [])
+        es = edges(mv)
+        for s in MANDATO_ESPERA:
+            self.assertIn(s, mv.get("states") or [], "mandato.%s declarado" % s)
+            self.assertNotIn(s, terminal, "mandato.%s nunca é terminal" % s)
+            self.assertTrue({to for _, f, to in es if f == s}, "mandato.%s sem saída (trancado)" % s)
+        destinos = {to for _, f, to in es if f == "AWAITING_HUMAN"}
+        faltam = MANDATO_SAIDAS_HUMANAS - destinos
+        self.assertFalse(faltam, "mandato.AWAITING_HUMAN sem saída para %s" % sorted(faltam))
 
 
 if __name__ == "__main__":

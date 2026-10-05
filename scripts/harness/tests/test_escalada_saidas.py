@@ -120,7 +120,7 @@ class TestEscalada(Base):
 
     def test_escalate_reroute_troca_de_agente(self):
         self.dispatched()
-        self.ok("escalate", "--task", "T-1", "--reason", "é território de members")
+        self.ok("escalate", "--task", "T-1", "--reason", "é território de users")
         self.ok("reroute", "--task", "T-1", "--agent", "dev-members", "--allowed-path", "src/members/discount.py",
                 "--decision", "mover para dev-members")
         t = task(self.root)

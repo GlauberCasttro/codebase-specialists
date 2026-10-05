@@ -566,6 +566,8 @@ def task_dor(tv, it, run=True):
         fx = it.get("fixes")
         if not fx:
             P.append("FIX sem --fixes <id do BUG> (o que esta correção conserta)")
+        elif it.get("mandato") and str(fx) == "%s:regressao" % it["mandato"]:
+            pass  # M5: nó FIX de replano de regressão — o motor preenche `fixes` com a regressão do mandato (decisão 17)
         else:
             bug = tv.get(fx)
             if bug is None or bug.get("kind") != "task" or bug.get("tipo") != "BUG":
@@ -594,6 +596,52 @@ def feature_dor(tv, it, run=True):
             P.append("o teste de aceite já passa hoje (%s exit 0): feature sem aceite vermelho não tem o que entregar"
                      % it["aceite"])
     return P
+
+
+# ================================================================ sincronia M2 → arquivo da task (reroute/retry/ready)
+SYNC_FIELDS = ("agent", "route")
+
+
+def _route_view(r):
+    return {"model": r.get("model"), "band": r.get("band")} if isinstance(r, dict) else None
+
+
+def item_of_m2(board, m2_id):
+    """Item de task da árvore cuja task M2 é `m2_id` (None fora do modo árvore ou task sem item)."""
+    for it in (board.get("tree") or {}).values():
+        if it.get("kind") == "task" and it.get("m2") == m2_id:
+            return it
+    return None
+
+
+def sync_m2_event(board, ev, m2_id, actor, acao, **fields):
+    """O comando M2 (reroute/retry/ready) mudou `agent`/`route` da delegação: o MESMO evento grava o arquivo da task
+    (op tput, motor = escritor único) e registra `data.de`/`data.para` (convenção de `arvore.move`), em objetos.
+    Sem item de árvore (board plano) não faz nada; sem mudança, só o de/para (o arquivo já está coerente).
+    Devolve o evento."""
+    it = item_of_m2(board, m2_id)
+    if it is None:
+        return ev
+    new = copy.deepcopy(it)
+    de, para = {}, {}
+    for k in SYNC_FIELDS:
+        if k not in fields:
+            continue
+        val = _route_view(fields[k]) if k == "route" else fields[k]
+        de[k] = _route_view(it.get(k)) if k == "route" else it.get(k)
+        para[k] = val
+        if val is None:
+            new.pop(k, None)
+        else:
+            new[k] = val
+    if new != it:  # sem mudança (ex.: retomada no mesmo tier) o arquivo fica; o evento registra de/para assim mesmo
+        h = {"at": hcore.now_iso(), "acao": acao, "by": actor}
+        h.update({"de": de, "para": para})
+        new.setdefault("historico", []).append(h)
+        ev.ops.append(["tput", it["id"], None, new])
+    ev.data = dict(ev.data or {})
+    ev.data.update({"arvore": it["id"], "m2": m2_id, "de": de, "para": para})
+    return ev
 
 
 # ================================================================ start
@@ -654,6 +702,11 @@ def start_task(tv, it):
     st, _ = tv.m2_status(it)
     if st is not None and not (st in M2_DONE and it.get("reaberta")):
         raise Refused("%s já iniciada (M2 %s): siga o pipeline (cs-state board)" % (it["id"], st))
+    if not it.get("mandato") and tv.ctx.board.get("mandatos"):
+        import auto  # M5: task fora do mandato cujo allowed_path colide com o DAG ativo não inicia
+        clash = auto.dag_collision(tv, it)
+        if clash:
+            raise Refused("%s: %s" % (it["id"], clash))
     P = task_dor(tv, it, run=True)
     if P:
         raise Refused(["DoR de %s (%s) não atendido:" % (it["id"], it.get("tipo"))] + P,

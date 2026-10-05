@@ -125,6 +125,11 @@ def decide_write(root, board, cfg, actor, path, base=None):
         fw = autonomy.forbidden_write(root, rel)
         if fw:
             return fw
+        if board is not None and board.get("mandatos"):
+            import auto  # M5: aceite/spec assinados pelo humano não mudam durante o mandato (tentativa → escalada global)
+            pw = auto.protected_write(root, board, rel)
+            if pw:
+                return pw
     if actor["main"]:
         for rel in rels:
             if not hcore.matches_any(rel, cfg.get("lead_write_allow") or []):
@@ -153,7 +158,11 @@ def decide_write(root, board, cfg, actor, path, base=None):
             import engine
             ctx = engine.Ctx(root, board)
             s = ctx.session_of(task)
-            if not (s and s.get("class") == "risco" and s.get("confirmation")):
+            released = False
+            if board.get("mandatos"):
+                import auto  # M5: nó congelado liberado por decisão humana (resolve retomar/trocar-agente)
+                released = auto.frozen_released(board, task)
+            if not (s and s.get("class") == "risco" and s.get("confirmation")) and not released:
                 return "%s é área congelada: exige classe risco com confirmação do usuário" % rel
     return None
 
@@ -263,6 +272,11 @@ def harness_call_problem(root, board, team, actor, call):
 
 
 def decide_bash(root, board, cfg, team, actor, command, cwd):
+    import auto
+    act = auto.human_act_in_command(command)
+    if act:
+        return ("cs-auto %s é ato HUMANO (portão humano do mandato M5): peça ao humano que rode no terminal dele — o "
+                "modelo (principal ou subagente) nunca aprova, emenda, resolve, para nem aborta o mandato" % act)
     s = bashscan.scan(command, cwd or root, root, harness_paths(root))
     if s.unanalyzable:
         return "comando não analisável (%s) — divida em comandos simples, sem $(...), heredoc ou -c" % "; ".join(s.unanalyzable[:3])
@@ -465,6 +479,12 @@ def mode_subagent_stop(root, payload):
 
 
 def mode_stop(root, payload):
+    import auto
+    r = auto.stop_decision(root, payload)  # M5: mandato aberto conduz o Stop (anti-loop pausa, nunca escala)
+    if r is not None:
+        if r[0]:
+            out_json({"decision": "block", "reason": r[1]})
+        return
     import autonomy
     block, reason = autonomy.stop_decision(root, payload)
     if block:
@@ -481,6 +501,13 @@ def mode_user_prompt(root, payload):
 
 def mode_session_start(root, payload):
     parts = []
+    try:
+        import auto  # M5: PAUSED → resume; injeta objetivo + próximo comando `cs-auto …`
+        txt = auto.session_start(root)
+        if txt:
+            parts.append(txt)
+    except Exception as e:
+        parts.append("(cs-auto indisponível: %s)" % str(e)[:120])
     orch = os.path.join(root, ".claude", "orchestrator.md")
     if os.path.isfile(orch):
         with open(orch, "r", encoding="utf-8") as f:
@@ -492,6 +519,14 @@ def mode_session_start(root, payload):
     except Exception as e:
         parts.append("(cs-session load indisponível: %s)" % str(e)[:120])
     out_json({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "\n\n".join(parts)[:10000]}})
+
+
+def mode_pre_compact(root, payload):
+    """PreCompact: pausa o mandato (estado de trabalho) + checkpoint de sessão; sem mandato = nada (exit 0)."""
+    import auto
+    mid = auto.pre_compact(root)
+    if mid:
+        ledger(root, {"kind": "pre_compact", "mandato": mid, "trigger": payload.get("trigger")})
 
 
 def mode_post_edit(root, payload):
@@ -616,7 +651,8 @@ def main(argv=None):
             return 2
         return 0
     handlers = {"subagent-start": mode_subagent_start, "subagent-stop": mode_subagent_stop, "stop": mode_stop,
-                "user-prompt": mode_user_prompt, "session-start": mode_session_start, "post-edit": mode_post_edit}
+                "user-prompt": mode_user_prompt, "session-start": mode_session_start, "post-edit": mode_post_edit,
+                "pre-compact": mode_pre_compact}
     h = handlers.get(mode)
     if not h:
         sys.stderr.write("cs-guard: modo desconhecido %r\n" % mode)

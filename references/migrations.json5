@@ -19,7 +19,7 @@
 // Nunca refeito num upgrade (salvo migração explícita): entrevista, roster aprovado, cartões aprovados,
 // memória de lições, board/eventos.
 {
- version: "0.7.0",
+ version: "0.8.0",
  migrations: [
   {
    to: "0.5.0",
@@ -40,10 +40,18 @@
   },
   {
    to: "0.7.0",
-   why: "o estado do harness passa de board plano para árvore de pastas (backlog/ state/ archive/, campanha-iter10): reinstala o motor, migra o board legado com `cs-state migrate state-tree` (idempotente, com backup; histórico de eventos preservado byte a byte) e reemite os artefatos (skills de board/new/close/reopen/park/move), sem refazer entrevista, roster, cartões nem memória",
+   why: "o estado do harness passa de board plano para árvore de pastas (backlog/ state/ archive/, rodada interna 10): reinstala o motor, migra o board legado com `cs-state migrate state-tree` (idempotente, com backup; histórico de eventos preservado byte a byte) e reemite os artefatos (skills de board/new/close/reopen/park/move), sem refazer entrevista, roster, cartões nem memória",
    actions: [
     {kind: "harness"},
     {kind: "state-tree"},
+    {kind: "emit"}
+   ]
+  },
+  {
+   to: "0.8.0",
+   why: "modo autônomo (mandato M5): reinstala o motor, os guards, os wrappers (inclui `cs-auto` e o hook PreCompact que pausa o mandato) e reemite os artefatos (inclui as 9 skills `/auto-*`), sem refazer entrevista, roster, cartões, memória nem board",
+   actions: [
+    {kind: "harness"},
     {kind: "emit"}
    ]
   }

@@ -1,5 +1,5 @@
 """ORÁCULO — D-1-02 (despacho só de estado) e D-1-03 (verify olhando a árvore inteira), relatados na cobaia
-projeto-legado (repositório-piloto).
+repositório-piloto (projeto-legado).
 
 Tudo pelo comportamento OBSERVÁVEL: CLI real (engine/state.py = cs-state, em subprocesso) e guard real
 (engine/guard.py com payloads de hook), num repo git temporário (fixture.make_repo). Nada de mock do motor.

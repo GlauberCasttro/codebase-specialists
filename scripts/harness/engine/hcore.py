@@ -22,13 +22,13 @@ STATE_DIR = ".swarm"
 LEGACY_STATE_DIR = "." + "specialists"
 SCHEMA_VERSION = 2
 GENESIS = "0" * 64
-KINDS = ("session", "epic", "feature", "sprint", "story", "task", "deleg", "consult")
+KINDS = ("session", "epic", "feature", "sprint", "story", "task", "deleg", "consult", "mandato")
 BOARD_LISTS = {"session": "sessions", "epic": "epics", "feature": "features", "sprint": "sprints",
-               "story": "stories", "task": "tasks", "consult": "consults"}
+               "story": "stories", "task": "tasks", "consult": "consults", "mandato": "mandatos"}
 KIND_MACHINE = {"session": "session", "epic": "epic", "feature": "feature", "sprint": "sprint",
-                "story": "story", "task": "task", "deleg": "delegation", "consult": "consult"}
+                "story": "story", "task": "task", "deleg": "delegation", "consult": "consult", "mandato": "mandato"}
 # listas acrescentadas depois do schema 2: board antigo sem elas é lido como lista vazia (compatível).
-OPTIONAL_LISTS = ("consults",)
+OPTIONAL_LISTS = ("consults", "mandatos")
 
 # Nunca entram em território de produto; casamento por PREFIXO de path relativo (lição §8).
 RESERVED_PREFIXES = (STATE_DIR + "/", LEGACY_STATE_DIR + "/", ".claude/", ".git/", ".cursor/", ".codex/",
@@ -82,10 +82,19 @@ def verdicts():
 def legal_pairs(machine_name):
     m = machines()["machines"][machine_name]
     pairs = set(tuple(p) for p in m.get("pairs") or [])
+    into = {}  # "^" (volta à origem): destinos = estados que entram na origem por transição comum
+    for t in (m.get("transitions") or {}).values():
+        if t["to"] not in ("=", "^"):
+            for f in t["from"]:
+                into.setdefault(t["to"], set()).add(f)
     for t in (m.get("transitions") or {}).values():
         tos = [t["to"]] + list(t.get("alt_to") or [])
         for f in t["from"]:
             for to in tos:
+                if to == "^":
+                    for prev in into.get(f, ()):
+                        pairs.add((f, prev))
+                    continue
                 pairs.add((f, f if to == "=" else to))
     for p in m.get("extra_pairs") or []:
         pairs.add(tuple(p))
@@ -166,8 +175,23 @@ def state_paths(root):
     }
 
 
+def now_dt():
+    """Relógio do motor: CS_NOW=<ISO-8601 UTC> (testes: "8 h de pausa não contam") ou o relógio real."""
+    v = (os.environ.get("CS_NOW") or "").strip()
+    if v:
+        try:
+            s = v[:-1] + "+00:00" if v.endswith("Z") else v
+            d = datetime.fromisoformat(s)
+            if d.tzinfo is None:
+                d = d.replace(tzinfo=timezone.utc)
+            return d.astimezone(timezone.utc)
+        except ValueError:
+            pass
+    return datetime.now(timezone.utc)
+
+
 def now_iso():
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    return now_dt().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
 def canonical(obj):

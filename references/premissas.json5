@@ -118,37 +118,37 @@
 
     {id: "PR-23", premissa: "Concorrência de subagentes tem teto prático abaixo do teto declarado: lotes de até 3, em primeiro plano, com recuo registrado.",
      evidencia: "Iteração 2 (3 evals): com ≤8 simultâneos as sessões bateram no limite de subagentes e em 429 da API; um redator redespachado antes do lote voltar sobrescreveu rascunho já gravado. Iteração 3 (ts-shop): lotes em segundo plano devolviam o controle a cada lote; o coordenador passou para primeiro plano.",
-     fonte: "medição interna — rodada de avaliação iteration-2 (cli_e_fluxo)",
+     fonte: "medição interna — rodada-2/DEFEITOS.json5 (cli_e_fluxo)",
      aplicada_em: ["prompts.json5 execucao.concorrencia/limite", "SKILL.md princípio 6"]},
 
     {id: "PR-24", premissa: "O cartão é mapa, não memória: o exame em modo fechado (sem repo) é sinal, não placar de especialista.",
      evidencia: "Iteração 2, py-billing: no modo fechado os 9 agentes ficaram abaixo do baseline e 7 alucinaram; no modo guiado (com repo) passaram no G4.",
-     fonte: "medição interna — rodada de avaliação iteration-2 (refino_e_sondas)",
+     fonte: "medição interna — rodada-2/DEFEITOS.json5 (refino_e_sondas)",
      aplicada_em: ["probes.md §10", "prompts.json5 validate.3 modo_fechado"]},
 
     {id: "PR-25", premissa: "O examinado não pode alcançar o gabarito: exame e juízes rodam num clone local do alvo com histórico e sem .swarm/.",
      evidencia: "Iteração 2: um grep do examinado no modo guiado imprimiu linhas de .swarm/probes/bank.json5. Iteração 3 (3 evals): a cópia sem .git deixou as sondas de sha sem resposta (11/11 falhas discriminativas do py-billing --fast) e `git log` na cópia subia ao repo pai.",
-     fonte: "medição interna — rodada de avaliação iteration-2 (refino_e_sondas)",
+     fonte: "medição interna — rodada-2/DEFEITOS.json5 (refino_e_sondas)",
      aplicada_em: ["probes.md §10", "prompts.json5 validate.3"]},
 
     {id: "PR-26", premissa: "Mesa redonda e refino não mudam a qualidade medida do time; mudam a certificação. Por isso o modo padrão é --fast e a execução certificada completa (--full) é pedido explícito.",
      evidencia: "Iteração 3, py-billing: [Q] 13/13 tanto na execução completa quanto na --fast (230k contra 326k tokens do orquestrador); nos 3 alvos a execução completa ficou em 13/13 [Q] e as decisões foram dominadas por defeitos da skill, não pela mesa redonda.",
-     fonte: "medição interna — rodada de avaliação iteration-3",
+     fonte: "medição interna — rodada-3/RESULTADOS.json5",
      aplicada_em: ["SKILL.md Modos", "ARCHITECTURE.md §8 (etapas)"]},
 
     {id: "PR-27", premissa: "Subagente grava só o próprio arquivo de saída; o orquestrador registra pela CLI em série. Devolver o JSON inteiro dobra tokens; gravar no arquivo de outro corrompe a mesa redonda.",
      evidencia: "Iteração 3: nos 3 alvos os redatores gravaram o próprio rascunho para não trazer 9–11 cartões ao contexto do orquestrador (desvio do prompt); em go-polyglot um revisor regravou 5 saídas de outros revisores.",
-     fonte: "medição interna — rodada de avaliação iteration-3",
+     fonte: "medição interna — rodada-3/*/with_skill*/outputs/notes.md",
      aplicada_em: ["SKILL.md princípio 5", "prompts.json5 execucao.escrita/saida_path"]},
 
     {id: "PR-28", premissa: "O veredito tem de ser função do estado: GO só com todos os agentes especialistas e gates verdes; qualquer nao-especialista é NO-GO.",
      evidencia: "Iteração 3: go-polyglot saiu GO com ops aceito como nao-especialista, enquanto py-billing e ts-shop, com o mesmo tipo de estado, saíram NO-GO.",
-     fonte: "medição interna — rodada de avaliação iteration-3",
+     fonte: "medição interna — rodada-3/RESULTADOS.json5",
      aplicada_em: ["ARCHITECTURE.md §9", "SKILL.md approve", "harness.md §8"]},
 
     {id: "PR-29", premissa: "Teste que confere o valor esperado/derivado de uma constante prova a regra; o scan nunca afirma \"não prova\" por palpite — diz \"não determinável\".",
      evidencia: "Iteração 3: o L9 dizia \"não prova esta regra\" em 12 fatos de regra que o GROUND_TRUTH dá como testadas (py 7, ts 3, go 2), ex.: tests/test_late_fees.py:15 == 6100 e eta_test.go `if got := ETA(8, 0); got != time.Hour`. Iteração 4: 0 (8 viraram `asserted`, 4 validações de exceção ambígua viraram \"não determinável\").",
-     fonte: "medição interna — iteration-3 notes.md (py-billing, go-polyglot) + scripts/scan/tests/test_precision_iter4.py",
+     fonte: "medição interna — rodada-3 notes.md (py-billing, go-polyglot) + scripts/scan/tests/test_precision_iter4.py",
      aplicada_em: ["scripts/scan/coverage.py nível asserted", "scripts/scan/l9_domain.py _cov_text"]},
   ],
 }

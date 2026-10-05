@@ -1,4 +1,4 @@
-"""ORÁCULO D-1-04 — incoerência de HIERARQUIA deixada pelo motor antigo não tem saída (repositório-piloto projeto-legado).
+"""ORÁCULO D-1-04 — incoerência de HIERARQUIA deixada pelo motor antigo não tem saída (cobaia repositório-piloto (projeto-legado)).
 
 O motor antigo (atalho D-0-09, já fechado para o futuro) deixou story US-3 IN_PROGRESS com a feature FEAT-2 em BACKLOG
 e o épico EPIC-2 PROPOSED. O motor novo, em `validate --strict`, acusa "story US-3 IN_PROGRESS com feature FEAT-2 em
@@ -66,7 +66,7 @@ def legacy_board(root):
     EPIC-2 PROPOSED, FEAT-2 BACKLOG, US-2 e US-3 READY na FEAT-2; US-3 posta IN_PROGRESS pelo atalho antigo."""
     fixture.process(root, "pequena")
     cmds.add_epic(root, A, "Orquestração", "orquestrar", "throughput")                      # EPIC-2 (PROPOSED)
-    cmds.add_feature(root, A, "EPIC-2", "Legado", "spec/feat.md", ["python3 -m unittest accept.test_accept"],
+    cmds.add_feature(root, A, "EPIC-2", "Piloto", "spec/feat.md", ["python3 -m unittest accept.test_accept"],
                      ["accept/test_accept.py"])                                            # FEAT-2 (BACKLOG)
     _story(root, "FEAT-2")                                                                 # US-2
     _story(root, "FEAT-2")                                                                 # US-3

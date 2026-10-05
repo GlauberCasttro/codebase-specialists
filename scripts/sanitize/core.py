@@ -1,6 +1,6 @@
 """Saneamento da pasta da skill ao fim de todo init (approve.4, DEC-SANITIZE de 2026-10-03).
 
-Evidência (repositório-piloto projeto-legado, 2026-10-03): 91 MB de lixo em `<pasta>/tmp/` — 15 cópias de exame com `.git`
+Evidência (repositório-piloto (projeto-legado), 2026-10-03): 91 MB de lixo em `<pasta>/tmp/` — 15 cópias de exame com `.git`
 próprio, pacotes de entrada, rascunhos, 4 scripts de contorno do executor — e `harness/__pycache__`, sem
 `.gitignore`: um `git add .` commitaria tudo e 15 repositórios aninhados.
 

@@ -149,21 +149,87 @@ STATE_SKILLS = (
     ("move", True, "<id> <novo pai|--avulsa>", ("move", "board"),
      "Troca o pai de um item via `cs-state move` (o id antigo continua resolvendo em `find`)."),
 )
-STATE_SKILL_NAMES = tuple(s[0] for s in STATE_SKILLS)
-STATE_SKILLS_HUMAN = tuple(s[0] for s in STATE_SKILLS if s[1])
+# Skills do mandato autônomo (M5): finas, tudo mecânico no `cs-auto`. O modelo pode consultar e conduzir
+# (status/plan/tick/report); aprovar, emendar, resolver, parar e abortar são só humanos.
+AUTO_SKILLS = (
+    ("auto-status", False, "[--brief]", ("status",),
+     "Mostra o estado do mandato autônomo via `cs-auto status` (objetivo, estado, orçamento, aceite e próximo comando)."),
+    ("auto-plan", False, "<add-node|edit-node|reset|submit> ...", ("plan", "status"),
+     "Monta e submete o plano do mandato via `cs-auto plan` (o motor valida; recusa traz a guarda e o que falta)."),
+    ("auto-tick", False, "[--json]", ("tick", "status"),
+     "Pede ao motor a próxima ação do mandato via `cs-auto tick` e executa só ela (o motor decide, integra e para)."),
+    ("auto-report", False, "[--json]", ("report",),
+     "Mostra o relatório do mandato via `cs-auto report` (critérios verdes, verificações com hash, devolvidos)."),
+    ("auto-approve", True, "[despachos=,tentativas=,replanos=,minutos=]", ("approve", "status"),
+     "Humano aprova a proposta do mandato via `cs-auto approve` (mostra a proposta por `cs-auto status`)."),
+    ("auto-amend", True, "<motivo> [orçamento]", ("amend", "status"),
+     "Humano emenda o mandato via `cs-auto amend` (volta a PROPOSED para nova aprovação)."),
+    ("auto-resolve", True, "<retomar|trocar-agente|emendar|descartar-ramo|encerrar|abortar> <decisão>",
+     ("resolve", "status"),
+     "Humano resolve uma escalada do mandato via `cs-auto resolve` (escolhe uma das opções do pacote)."),
+    ("auto-stop", True, "<motivo>", ("stop", "status"),
+     "Humano manda o mandato encerrar com relatório via `cs-auto stop`."),
+    ("auto-abort", True, "<motivo>", ("abort", "status"),
+     "Humano aborta o mandato via `cs-auto abort` (o relatório traz o comando para restaurar o ponto seguro)."),
+)
+STATE_SKILL_NAMES = tuple(s[0] for s in STATE_SKILLS) + tuple(s[0] for s in AUTO_SKILLS)
+STATE_SKILLS_HUMAN = tuple(s[0] for s in STATE_SKILLS + AUTO_SKILLS if s[1])
 
 
 def state_skills():
     """Artifacts das 14 skills de estado (Claude Code). Corpo em assets/templates/state/<nome>.md."""
     arts = []
-    for name, human, hint, cmds, desc in STATE_SKILLS:
-        tools = " ".join("Bash(.swarm/bin/cs-state %s *)" % c for c in cmds)
+    for binary, table in (("cs-state", STATE_SKILLS), ("cs-auto", AUTO_SKILLS)):
+        arts.extend(_bin_skills(binary, table))
+    return arts
+
+
+def _bin_skills(binary, table):
+    arts = []
+    for name, human, hint, cmds, desc in table:
+        tools = " ".join("Bash(.swarm/bin/%s %s *)" % (binary, c) for c in cmds)
         fm = [("name", name), ("description", yq(desc))]
         if human:
             fm.append(("disable-model-invocation", "true"))
         fm += [("argument-hint", yq(hint)), ("allowed-tools", yq(tools))]
         arts.append(Artifact("claude-code", "claude.state", "STATE", ".claude/skills/%s/SKILL.md" % name,
                              OWNED, owned_md(fm, template("state/%s.md" % name))))
+    return arts
+
+
+# Skills de estado/mandato nas demais plataformas (formato nativo de Agent Skills de cada uma; fontes em
+# references/platforms.md). Cursor e Copilot têm `disable-model-invocation`; o Codex não tem o campo, então a
+# skill humana diz no corpo, explicitamente, que só o humano a executa (o guard continua bloqueando o comando).
+SKILL_DIRS = {"cursor": ".cursor/skills", "copilot": ".github/skills", "codex": ".agents/skills"}
+HUMAN_ONLY_TEXT = "Só o humano executa"
+HUMAN_ONLY_LINE = ("%s esta skill: o modelo não a invoca por conta própria nem roda os comandos de mudança "
+                   "abaixo; ele só mostra a saída e o comando ao humano (o guard bloqueia o ato humano vindo do "
+                   "modelo)." % HUMAN_ONLY_TEXT)
+
+
+def skill_path(platform, name):
+    return "%s/%s/SKILL.md" % (SKILL_DIRS[platform], name)
+
+
+def portable_skill_body(platform, name, human):
+    body = template("state/%s.md" % name).replace("$ARGUMENTS", "<argumentos do pedido>")
+    if platform == "codex" and human:
+        body = HUMAN_ONLY_LINE + "\n\n" + body
+    return body
+
+
+def portable_state_skills(platform):
+    """Artifacts das 23 skills finas (cs-state + cs-auto) para Cursor, Copilot ou Codex."""
+    arts = []
+    for binary, table in (("cs-state", STATE_SKILLS), ("cs-auto", AUTO_SKILLS)):
+        for name, human, hint, cmds, desc in table:
+            fm = [("name", name), ("description", yq(desc))]
+            if human and platform in ("cursor", "copilot"):
+                fm.append(("disable-model-invocation", "true"))
+            if platform == "copilot":
+                fm.append(("argument-hint", yq(hint)))
+            arts.append(Artifact(platform, "%s.skill" % platform, "STATE", skill_path(platform, name), OWNED,
+                                 owned_md(fm, portable_skill_body(platform, name, human))))
     return arts
 
 
@@ -254,6 +320,7 @@ def cursor(ctx):
                    ("alwaysApply", "false")]
             arts.append(Artifact("cursor", "cursor.rule.territory", "S2", pointers["s2"], OWNED,
                                  owned_md(rfm, render.s2_body(team, ag, ctx.kn, st, sr)), n))
+    arts.extend(portable_state_skills("cursor"))
     return arts
 
 
@@ -294,6 +361,7 @@ def copilot(ctx):
             ifm = [("applyTo", yq(",".join(expand_braces(ag["territory"]))))]
             arts.append(Artifact("copilot", "copilot.instructions.path", "S2", pointers["s2"], OWNED,
                                  owned_md(ifm, render.s2_body(team, ag, ctx.kn, st, sr)), n))
+    arts.extend(portable_state_skills("copilot"))
     return arts
 
 
@@ -382,6 +450,7 @@ def codex(ctx):
     for d, agents in sorted(by_dir.items()):
         arts.append(Artifact("codex", "codex.agents_md.nested", "S2", "%s/AGENTS.md" % d, BLOCK,
                              render.nested_block(team, agents, ctx.kn, shown)))
+    arts.extend(portable_state_skills("codex"))
     return arts
 
 

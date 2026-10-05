@@ -65,6 +65,17 @@ PRECOMMIT_PROBE = "pre-commit"
 # U-2: fora do backup — clones de exame (com .git) e repositórios aninhados; listados em manifest.json5 `excluded`
 BACKUP_EXCLUDE_TOP = ("tmp",)
 BACKUP_EXCLUDE_ANY = (".git",)
+# U-5: DADOS preservados que alimentam o emit (dentro da pasta). O rename-dir traduz neles SÓ o prefixo de caminho da
+# pasta legada desta skill (`.specialists/…` → `.swarm/…`) ANTES do emit; o original fica no backup do upgrade e o
+# que foi traduzido vai para o upgrade_history (`translated`).
+EMIT_DATA = ("team.json5", "team.json", os.path.join("knowledge", "deps.json5"), os.path.join("knowledge", "deps.json"),
+             os.path.join("knowledge", "collision.json5"), os.path.join("knowledge", "collision.json"))
+_LEGACY_PREFIX_RE = re.compile(r"(?<![A-Za-z0-9_./\-])((?:\./)?)" + re.escape(LEGACY) + r"/")
+# U-4: resíduo PRÓPRIO da skill numa pasta nova junto do legado (gravado por um comando rodado no alvo ainda legado):
+# descartável; qualquer outro conteúdo em .swarm/ continua recusado por rename_conflict.
+OWN_RESIDUE = (os.path.join("state", "selftest.json5"), os.path.join(".engine", "selftest.json5"))
+# U-3: quantas linhas do comando que falhou o progresso mostra (cabeça + cauda; nunca só a cauda)
+FAIL_HEAD, FAIL_TAIL = 40, 20
 
 
 # ------------------------------------------------------------------ layout (pasta nova × legado)
@@ -110,6 +121,33 @@ def check_rename_action(a):
     return {"kind": "rename-dir"}
 
 
+def own_residue(target):
+    """→ [rel] se a pasta nova (junto do legado) contém SÓ resíduo próprio da skill (OWN_RESIDUE, ex.: o
+    selftest.json5 de um `cs.py harness selftest` rodado no alvo legado); None se tem qualquer outra coisa."""
+    new = paths.specialists_dir(target)
+    if os.path.islink(new) or not os.path.isdir(new):
+        return None
+    found = []
+    for d, dirs, files in os.walk(new):
+        if any(os.path.islink(os.path.join(d, x)) for x in dirs):
+            return None
+        for f in files:
+            rel = os.path.relpath(os.path.join(d, f), new)
+            if rel not in OWN_RESIDUE or os.path.islink(os.path.join(d, f)):
+                return None
+            found.append(rel)
+    return sorted(found)
+
+
+def _drop_own_residue(target):
+    """Remove a pasta nova quando ela só tem resíduo próprio (conferido de novo aqui). → [rel] removidos."""
+    found = own_residue(target)
+    if found is None or not is_legacy(target):
+        return []
+    shutil.rmtree(paths.specialists_dir(target))
+    return found
+
+
 def rename_conflict(target):
     """→ motivo (str) se o rename-dir não pode mover o legado sem mesclar às cegas; None se pode."""
     lg, new = legacy_root(target), paths.specialists_dir(target)
@@ -117,6 +155,8 @@ def rename_conflict(target):
         return "%s/ é symlink; mova à mão" % LEGACY
     if not os.path.lexists(new):
         return None
+    if own_residue(target) is not None:
+        return None                                      # só resíduo próprio: o rename-dir o descarta
     if os.path.islink(new) or not os.path.isdir(new):
         return "%s existe e não é diretório" % NEW
     if os.path.lexists(os.path.join(new, "instance.json")):
@@ -141,19 +181,24 @@ def _walk_items(base, rel_base):
     return out
 
 
-def rename_targets(target, inside_root=None):
+def rename_targets(target, inside_root=None, include_emitted=True):
     """[(abs, rel)] que o rename-dir reescreve (citam o legado em texto ou no destino do symlink): o MECANISMO
     dentro da pasta (bin/, harness/) e as raízes fora dela (harness/emit/plataformas). Produto não é tocado;
-    dados/histórico dentro da pasta (ledgers com cadeia de hash, memória, board) também não."""
+    dados/histórico dentro da pasta (ledgers com cadeia de hash, memória, board) também não.
+    include_emitted=False: pula os arquivos do manifesto do emit (gerados; o emit é quem os reescreve)."""
     root_in = inside_root or state_root(target)
     cands = [(os.path.join(root_in, sub), "%s/%s" % (NEW, sub)) for sub in RENAME_INSIDE]
     for r in _dedupe_roots(list(OUTSIDE_ROOTS) + list(RENAME_ROOTS) + _emit_manifest_paths(target)):
         cands.append((os.path.join(target, r), r.replace(os.sep, "/")))
+    emitted = set() if include_emitted else set(
+        os.path.normpath(x).replace(os.sep, "/") for x in _emit_manifest_paths(target))
     out = {}
     for base, rel_base in cands:
         if not os.path.lexists(base):
             continue
         for p, rel in _walk_items(base, rel_base):
+            if rel in emitted:
+                continue
             if os.path.islink(p):
                 if _LEGACY_RE.search(os.readlink(p)):
                     out[rel] = p
@@ -184,17 +229,56 @@ def _rewrite(p):
     os.replace(tmp, p)
 
 
-def rewrite_legacy_refs(target):
-    """Reescreve o caminho legado no mecanismo e fora da pasta (idempotente). → [rel reescritos]."""
+def rewrite_legacy_refs(target, include_emitted=True):
+    """Reescreve o caminho legado no mecanismo e fora da pasta (idempotente). → [rel reescritos].
+    include_emitted=False: não toca os emitidos do manifesto (reemita em vez de editar: G7 compara o hash)."""
     done = []
-    for p, rel in rename_targets(target, paths.specialists_dir(target)):
+    for p, rel in rename_targets(target, paths.specialists_dir(target), include_emitted=include_emitted):
         _rewrite(p)
         done.append(rel)
     return done
 
 
-def do_rename(target, say):
-    """Move LEGACY → NEW (sem mesclar) e reescreve os caminhos do mecanismo. Dados/histórico vão intactos."""
+def emit_data_with_legacy(sp):
+    """[rel] dos dados que alimentam o emit (EMIT_DATA, sob a pasta `sp`) que citam o prefixo legado."""
+    out = []
+    for rel in EMIT_DATA:
+        p = os.path.join(sp, rel)
+        if not os.path.isfile(p) or os.path.islink(p):
+            continue
+        try:
+            with open(p, "rb") as fh:
+                txt = fh.read().decode("utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        if _LEGACY_PREFIX_RE.search(txt):
+            out.append(rel)
+    return out
+
+
+def translate_emit_data(sp):
+    """U-5: traduz `.specialists/…` → `.swarm/…` (só o prefixo de caminho da pasta legada desta skill) nos dados que
+    alimentam o emit, sob a pasta `sp` (já renomeada). → [{path, n}] traduzidos (rel ao alvo, com o nome novo)."""
+    done = []
+    for rel in emit_data_with_legacy(sp):
+        p = os.path.join(sp, rel)
+        mode = os.stat(p).st_mode & 0o7777
+        with open(p, "rb") as fh:
+            txt = fh.read().decode("utf-8")
+        new_txt, n = _LEGACY_PREFIX_RE.subn(lambda m: m.group(1) + NEW + "/", txt)
+        tmp = p + ".cs-rename.tmp"
+        with open(tmp, "wb") as fh:
+            fh.write(new_txt.encode("utf-8"))
+        os.chmod(tmp, mode)
+        os.replace(tmp, p)
+        done.append({"path": "%s/%s" % (NEW, rel.replace(os.sep, "/")), "n": n})
+    return done
+
+
+def do_rename(target, say, record=None):
+    """Move LEGACY → NEW (sem mesclar) e reescreve os caminhos do mecanismo. Dados/histórico vão intactos, exceto
+    o prefixo do caminho legado nos dados que alimentam o emit (EMIT_DATA): traduzido ANTES do emit e registrado em
+    `record["translated"]` (o original fica no backup do upgrade)."""
     lg, new = legacy_root(target), paths.specialists_dir(target)
     if not os.path.isdir(lg) or os.path.islink(lg) or not is_legacy(target):
         say("    rename-dir: nada a renomear (o alvo já está em %s/)" % NEW)
@@ -202,11 +286,22 @@ def do_rename(target, say):
     why = rename_conflict(target)
     if why:
         return False, "rename-dir: " + why
+    dropped = _drop_own_residue(target)
+    if dropped:
+        say("    rename-dir: resíduo próprio descartado em %s/: %s" % (NEW, ", ".join(dropped)))
     if os.path.isdir(new):
         os.rmdir(new)                                    # vazio (conferido em rename_conflict)
     os.rename(lg, new)
     done = rewrite_legacy_refs(target)
     say("    rename-dir: %s/ → %s/ (%d caminho(s) reescrito(s) no mecanismo)" % (LEGACY, NEW, len(done)))
+    tr = translate_emit_data(new)
+    if tr:
+        say("    rename-dir: caminho legado %s/ → %s/ traduzido nos dados do emit: %s"
+            % (LEGACY, NEW, ", ".join("%s (%d)" % (t["path"], t["n"]) for t in tr)))
+    if record is not None:
+        record["translated"] = tr
+        if dropped:
+            record["dropped_residue"] = ["%s/%s" % (NEW, r.replace(os.sep, "/")) for r in dropped]
     return True, ""
 
 
@@ -230,8 +325,10 @@ def _simulate_rename(target):
         gh = os.path.join(target, ".git", "hooks", "pre-commit")
         if os.path.lexists(gh):
             _copy(gh, os.path.join(sim, ".git", "hooks", "pre-commit"))
+        _drop_own_residue(sim)
         os.rename(os.path.join(sim, LEGACY), os.path.join(sim, NEW))
         rewrite_legacy_refs(sim)
+        translate_emit_data(os.path.join(sim, NEW))
     except Exception:
         shutil.rmtree(tmp, ignore_errors=True)
         raise
@@ -254,6 +351,14 @@ def run_cs(target, argv, timeout=CMD_TIMEOUT):
 def _tail(text, n=8):
     lines = [l for l in (text or "").splitlines() if l.strip()]
     return "\n".join("      " + l for l in lines[-n:])
+
+
+def _excerpt(text, head=FAIL_HEAD, tail=FAIL_TAIL):
+    """Saída de um comando que falhou, sem perder a linha do motivo: cabeça + cauda (não só as últimas N)."""
+    lines = [l for l in (text or "").splitlines() if l.strip()]
+    if len(lines) > head + tail:
+        lines = lines[:head] + ["... (%d linha(s) omitida(s))" % (len(lines) - head - tail)] + lines[-tail:]
+    return "\n".join("      " + l for l in lines)
 
 
 def _outside_block(text):
@@ -470,6 +575,12 @@ def build_plan(target):
             return plan
         plan["inside"].append("%s/ → %s/ (move; board, eventos, memória, ledgers e aprovações intactos)"
                               % (LEGACY, NEW))
+        for r in own_residue(target) or []:
+            plan["inside"].append("%s/%s (resíduo próprio da skill junto do legado: descartado)"
+                                  % (NEW, r.replace(os.sep, "/")))
+        for r in emit_data_with_legacy(legacy_root(target)):
+            plan["inside"].append("%s/%s (traduz o prefixo %s/ → %s/ antes do emit; original no backup)"
+                                  % (NEW, r.replace(os.sep, "/"), LEGACY, NEW))
         plan["outside"] += [("rename-dir", "update", rel) for _, rel in rename_targets(target)
                             if not rel.startswith(NEW + "/")]
         sim_tmp, root = _simulate_rename(target)
@@ -732,10 +843,10 @@ def do_state_tree(target, say):
     return True, ""
 
 
-def _run_action(target, run, a, allow_outside, say):
+def _run_action(target, run, a, allow_outside, say, record=None):
     k = a["kind"]
     if k == "rename-dir":
-        return do_rename(target, say)
+        return do_rename(target, say, record)
     if k == "state-tree":
         return do_state_tree(target, say)
     if k == "harness":
@@ -772,8 +883,41 @@ def _run_action(target, run, a, allow_outside, say):
     for argv in steps:
         rc, out, err = run_cs(target, argv)
         if rc != 0:
-            return False, "cs.py %s → exit %d\n%s" % (" ".join(argv), rc, _tail(err or out))
+            say("    cs.py %s: FALHOU (exit %d)" % (" ".join(argv), rc))
+            return False, "cs.py %s → exit %d\n%s" % (" ".join(argv), rc, _excerpt(out + "\n" + err))
         say("    cs.py %s: ok" % " ".join(argv))
+    return True, ""
+
+
+def _emitted_with_legacy(target):
+    """[rel] dos emitidos (manifesto do emit) que ainda citam o caminho legado."""
+    bad = []
+    for rel in _emit_manifest_paths(target):
+        p = os.path.join(target, rel)
+        if not os.path.isfile(p) or os.path.islink(p):
+            continue
+        try:
+            with open(p, "rb") as fh:
+                txt = fh.read().decode("utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        if _LEGACY_RE.search(txt):
+            bad.append(rel)
+    return bad
+
+
+def _reemit_if_legacy(target, plan, allow_outside, say):
+    """Emitido citando o legado depois das ações: traduz os dados do emit e REEMITE (nunca edita o emitido)."""
+    bad = _emitted_with_legacy(target)
+    if not bad or not any(a["kind"] == "emit" for a in plan["actions"]):
+        return True, ""
+    translate_emit_data(paths.specialists_dir(target))
+    argv = ["emit"] + (["--allow-outside"] if allow_outside else [])
+    rc, out, err = run_cs(target, argv)
+    if rc != 0:
+        say("    cs.py %s (reemissão): FALHOU (exit %d)" % (" ".join(argv), rc))
+        return False, "cs.py %s (reemissão) → exit %d\n%s" % (" ".join(argv), rc, _excerpt(out + "\n" + err))
+    say("    cs.py %s: ok (reemitido: %d emitido(s) citavam %s/)" % (" ".join(argv), len(bad), LEGACY))
     return True, ""
 
 
@@ -806,7 +950,8 @@ def verify(target, say, run=None, hook_before=None):
                 "retomar a etapa)" % HARNESS_SUBSTAGE)
             continue
         if rc != 0:
-            return False, "cs.py %s → exit %d\n%s" % (" ".join(argv), rc, _tail(out + "\n" + err))
+            say("    cs.py %s: FALHOU (exit %d)" % (" ".join(argv), rc))
+            return False, "cs.py %s → exit %d\n%s" % (" ".join(argv), rc, _excerpt(out + "\n" + err))
         say("    cs.py %s: ok" % " ".join(argv))
     return True, ""
 
@@ -834,18 +979,21 @@ def apply(target, allow_outside=False, out=None):
     keep = preserved_snapshot(target)
     explicit = any(a["kind"] in EXPLICIT_KINDS for a in plan["actions"])
     ok, why = True, ""
+    record = {}
     for a in plan["actions"]:
         try:
-            ok, why = _run_action(target, plan["run"], a, allow_outside, say)
+            ok, why = _run_action(target, plan["run"], a, allow_outside, say, record)
         except Exception as exc:  # qualquer falha de ação → restauração (nunca meio-aplicado)
             ok, why = False, "%s: %s" % (a["kind"], exc)
         if not ok:
             break
     if ok and plan["renaming"]:
         try:                         # resíduo do caminho legado deixado por ações posteriores (idempotente)
-            left = rewrite_legacy_refs(target)
+            # emitidos (manifesto do emit) NÃO são editados: G7 compara o hash; se ainda citam o legado, reemite
+            left = rewrite_legacy_refs(target, include_emitted=False)
             if left:
                 say("    rename-dir: %d caminho(s) legado(s) residual(is) reescrito(s)" % len(left))
+            ok, why = _reemit_if_legacy(target, plan, allow_outside, say)
         except Exception as exc:
             ok, why = False, "rename-dir (resíduo): %s" % exc
     if ok:
@@ -861,6 +1009,7 @@ def apply(target, allow_outside=False, out=None):
         else:
             say("    preservados intactos (entrevista, aprovações, cartões, board/eventos, memória): ok")
     if not ok:
+        say("upgrade FALHOU: %s" % why)
         restore_backup(target, rel, manifest, plan["layout_legacy"])
         sys.stderr.write("upgrade FALHOU: %s\nbackup restaurado (%s); alvo continua em %s\n"
                          % (why, rel, plan["from"]))
@@ -871,6 +1020,10 @@ def apply(target, allow_outside=False, out=None):
              "migrations": [m["to"] for m in plan["migrations"]],
              "actions": [a["kind"] for a in plan["actions"]], "backup": rel,
              "reexam_required": plan["reexam"]}
+    if record.get("translated"):
+        entry["translated"] = record["translated"]
+    if record.get("dropped_residue"):
+        entry["dropped_residue"] = record["dropped_residue"]
     hist.append(entry)
     run["skill_version"] = plan["to"]
     run["upgrade_history"] = hist

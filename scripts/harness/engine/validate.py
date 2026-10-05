@@ -162,6 +162,10 @@ def run(root, strict=True, allow_empty=False):
         # estado em árvore: árvore × eventos × disco (edição à mão, órfão, fechado fora de archive/, 1 feature ativa)
         import tree
         E += tree.validate(root)
+    if board.get("mandatos"):
+        # M5: mandato.json5 / plano.vN.json5 / pacotes de escalada / relatório são visões do motor (editar à mão = falha)
+        import auto
+        E += auto.validate_files(root, board)
     for name, path in (("harness-ledger", p["ledger"]), ("model-router", os.path.join(p["state_dir"], "model-router.jsonl"))):
         if os.path.isfile(path):
             _, le, _ = hcore.read_chain(path)

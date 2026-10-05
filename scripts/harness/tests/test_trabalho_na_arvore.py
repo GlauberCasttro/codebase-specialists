@@ -1,6 +1,6 @@
 """ORÁCULO — D-0-13: trabalho de tentativa anterior já na árvore (retentativa / retomada sobre arquivo sujo).
 
-Defeito observado (repositório-piloto projeto-legado, TASK-02-002-KEY): no `dispatch` o motor fotografa o sha de cada
+Defeito observado (cobaia real repositório-piloto (projeto-legado), TASK-02-002-KEY): no `dispatch` o motor fotografa o sha de cada
 arquivo sujo (inclusive os de allowed_paths) como "baseline" da delegação. Numa RETENTATIVA (reject → retry → dispatch)
 ou numa RETOMADA (escalate → retry --decision → dispatch) o código da tentativa anterior continua modificado e não
 commitado; o `verify` compara com essa baseline, não vê mudança e reprova com
@@ -55,7 +55,7 @@ class G(unittest.TestCase):
         self.assertTrue(os.path.exists(MARK), 'portao fechado: marcador ausente')
 """
 
-TRACKED = "src/billing/tax.py"       # existe no HEAD: o dev MODIFICA e não commita (caso do piloto)
+TRACKED = "src/billing/tax.py"       # existe no HEAD: o dev MODIFICA e não commita (caso do repositório-piloto)
 NEW = "src/billing/discount.py"      # não existe no HEAD: o dev CRIA e não commita
 OUTSIDE = "src/members/model.py"       # território de outro agente
 

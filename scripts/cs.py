@@ -107,6 +107,24 @@ def _harness_gate(args):
                         allow_outside=getattr(args, "allow_outside", False), cmd=kind)
 
 
+def _legacy_gate(args):
+    """U-4: alvo ainda no diretório legado (paths.LEGACY_STATE_DIR com run.json5, sem `.swarm/run.json5`): os
+    comandos do harness só operam em `.swarm/` e criariam a pasta nova do nada (resíduo que bloqueia o upgrade).
+    Recusa sem escrever (exit 3), apontando `cs.py upgrade`. `harness install` fica com o porteiro do harness único
+    (_harness_gate, que já recusa o legado desta skill apontando o upgrade). → None (siga) ou exit code."""
+    if getattr(args, "command", None) != "harness" or getattr(args, "harness_cmd", None) == "install":
+        return None
+    t = args.target
+    if not os.path.isfile(os.path.join(t, paths.LEGACY_STATE_DIR, "run.json5")) \
+            or os.path.isfile(os.path.join(t, paths.STATE_DIR, "run.json5")):
+        return None
+    sys.stderr.write("cs.py harness %s recusado (nada escrito): o alvo ainda está no diretório legado %s/ e o "
+                     "harness só opera em %s/\nrode `cs.py upgrade` (plano) e `cs.py upgrade --apply` para migrar "
+                     "%s/ → %s/\n" % (getattr(args, "harness_cmd", None) or "", paths.LEGACY_STATE_DIR,
+                                       paths.STATE_DIR, paths.LEGACY_STATE_DIR, paths.STATE_DIR))
+    return 3
+
+
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -115,7 +133,9 @@ def main(argv=None):
         return 2
     try:
         args.target = paths.resolve_target(args.target)
-        rc = _harness_gate(args)
+        rc = _legacy_gate(args)
+        if rc is None:
+            rc = _harness_gate(args)
         if rc is not None:
             return rc
         return int(args.func(args) or 0)

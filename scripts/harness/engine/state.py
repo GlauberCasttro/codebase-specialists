@@ -663,6 +663,7 @@ def run(a):
         if tree_mode:
             import session
             import tree
+            out += session.tree_session_lines(root)  # mesma orientação de sessão M1 do caminho plano
             out += session._steps(tree.load_view(root))
         else:
             out += views.next_lines(engine.Ctx(root, hcore.load_board(root)))

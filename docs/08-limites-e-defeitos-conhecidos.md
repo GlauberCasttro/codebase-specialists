@@ -49,7 +49,7 @@ o registro de resultados e defeitos da iteração 4 (interno), notas das execuç
 
 ## 2. Defeitos abertos (iteração 4)
 
-De `iteration-4/RESULTADOS-E-DEFEITOS.json5 → defeitos_iter5`, conferidos contra o código atual:
+De registro interno de defeitos da iteração 4 (`defeitos_iter5`), conferidos contra o código atual:
 
 | Prio | Defeito | Estado no código hoje | Efeito prático |
 |---|---|---|---|

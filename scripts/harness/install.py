@@ -27,10 +27,10 @@ import j5  # noqa: E402
 
 ENGINE_FILES = ["hcore.py", "j5.py", "engine.py", "cmds.py", "views.py", "brief.py", "router.py", "autonomy.py",
                 "session.py", "state.py", "validate.py", "guard.py", "bashscan.py", "selftest.py",
-                "envfail.py", "tree.py"]
+                "envfail.py", "tree.py", "auto.py"]
 DATA_FILES = [(os.path.join(HERE, "machines.json5"), "machines.json5"), (os.path.join(HERE, "routing.json5"), "routing.json5"),
               (os.path.join(MEMORY, "mem.py"), "mem.py")]
-BINS = ["cs-state", "cs-mem", "cs-session", "cs-route", "cs-precommit"]
+BINS = ["cs-state", "cs-mem", "cs-session", "cs-route", "cs-precommit", "cs-auto"]
 HOOK_CMD = '"$CLAUDE_PROJECT_DIR"/.claude/hooks/cs-guard.sh %s'
 HOOKS = [
     ("PreToolUse", "Write|Edit|MultiEdit|NotebookEdit", "pre-write", 30),
@@ -42,6 +42,7 @@ HOOKS = [
     ("Stop", None, "stop", 30),
     ("UserPromptSubmit", None, "user-prompt", 10),
     ("SessionStart", None, "session-start", 30),
+    ("PreCompact", None, "pre-compact", 30),
 ]
 MAKE_TARGETS = [
     ("next", "cs-state next", "próxima ação permitida"),
@@ -319,6 +320,20 @@ Honestidade: sem hooks de pré-execução nada impede o agente de escrever fora 
             changes.append(hcore.STATE_DIR + "/harness/adapters/%s.md" % p)
 
 
+def init_target_state(root):
+    """Estado do alvo. Alvo NOVO nasce em ÁRVORE (backlog/ state/ archive/ + events.jsonl com 1º evento `init`
+    layout tree; sem board plano, sem migrate). Já em árvore: nada. Board plano legado: preservado como está
+    (a migração é explícita: `cs-state migrate state-tree`). → True se criou."""
+    import engine
+    import tree
+    legacy = os.path.join(root, hcore.STATE_DIR, "state", "board.json5")
+    if hcore.tree_mode(root):
+        return False
+    if os.path.isfile(legacy):
+        return engine.init_state(root)
+    return bool(tree.init(root))
+
+
 def _apply(root, platforms, settings, makefile, git_hook, path_env):
     dry = _PLAN is not None
     changes = []
@@ -332,8 +347,7 @@ def _apply(root, platforms, settings, makefile, git_hook, path_env):
             changes.append(hcore.STATE_DIR + "/state (init)")
     else:
         sys.path.insert(0, os.path.join(root, hcore.STATE_DIR, "harness"))
-        import engine
-        if engine.init_state(root):
+        if init_target_state(root):
             changes.append(hcore.STATE_DIR + "/state (init)")
         os.makedirs(os.path.join(root, hcore.STATE_DIR, "memory", "agents"), exist_ok=True)
     targets = write_makefile(root, changes) if makefile else {}

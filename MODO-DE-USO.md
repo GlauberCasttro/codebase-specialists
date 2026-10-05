@@ -180,6 +180,8 @@ Em Claude Code o `emit` cria 14 skills finas (≤ 40 linhas; só chamam o `cs-st
 | `/board`, `/new-epico`, `/new-sprint`, `/new-feature`, `/new-task`, `/new-story` | o **modelo pode chamar sozinho**; as de criação mostram antes com `--dry-run` e checam o DoR com `cs-state check` |
 | `/close-task`, `/close-feature`, `/close-sprint`, `/close-epico`, `/close-story`, `/reopen`, `/park`, `/move` | **só o humano** (`disable-model-invocation: true`): mudam o estado |
 
+As 14 skills de estado e as 9 do mandato também saem para Cursor (`.cursor/skills/`), Copilot (`.github/skills/`) e Codex (`.agents/skills/`); no Codex a skill humana diz "Só o humano executa".
+
 ## Migrar para 0.7.0 (estado em árvore) e correções do upgrade
 
 O `cs.py upgrade --apply` de um alvo anterior à 0.7.0 aplica a migração `state-tree` depois de instalar o harness
@@ -189,6 +191,40 @@ correções do mesmo upgrade: **alvo pausado** no meio do init (ex.: antes da in
 é atualizado sem restaurar o backup e **retoma do ponto onde parou** (`cs.py stage status`); e o **backup** deixa de
 copiar `.git` aninhado e `tmp/` (listados em `excluded` no `manifest.json5`; o hook `pre-commit` é guardado sob
 outro nome).
+
+## Modo autônomo (0.8.0)
+
+O **mandato** é um contrato que você assina: um objetivo, critérios de aceite executáveis (hoje vermelhos), os
+nós do plano e um orçamento. Depois de aprovado, o modelo só executa tasks; **quem decide o próximo passo, verifica,
+aceita, integra e encerra é o script** (`cs-auto`).
+
+1. `cs-auto propose --feature FEA-nnn --spec <arquivo> --objetivo "…" --nos N --criterio 'AC-1|texto|<teste>'`
+   (ou `--sprint SPR-nnn`). Recusa se algum critério já está verde, se a classe é trivial ou se já há mandato aberto.
+2. **Você** lê a proposta (`cs-auto status`) e aprova com `/auto-approve` (com a senha). O orçamento
+   (despachos, tentativas, replanos, minutos) é calculado pelo motor a partir do tamanho do plano; só você o muda,
+   na aprovação ou numa emenda.
+3. O modelo monta o plano com `cs-auto plan add-node … ` e `cs-auto plan submit` (o motor valida DAG, território e
+   cobertura dos critérios), e então roda `cs-auto tick` em laço (`/auto-tick`): cada chamada devolve **uma** ação
+   (despachar uma task, integrar uma onda, replanejar…); o modelo executa só ela e chama `tick` de novo.
+4. Ao fim, `/auto-report` (`cs-auto report`): critérios verdes, verificações com hash e o que foi devolvido.
+
+**Só do humano** (exigem `--by <humano>`; o guard bloqueia o modelo): `approve`, `amend`, `resolve`, `stop`, `abort`
+(`/auto-approve`, `/auto-amend`, `/auto-resolve`, `/auto-stop`, `/auto-abort`).
+
+**Regras que você vai ver:**
+- **Corte aos 80% do orçamento**: com 5 despachos, o 4º ainda termina; o 5º nunca sai. Você recebe entrega parcial,
+  com o que sobrou devolvido ao backlog.
+- **Ramo travado não para o resto**: uma task que precisa mexer em área congelada espera você junto das que dependem
+  dela; o resto segue. O mandato só chama você (`AWAITING_HUMAN`) quando nada mais pode rodar. Você responde com
+  `/auto-resolve` (`retomar`, `trocar-agente`, `emendar`, `descartar-ramo`, `encerrar` ou `abortar`).
+- **Sem progresso**: se as rodadas não avançam o aceite, o mandato replaneja **uma vez**; parado de novo, encerra com
+  entrega parcial. Não fica pedindo ajuda por contagem de tentativas.
+- **Pausa e retomada**: `cs-auto pause` / `cs-auto resume` voltam exatamente ao estado anterior; o hook PreCompact
+  pausa o mandato sozinho antes de compactar. O tempo pausado não gasta o orçamento de minutos.
+- O modelo nunca roda verificar/aceitar/fechar task nem escreve o brief à mão; subagente que morre no meio é
+  tratado pelo script olhando o disco (`cs-auto orphan`).
+
+Detalhe e a máquina de 12 estados: [docs/11-modo-autonomo.md](docs/11-modo-autonomo.md).
 
 ## Depois do GO — o dia a dia
 

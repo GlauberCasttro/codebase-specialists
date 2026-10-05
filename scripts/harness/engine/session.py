@@ -507,7 +507,26 @@ def tree_check(root):
         return ["nenhum carimbo salvo (cs-session save)"]
     if not isinstance(rec, dict):
         return ["carimbo ilegível: %s" % path]
-    return check_blocks(rec.get("blocos"))
+    probs = list(check_blocks(rec.get("blocos")) or [])
+    last = _last_approval_ts(root)
+    if last and str(rec.get("saved_at") or "")[:19] < str(last)[:19]:
+        # approve.3 (efeito), igual a check_saved: o carimbo tem de ser DEPOIS da decisão do founder
+        probs.append("carimbo (%s) é anterior à decisão do founder (%s): rode cs-session save de novo"
+                     % (rec.get("saved_at"), last))
+    return probs
+
+
+def tree_session_lines(root):
+    """`cs-state next` em árvore: orientação da sessão M1 (paridade com views.next_lines do caminho plano)."""
+    try:
+        board = hcore.load_board(root)
+    except hcore.StateError:
+        return []
+    sess = [s for s in board.get("sessions") or [] if s.get("state") != "IDLE"]
+    if not sess:
+        return ["sem sessão ativa → cs-state session start --request '<pedido do usuário>'"]
+    s = sess[-1]
+    return ["sessão %s [%s] classe=%s" % (s["id"], s["state"], s.get("class") or "?")]
 
 
 def tree_load(root):

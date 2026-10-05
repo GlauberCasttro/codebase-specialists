@@ -42,7 +42,7 @@ ESCALATED/ABSTAINED esperam o usuário e nunca são fim (`cs-state why <task>` d
 | não vale fazer | `drop --task <id> --reason "<motivo>"` (task DROPPED) |
 | verify falhou por AMBIENTE, já consertado | `reverify --task <id>` |
 | AMBIENTE, usuário assume a exceção | só o USUÁRIO, no terminal dele: `waive-verify --task <id> --by <usuário> --reason "…" --evidence "<saída>"`; review de gate segue obrigatória; nunca para teste vermelho |
-| mandato autônomo escalado | `autonomy resume --decision "<decisão>"` ou `autonomy stop --reason "…"` |
+| mandato autônomo escalado | só o HUMANO: `.swarm/bin/cs-auto resolve --choice <opção> --by <humano> --decision "…"` (opções em `cs-auto status`) |
 
 ## Faixas (pela classe da triagem)
 
@@ -81,9 +81,9 @@ O especialista aponta erro no próprio brief por `submission.risks`; corrigir br
 ## Modos
 
 - `assistido` (padrão): o usuário aprova plano, escaladas e aceite final.
-- `autonomo`: só após UMA aprovação do usuário sobre spec, testes de aceite executáveis (vermelhos hoje),
-  classe e orçamento: `.swarm/bin/cs-state autonomy start --feature <id> --spec <arquivo> --budget
-  tasks=N,attempts=2,minutes=M`; depois `.swarm/bin/cs-state next` até REPORTING, sem perguntar.
+- `autonomo`: mandato proposto por `.swarm/bin/cs-auto propose` (spec, critérios vermelhos hoje, classe; o motor
+  deriva o orçamento) e aprovado pelo humano. O loop é `.swarm/bin/cs-auto tick`: execute só a ação pedida;
+  verificar, aceitar, fechar e parar são do motor. Aprovar, emendar, resolver, parar e abortar: só o humano.
 - Escale (pare e traga a decisão com a evidência) ao tocar invariante ou área congelada, ambiguidade
   material, mesma rejeição 2 vezes, orçamento no fim, risco descoberto no caminho, teste de aceite que
   só passaria mudando o teste, conflito entre agentes sem evidência que decida.

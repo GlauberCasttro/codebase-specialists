@@ -1,6 +1,6 @@
 """DEC-SANITIZE (2026-10-03) — um teste por cenário SANITIZE-1..4 + cópia de exame apagada após `probes check`.
 
-Layout pós-init reproduz o medido num repositório-piloto (projeto-legado): `tmp/` com cópia de exame (clone com `.git`), pacote de
+Layout pós-init reproduz o medido no repositório-piloto (projeto-legado): `tmp/` com cópia de exame (clone com `.git`), pacote de
 entrada, rascunhos e scripts de contorno (`fix_g2.py`…), `harness/__pycache__`, sem `.gitignore`.
 """
 import hashlib

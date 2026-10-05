@@ -2,7 +2,7 @@
 
 Como a skill é medida, e o que as medições disseram até agora. Fontes: `evals/README.md`, `evals/evals.json`,
 `evals/check_run.py`, `evals/summarize.py`, `evals/fixtures/`, e os resultados
-das rodadas de avaliação internas (`iteration-1` … `iteration-4`; não publicadas).
+das rodadas de avaliação internas (`rodada-1` … `rodada-4`; não publicadas).
 
 ## 1. O oráculo
 
@@ -49,9 +49,9 @@ ainda casa o texto esperado.
 | 7, 8, 9 | ts-shop-setup-7/8/9 | montar o time |
 | 10, 11, 12 | go-polyglot-setup-10/11/12 | montar o time |
 
-As rodadas registradas no workspace usaram os evals **1, 7 e 10** (prompts vagos: "monta o time de agentes pra
+As rodadas registradas nas rodadas internas usaram os evals **1, 7 e 10** (prompts vagos: "monta o time de agentes pra
 esse repo", "create a team of expert agents for this monorepo", "monta o time de agentes especialistas para
-este repo"). Os evals 4–6 (autônomo, escalada, bugfix) **não aparecem** nos resultados do workspace.
+este repo"). Os evals 4–6 (autônomo, escalada, bugfix) **não aparecem** nos resultados das rodadas internas.
 
 ### `check_run.py` — duas famílias de asserção
 
@@ -122,7 +122,7 @@ Evals de setup com prompt vago. [Q] = qualidade (13 asserções); [S] = estrutur
 | 4 | py-billing | `--fast` | — | — | pausada | — | — | parou em validate.3 |
 | 4 | go-polyglot | `--fast` | — | — | pausada | — | — | parou em validate.2 |
 
-Agregado da iteração 2 (`iteration-2/benchmark-q.md`, 3 runs por config):
+Agregado da iteração 2 (`rodada-2/benchmark-q.md`, 3 runs por config):
 
 | Métrica | with_skill | without_skill | Delta |
 |---|---|---|---|
@@ -137,12 +137,12 @@ Agregado da iteração 2 (`iteration-2/benchmark-q.md`, 3 runs por config):
   baseline. As falhas típicas da baseline são cobertura de território, histórico real (hotspots, co-change,
   commits de correção), versões exatas do lockfile e invariantes de ADR entregues a todos os donos.
 - **Modo**: na py-billing (iteração 3), `--fast` e `--full` deram o mesmo [Q] 13/13; mesa redonda e refino mudam
-  a certificação (G2/G4), não a qualidade (`iteration-3/RESULTADOS.json5 → leitura`; premissa PR-26). Daí o
+  a certificação (G2/G4), não a qualidade (`rodada-3/RESULTADOS.json5 → leitura`; premissa PR-26). Daí o
   `--fast` como padrão.
 - **Decisão**: até a iteração 3 as decisões foram dominadas por defeitos da própria skill. Na iteração 4 só a
   ts-shop concluiu (GO simulado) e precisou de 5 contornos manuais; o critério de parada da campanha
   ("≥2/3 GO; zero contornos manuais; [Q] ≥ baseline nos 3; testes verdes") **não foi cumprido**
-  (`iteration-4/RESULTADOS-E-DEFEITOS.json5`).
+  (`rodada-4/RESULTADOS-E-DEFEITOS.json5`).
 - **Custo**: ~3–4× o tempo e o número de tokens da baseline só no orquestrador, mais dezenas de subagentes.
 
 ## 3. Limites conhecidos do corretor

@@ -1,7 +1,7 @@
 # Plataformas — formatos confirmados e mapeamento da emissão
 
 Normativo para `scripts/emit/`. Formatos verificados na documentação oficial em **2026-10-01**
-(data de acesso). Quando a doc mudar, atualize esta tabela **e** o validador (`scripts/emit/validate.py`),
+(data de acesso; Agent Skills de Cursor/Copilot/Codex conferidas em **2026-10-05**). Quando a doc mudar, atualize esta tabela **e** o validador (`scripts/emit/validate.py`),
 que é o gate G7. Fonte de verdade da emissão: `.swarm/team.json5` + `.swarm/facts/*.json5`.
 
 ## 1. Formatos confirmados (com fonte)
@@ -16,6 +16,9 @@ que é o gate G7. Fonte de verdade da emissão: `.swarm/team.json5` + `.swarm/fa
 | Claude Code | `AGENTS.md` | lido só quando não há `CLAUDE.md` (padrão `claude-md-or-agents-md`) | https://code.claude.com/docs/en/memory#agents-md |
 | Cursor | regras `.cursor/rules/*.mdc` | frontmatter `description`, `globs` (**string, padrões separados por vírgula**, sem aspas nos exemplos oficiais), `alwaysApply` (bool); `alwaysApply: true` ignora globs | https://cursor.com/docs/context/rules |
 | Cursor | subagentes `.cursor/agents/*.md` | frontmatter `name`, `description`, `model` (`inherit` padrão), `readonly` (bool), `is_background` (bool). **O Cursor também lê `.claude/agents/` e `.codex/agents/`** | https://cursor.com/docs/context/subagents |
+| Cursor | skills `.cursor/skills/<n>/SKILL.md` | frontmatter `name` (= diretório), `description`; opcionais `disable-model-invocation`, `license`, `compatibility`, `metadata` (acesso 2026-10-05) | https://cursor.com/docs/context/skills |
+| Copilot | skills `.github/skills/<n>/SKILL.md` | frontmatter `name` (= diretório), `description`; opcionais `argument-hint`, `user-invokable`, `disable-model-invocation`, `license`, `compatibility`, `metadata` (acesso 2026-10-05) | https://learn.microsoft.com/en-us/visualstudio/ide/copilot-agent-skills |
+| Codex | skills `.agents/skills/<n>/SKILL.md` | frontmatter `name`, `description`; opcionais `license`, `compatibility`, `metadata`. **Não existe `disable-model-invocation`** (acesso 2026-10-05) | https://github.com/vercel-labs/skills (`.agents/skills`) |
 | Cursor | `AGENTS.md` | raiz e aninhado; o mais específico prevalece | https://cursor.com/docs/context/rules |
 | Copilot | `.github/copilot-instructions.md` | Markdown livre, vale para o repositório inteiro | https://docs.github.com/en/copilot/how-tos/configure-custom-instructions/add-repository-instructions |
 | Copilot | `.github/instructions/<n>.instructions.md` | frontmatter `applyTo` (glob; vários separados por vírgula), `excludeAgent` opcional | idem |
@@ -36,7 +39,14 @@ Markdown só onde a plataforma exige (§8-decies); o que é da skill sai em JSON
 | S2 território (≤60) | `.claude/rules/cs-<n>.md` (`paths:`) | `.cursor/rules/cs-<n>.mdc` (`globs`) | `.github/instructions/cs-<n>.instructions.md` (`applyTo`) | `<dir>/AGENTS.md` aninhado quando o território é `dir/**`; senão `.swarm/territories/<n>.json5` |
 | S4 playbooks | `.claude/skills/<n>-playbooks/SKILL.md` (não listado em `skills:` para não pré-carregar) | `.swarm/playbooks/<n>.json5` | idem | idem |
 | S5 mapas | `.swarm/knowledge/tree.json5`, `stack.json5` (gerados aqui); `deps.json5`, `collision.json5` (do `cs.py team`, só validados) | idem | idem | idem |
+| Skills de estado (14) e do mandato (9) | `.claude/skills/<n>/SKILL.md` | `.cursor/skills/<n>/SKILL.md` | `.github/skills/<n>/SKILL.md` | `.agents/skills/<n>/SKILL.md` |
 | Comandos (≤15 / ≤25) | `/salvar-sessao`, `/carregar-sessao`, `/corrigir`, `/feature-autonoma`, `/planejar-sprint` como skills com `disable-model-invocation: true` | linhas de terminal no S0 | linhas de terminal no S0 | linhas de terminal no S0 |
+
+**Skills de estado (14) e do mandato (9).** As 23 skills finas (só chamam `.swarm/bin/cs-state <sub>` /
+`.swarm/bin/cs-auto <sub>`) saem para as 4 plataformas, arquivo inteiro gerado (marcador de gerado), `name` = diretório.
+Política de invocação: as que mudam estado (humanas) levam `disable-model-invocation: true` em Claude Code, Cursor e
+Copilot; o Codex não tem o campo, então o corpo da skill humana abre com "Só o humano executa" (o guard continua
+bloqueando o comando). As de consulta/criação ficam invocáveis pelo modelo e **não** podem dizer essa frase.
 
 Medida de orçamento: linhas não vazias que não são comentário HTML de linha inteira, sem frontmatter.
 Termos e regras de negócio entram no S1 como top-N (5→1) por relevância ao território; o restante vai
@@ -82,10 +92,10 @@ fora de `.swarm/`.
 
 | Quem escreve | Caminho fora de `.swarm/` | Tipo | Desliga com |
 |---|---|---|---|
-| `emit` (Claude Code) | `CLAUDE.md` (bloco gerenciado), `.claude/agents/<n>.md`, `.claude/rules/cs-<n>.md`, `.claude/skills/<n>-playbooks/`, `.claude/orchestrator.md`, comandos em `.claude/skills/` | bloco / arquivo gerado | `--platforms` sem `claude-code` |
-| `emit` (Cursor) | `.cursor/rules/cs-*.mdc`, `.cursor/agents/<n>.md` | arquivo gerado | `--platforms` sem `cursor` |
-| `emit` (Copilot) | `.github/copilot-instructions.md` (bloco), `.github/agents/<n>.agent.md`, `.github/instructions/cs-<n>.instructions.md` | bloco / arquivo | `--platforms` sem `copilot` |
-| `emit` (Codex) | `AGENTS.md` raiz (bloco), `<dir>/AGENTS.md` aninhado, `.codex/agents/<n>.toml` | bloco / arquivo | `--platforms` sem `codex` |
+| `emit` (Claude Code) | `CLAUDE.md` (bloco gerenciado), `.claude/agents/<n>.md`, `.claude/rules/cs-<n>.md`, `.claude/skills/<n>-playbooks/`, `.claude/orchestrator.md`, comandos e as 23 skills de estado/mandato em `.claude/skills/` | bloco / arquivo gerado | `--platforms` sem `claude-code` |
+| `emit` (Cursor) | `.cursor/rules/cs-*.mdc`, `.cursor/agents/<n>.md`, `.cursor/skills/<n>/SKILL.md` | arquivo gerado | `--platforms` sem `cursor` |
+| `emit` (Copilot) | `.github/copilot-instructions.md` (bloco), `.github/agents/<n>.agent.md`, `.github/instructions/cs-<n>.instructions.md`, `.github/skills/<n>/SKILL.md` | bloco / arquivo | `--platforms` sem `copilot` |
+| `emit` (Codex) | `AGENTS.md` raiz (bloco), `<dir>/AGENTS.md` aninhado, `.codex/agents/<n>.toml`, `.agents/skills/<n>/SKILL.md` | bloco / arquivo | `--platforms` sem `codex` |
 | `harness install` | `.claude/settings.json` (merge + backup), `.claude/hooks/cs-guard.sh` | merge / arquivo | `--no-settings` |
 | `harness install` | `specialists.mk` + bloco `include specialists.mk` no `Makefile` | arquivo / bloco | `--no-makefile` |
 | `harness install --git-hook` | hook `pre-commit` do git (chama `.swarm/bin/cs-precommit`) | arquivo | omitir `--git-hook` |
@@ -103,6 +113,14 @@ Em todo comando (SKILL, prompts, playbooks, `check`), glob vai entre aspas: o zs
 
 Dentro de arquivos (frontmatter `globs`/`applyTo`/`paths`, `territory` do `team.json5`) o glob é dado, não
 passa pelo shell: o formato de cada plataforma está na §1.
+
+### 4.3 O que `emit validate` confere nas skills
+
+Para cada plataforma pedida: **skill faltando** (falta a saída ou ela difere do que o emit geraria); **política
+removida à mão** (skill humana sem `disable-model-invocation: true` em Claude/Cursor/Copilot, ou sem "Só o humano
+executa" no Codex; skill de consulta/criação marcada como humana); frontmatter com chave fora do conjunto da
+plataforma; e **órfão** (arquivo com marcador de gerado em `.cursor/skills`, `.github/skills`, `.agents/skills` etc.
+sem skill correspondente). Sai com exit ≠ 0 citando o caminho.
 
 ## 5. Limitações conhecidas
 

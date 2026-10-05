@@ -31,7 +31,7 @@ Escolhas onde o contrato não fixa detalhe:
   * `reverify --task T`: roda o verify de novo sobre a MESMA submissão (sem novo despacho: `attempts` não muda).
   * Recusa = exit 1 (hcore.Refused). Exit 2 do argparse (subcomando inexistente) NÃO conta como recusa.
 
-DEPENDEM DA FRENTE EM ANDAMENTO (decisões de produto A1/A2) — podem falhar hoje:
+DEPENDEM DA FRENTE EM ANDAMENTO (A1/A2 em decisões de produto) — podem falhar hoje:
   [A2] `reverify`, `waive-verify`, `failure_kind: environment` → classe TestFalhaDeAmbiente inteira.
   [A1] `retry --decision`, `reroute --decision`, `drop --reason` de ESCALATED/ABSTAINED → classe TestEscaladaSaidas
        e o meio do TestAutonomoE2E (retomada da delegação abstida).
@@ -462,7 +462,7 @@ class TestEscaladaSaidas(E2E):
 
     def _trocar(self, root, t):
         self.ok(root, "reroute", "--task", t, "--agent", "dev-members", "--allowed-path", "src/members/discount.py",
-                "--decision", "é território de members")
+                "--decision", "é território de users")
         ds = task(root, t)["delegations"]
         self.assertEqual((ds[-2]["state"], ds[-1]["state"], ds[-1]["agent"]), ("REROUTED", "PLANNED", "dev-members"))
         self.ok(root, "ready", "--task", t)
