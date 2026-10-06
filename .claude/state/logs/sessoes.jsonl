@@ -3,3 +3,4 @@
 {"data": "2026-10-06T13:15:23-03:00", "evento": "sessao-salva", "resumo": "0.9.0 publicada como projeto; links em ~/.claude/skills; como continuar em outra máquina", "head": "5617806"}
 {"data": "2026-10-06T13:28:08-03:00", "evento": "sessao-salva", "resumo": "frente iter17 (/install do dist) aberta; oraculo em escrita", "head": "760fa57"}
 {"data": "2026-10-06T16:17:28-03:00", "evento": "sessao-salva", "resumo": "iter17 entregue (4dd7cf2); /install rodado: skill instalada = dist 0.9.0", "head": "4dd7cf2"}
+{"data": "2026-10-06T18:49:22-03:00", "evento": "achado", "resumo": "B-13: pre-commit barra o resultado do upgrade/emit/install (relato da sessao da cobaia)", "head": "ce45bb3"}
