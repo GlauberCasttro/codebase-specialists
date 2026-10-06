@@ -6,12 +6,14 @@ Atualizado em 2026-10-06 (criação do projeto completo; iter15 e iter16 entregu
 
 ## Frentes ativas
 
-Nenhuma.
+| frente | o quê | estado (2026-10-06) | escopo | próximo passo |
+|---|---|---|---|---|
+| iter17 | `/install`: a skill INSTALADA passa a ser o pacote `dist/` (gerado e validado), não o projeto; travas do git instaladas sozinhas ao abrir o Claude; carimbo avisa pacote desatualizado; README "máquina nova" sem comando de terminal (decisão do founder) | aberta (`campanhas/iter17`, etapa intake); autor do oráculo escrevendo `campanhas/iter17/oraculo/` | `.claude/tools/{instalar,carimbo,_comum,package}.sh`, `.claude/skills/{install,close-front,load-session}/SKILL.md`, `.claude/settings.json`, `.claude/CLAUDE.md`, `README.md` | congelar o oráculo → `script-aprovacao.sh iter17` → founder aprova com a senha → corretor na cópia → portão → commit → push com autorização → rodar `/install` na máquina de origem (troca o link atual, que aponta para o projeto, pelo `dist/`) |
 
 ## Fila
 
 1. Pacote 0.9.0 (BACKLOG B-08): `bash .claude/tools/package.sh` → founder confere e decide a publicação.
-2. Aviso à sessão da cobaia .NET para rodar o upgrade com a 0.9.0 (B-08, parte 2).
+2. Aviso à sessão da cobaia .NET para rodar o upgrade com a 0.9.0 (B-08, parte 2) — ENVIADO em 2026-10-06.
 3. B-03 refino `--fast` gasta o slot.
 4. B-02 upgrade real no repositório-piloto.
 5. B-06 lembrete "comite antes do close"; B-07 senha em amend/resolve/stop/abort.
