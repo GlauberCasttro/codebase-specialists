@@ -1,6 +1,10 @@
 <!-- carimbo:inicio (gerado por tools/carimbo.sh --write; não edite à mão) -->
 ```
-(ainda não gerado neste projeto — rode `bash .claude/tools/carimbo.sh --write` na próxima save-session)
+carimbo: 2026-10-06 13:15 -03 · branch master · HEAD 5617806 codebase-specialists 0.9.0 — projeto completo de desenvolvimento
+skill: codebase-specialists · VERSION viva 0.9.0 (HEAD: 0.9.0) · último commit da skill: 5617806 2026-10-06 codebase-specialists 0.9.0 — projeto completo de desenvolvimento
+campanhas ativas: nenhuma
+arquivos sujos da skill: 4
+  (lista: git status --porcelain)
 ```
 <!-- carimbo:fim -->
 
@@ -18,6 +22,19 @@
   check-diff pós-aceite) ENTREGUE — commit `da3ea45` no repositório de origem (2026-10-06 11:32); campanha fechada (GO).
 - Nenhuma campanha ativa. O ledger das campanhas (`.auto-correcao/`) ficou só na máquina original.
 - Pacote 0.9.0 gerado e validado por `.claude/tools/package.sh` (dist/ é gitignored; não publicado).
+- **Projeto publicado** (push autorizado pelo founder): `https://github.com/GlauberCasttro/codebase-specialists`
+  (branch `master`). Na máquina de origem, `~/.claude/skills/codebase-specialists` virou LINK para este projeto
+  (conferido: `cs.py` responde, suítes verdes). Irmãos publicados: `GlauberCasttro/auto-correcao` e
+  `GlauberCasttro/construcao-orquestrada` (também linkados em `~/.claude/skills/`).
+
+## Como continuar em outra máquina
+1. `git clone https://github.com/GlauberCasttro/codebase-specialists ~/Repositorios/codebase-specialists`
+2. `ln -s ~/Repositorios/codebase-specialists ~/.claude/skills/codebase-specialists` (instala a skill)
+3. `bash .claude/tools/instalar-hooks-git.sh` (guard de privacidade no commit); para aprovar campanhas,
+   `python3 .claude/tools/ac/ac.py frase definir` no SEU terminal (a senha nunca vai no repositório).
+4. `cd ~/Repositorios/codebase-specialists && claude` → `/load-session`.
+5. `local/` não viaja (privado): sem ele o guard usa só padrões genéricos e o `package` avisa; testes de recurso
+   privado pulam com motivo.
 
 ## Próximos passos (em ordem)
 1. Publicar o pacote 0.9.0 quando o founder quiser: `bash .claude/tools/package.sh` (gera e valida `dist/`) →
