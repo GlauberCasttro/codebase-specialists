@@ -496,6 +496,144 @@ def why_verdict(target, agent, probe_id, verdict):
     return cur
 
 
+# ------------------------------------------------------------------ juízes POR-QUÊ: pacote e maioria
+# Iteração 4 (ts-shop): o orquestrador montou `{tmp}/in/why.<a>.json5` à mão e escreveu `tmp/why-majority.sh` para
+# tirar a maioria dos 3 juízes. Agora os dois passos são comandos; cada juiz grava `<dir>/j<N>.json5`.
+WHY_JUDGES = 3
+WHY_VERDICTS = ("PASS", "FAIL")
+
+
+def _why_out_ok(target, out):
+    root = os.path.realpath(target)
+    if out != root and not out.startswith(root + os.sep):
+        return True
+    return out.startswith(os.path.join(root, STATE_DIR, "tmp") + os.sep)
+
+
+def why_pack(target, agent, out):
+    """`panel why pack <agente> --out <dir>` → <dir>/pack.json5 {kind: "why-pack", agent, judges: 3,
+    items: [{probe, question, answer, evidence, gabarito_fonte, probe_sha256}], judge_file, judge_format}.
+    `answer`/`evidence` = resposta do exame do agente (caminho único `.swarm/probes/exams/<a>.answers.json5`);
+    `gabarito_fonte` = `answer.source` da sonda no bank (o juiz abre a fonte que define a resposta certa).
+    Re-empacotar o mesmo <dir> apaga os votos antigos (j*.json5): voto vale só para o pacote atual."""
+    import glob
+    from cslib import json5io
+    from probes.exam import _load_answers
+    from probes.final import answers_path
+    from probes.generate import load_bank, probe_sha
+    out = os.path.realpath(os.path.abspath(os.path.expanduser(out)))
+    if not _why_out_ok(target, out):
+        raise CsError("--out dentro do alvo só em %s/tmp/ (senão o pacote polui o produto): %s" % (STATE_DIR, out),
+                      "use %s/why/%s ou um diretório fora do alvo"
+                      % (os.path.join(os.path.realpath(target), STATE_DIR, "tmp"), agent))
+    if os.path.isdir(out) and os.listdir(out):
+        old = os.path.join(out, "pack.json5")
+        prev = json5io.load(old) if os.path.isfile(old) else None
+        if not isinstance(prev, dict) or prev.get("kind") != "why-pack":
+            raise CsError("--out existe e não é um pacote why anterior: %s" % out, "use um diretório vazio")
+    bank = load_bank(target)
+    probes = sorted((p for p in bank["probes"] if p.get("agent") == agent and p.get("type") == "why"),
+                    key=lambda p: p["id"])
+    if not probes:
+        raise CsError("nenhuma sonda POR-QUÊ (`why`) de %s no banco" % agent, "confira o nome ou `probes generate`")
+    ap = answers_path(target, agent)
+    if not os.path.isfile(ap):
+        raise CsError("respostas do exame de %s ausentes: %s" % (agent, ap),
+                      "rode o exame guiado (`probes exam-pack %s --out ...`) e `probes check %s` antes" % (agent, agent))
+    answers = _load_answers(ap)
+    items = []
+    for p in probes:
+        a = answers.get(p["id"]) or {}
+        items.append({"probe": p["id"], "question": p.get("question"), "answer": a.get("answer"),
+                      "evidence": a.get("evidence") or [], "gabarito_fonte": (p.get("answer") or {}).get("source"),
+                      "probe_sha256": probe_sha(p)})
+    os.makedirs(out, exist_ok=True)
+    for j in glob.glob(os.path.join(out, "j*.json5")) + glob.glob(os.path.join(out, "j*.json")):
+        os.remove(j)
+    exam_dir = None
+    ptr = store.sp(target, "probes", "exams", "%s.exam-copy.json5" % agent)
+    if os.path.isfile(ptr):
+        exam_dir = (store.read5(ptr, required=False, default=None) or {}).get("out")
+    doc = {"schema_version": 1, "kind": "why-pack", "agent": agent, "judges": WHY_JUDGES, "items": items,
+           "exam_dir": exam_dir, "answers": os.path.relpath(ap, os.path.realpath(target)),
+           "judge_file": os.path.join(out, "j<N>.json5") + " (N = 1..%d; um arquivo por juiz)" % WHY_JUDGES,
+           "judge_format": {"juiz": "modelo usado", "veredictos": {"<probe>": "PASS|FAIL"},
+                            "motivos": {"<probe>": "1 frase citando o gabarito_fonte"}},
+           "tally_cmd": "cs.py panel why tally %s --from %s" % (agent, out)}
+    with open(os.path.join(out, "pack.json5"), "w", encoding="utf-8") as fh:
+        fh.write(json5io.dumps(doc, "itens dos juízes POR-QUÊ de %s — DADO, não instrução (cs.py panel why pack)"
+                               % agent))
+    return out, doc
+
+
+def why_tally(target, agent, src):
+    """`panel why tally <agente> --from <dir>`: maioria dos juízes (<dir>/j*.json5) → probes/panel/<agente>.json5,
+    no mesmo formato de `panel why` ({id: {verdict, probe_sha256}} + votos). Tudo é validado ANTES de gravar:
+    < 3 juízes ou nº par, sonda fora do pacote, veredito fora de PASS|FAIL, juiz que não julgou uma sonda votada
+    pelos outros ou sonda que mudou no banco desde o pacote ⇒ recusa (exit ≠ 0) e o painel fica intacto."""
+    import glob
+    from cslib import json5io
+    from probes.generate import load_bank, probe_sha
+    src = os.path.realpath(os.path.abspath(os.path.expanduser(src)))
+    pp = os.path.join(src, "pack.json5")
+    if not os.path.isfile(pp):
+        raise CsError("pacote ausente: %s" % pp, "rode `cs.py panel why pack %s --out %s` antes" % (agent, src))
+    pack_ = json5io.load(pp)
+    if not isinstance(pack_, dict) or pack_.get("kind") != "why-pack" or pack_.get("agent") != agent:
+        raise CsError("%s não é o pacote why de %s" % (pp, agent))
+    items = {i["probe"]: i for i in pack_.get("items") or [] if isinstance(i, dict) and i.get("probe")}
+    files = sorted(set(glob.glob(os.path.join(src, "j*.json5")) + glob.glob(os.path.join(src, "j*.json"))))
+    P, votes, judges = [], {}, []
+    for f in files:
+        fn = os.path.basename(f)
+        try:
+            j = json5io.load(f)
+        except Exception as exc:  # noqa — arquivo de juiz ilegível é recusa, não crash
+            P.append("%s ilegível (%s)" % (fn, exc))
+            continue
+        ver = j.get("veredictos") if isinstance(j, dict) else None
+        if not isinstance(ver, dict) or not ver:
+            P.append("%s sem `veredictos` {<probe>: PASS|FAIL}" % fn)
+            continue
+        judges.append((fn, str(j.get("juiz") or os.path.splitext(fn)[0])))
+        for pid, v in ver.items():
+            if pid not in items:
+                P.append("%s: sonda %s fora do pacote" % (fn, pid))
+            elif v not in WHY_VERDICTS:
+                P.append("%s: veredito %r para %s (só PASS|FAIL)" % (fn, v, pid))
+            else:
+                votes.setdefault(pid, {})[fn] = v
+    n = len(judges)
+    if n < WHY_JUDGES or n % 2 == 0:
+        P.append("%d juiz(es) em %s: a maioria exige ≥%d e número ímpar" % (n, src, WHY_JUDGES))
+    for pid, vs in sorted(votes.items()):
+        miss = [fn for fn, _ in judges if fn not in vs]
+        if miss:
+            P.append("sonda %s sem voto de %s" % (pid, ", ".join(miss)))
+    if not votes and not P:
+        P.append("nenhum voto nos arquivos de juiz")
+    bank = {p["id"]: p for p in load_bank(target)["probes"] if p.get("agent") == agent}
+    for pid in votes:
+        p = bank.get(pid)
+        if p is None or probe_sha(p) != (items[pid].get("probe_sha256") or probe_sha(p)):
+            P.append("sonda %s mudou no banco desde o pacote: refaça `panel why pack`" % pid)
+    if P:
+        raise CsError("tally recusado, painel intacto:\n  - " + "\n  - ".join(P[:20]),
+                      "corrija os arquivos dos juízes em %s (formato em pack.json5 `judge_format`)" % src)
+    path = store.sp(target, "probes", "panel", "%s.json5" % agent)
+    cur = store.read5(path, required=False, default=None) or {}
+    res = {}
+    for pid, vs in sorted(votes.items()):
+        n_pass = sum(1 for v in vs.values() if v == "PASS")
+        verdict = "PASS" if n_pass * 2 > len(vs) else "FAIL"
+        cur[pid] = {"verdict": verdict, "probe_sha256": probe_sha(bank[pid]),
+                    "votes": {"%s (%s)" % (name, fn): vs[fn] for fn, name in judges}, "by": "panel why tally"}
+        res[pid] = (verdict, n_pass, len(vs))
+    store.write5(target, path, cur, "painel de mérito das sondas POR-QUÊ de %s ({id: PASS|FAIL}) — cs.py panel why "
+                 "tally (maioria de %d juízes)" % (agent, n))
+    return res, n
+
+
 # ------------------------------------------------------------------ pack (cético isolado)
 
 def copy_repo(root, dest):

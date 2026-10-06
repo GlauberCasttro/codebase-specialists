@@ -19,7 +19,7 @@ if _SCRIPTS not in sys.path:
     sys.path.insert(0, _SCRIPTS)
 
 from emit import apply as A  # noqa: E402
-from emit import knowledge, platforms as P, render, validate as V  # noqa: E402
+from emit import guide, knowledge, platforms as P, render, validate as V  # noqa: E402
 from emit.common import ALL_PLATFORMS, EmitError  # noqa: E402
 from cslib.paths import STATE_DIR  # noqa: E402
 from emit.team import load_team, resolve_invariants  # noqa: E402
@@ -212,6 +212,7 @@ def register(subparsers):
     p = subparsers.add_parser("emit", help="emite agentes/regras/núcleo por plataforma; `emit validate` = G7",
                               description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     _add_args(p, with_target=False)  # cs.py injeta --target
+    guide.register(subparsers)  # `cs.py skills-guide --check|--write` (tabela de skills do MODO-DE-USO.md)
     return p
 
 

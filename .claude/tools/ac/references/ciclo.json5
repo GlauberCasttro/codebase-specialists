@@ -1,0 +1,90 @@
+// ciclo.json5 — fonte única das etapas da auto-correcao. Lido por `ac.py load|check|done`.
+// check: comando ac.py (sem prefixo) que prova o EFEITO da sub-etapa, não que um subcomando rodou.
+// ctx: main (orquestrador) | sub (subagente; protege a janela) | user (portão humano).
+{
+  schema_version: 1,
+  order: ["intake", "oraculo", "base", "diagnostico", "plano", "correcao", "integracao", "remedicao", "decisao"],
+  per_round: ["diagnostico", "plano", "correcao", "integracao", "remedicao", "decisao"],
+  stages: {
+    intake: {
+      goal: "alvo, problema, escopo de escrita, orçamento e critério de parada numérico registrados",
+      substages: [
+        {id: "intake.1", do: "registrar alvo, problema (relatado ou a medir) e escopo de escrita", ctx: "main", check: "require target scope"},
+        {id: "intake.2", do: "orçamento: rodadas máx., horas de parede, execuções paralelas máx.", ctx: "main", check: "require budget"},
+        {id: "intake.3", do: "critério de parada em números, aceito pelo usuário", ctx: "user", check: "require stop gate:stop"},
+      ],
+    },
+    oraculo: {
+      goal: "medida existente ou construída, calibrada e congelada por hash",
+      substages: [
+        {id: "oraculo.1", do: "localizar ou construir o oráculo (testes, evals com gabarito oculto, gates)", ctx: "main", check: "require oracle.command"},
+        {id: "oraculo.2", do: "calibrar: saída vazia ≈0, saída boa conhecida passa, ≥2 asserções/config conferidas à mão", ctx: "sub", check: "calibration"},
+        {id: "oraculo.3", do: "separar qualidade (neutra de formato) de estrutura (artefatos próprios)", ctx: "main", check: "require oracle.split"},
+        {id: "oraculo.4", do: "congelar (hash dos arquivos do oráculo)", ctx: "main", check: "oracle verify"},
+      ],
+    },
+    base: {
+      goal: "estado atual medido (e baseline sem o sistema, quando aplicável), com notes.md por execução",
+      substages: [
+        {id: "base.1", do: "execuções isoladas do sistema (diretório próprio, temporários dentro dele)", ctx: "sub", check: "runs --round 0 --min 1"},
+        {id: "base.2", do: "baseline sem o sistema, mesma tarefa (ou motivo registrado para não ter)", ctx: "sub", check: "runs --round 0 --config baseline --min 1 --or-waived"},
+        {id: "base.3", do: "corrigir com o oráculo congelado e registrar tempo/tokens", ctx: "main", check: "runs --round 0 --graded"},
+      ],
+    },
+    diagnostico: {
+      goal: "DEFEITOS.json5 com evidência exata, prioridade e classe",
+      substages: [
+        {id: "diagnostico.1", do: "ler notes.md e asserções falhas; reproduzir os P0", ctx: "main", check: "defects --min 1 --evidence"},
+        {id: "diagnostico.2", do: "classificar: sistema | oraculo | ambiente | executor", ctx: "main", check: "defects --classified"},
+      ],
+    },
+    plano: {
+      goal: "PLANO.json5 com decisões, contrato de nomes e frentes disjuntas que não tocam o oráculo",
+      substages: [
+        {id: "plano.1", do: "frentes com conjuntos de escrita disjuntos e contrato de nomes", ctx: "main", check: "plan check"},
+        {id: "plano.2", do: "decisões de produto aprovadas pelo usuário (ou nenhuma)", ctx: "user", check: "plan gates"},
+      ],
+    },
+    correcao: {
+      goal: "cada defeito de classe sistema com teste que falha antes e passa depois",
+      substages: [
+        {id: "correcao.1", do: "despachar frentes (prompt em prompts.json5) e coletar relatórios", ctx: "sub", check: "fronts --reported"},
+      ],
+    },
+    integracao: {
+      goal: "todas as suítes verdes, contratos alinhados, commit com portão",
+      substages: [
+        {id: "integracao.1", do: "rodar TODAS as suítes em todos os runtimes suportados", ctx: "main", check: "require integration.tests_green"},
+        {id: "integracao.2", do: "oráculo intacto (hash) — mudanças só via oracle change", ctx: "main", check: "oracle verify"},
+        {id: "integracao.3", do: "commit/push com portão humano ou autorização prévia", ctx: "user", check: "gate-ok commit"},
+      ],
+    },
+    remedicao: {
+      goal: "mesmas tarefas, mesmo oráculo, execuções isoladas, sistema congelado durante a medição",
+      substages: [
+        {id: "remedicao.1", do: "execuções da rodada (retomar pelo disco se caírem)", ctx: "sub", check: "runs --min 1"},
+        {id: "remedicao.2", do: "corrigir e registrar tempo/tokens", ctx: "main", check: "runs --graded"},
+      ],
+    },
+    decisao: {
+      goal: "parar | continuar | escalar, decidido contra o critério de parada",
+      substages: [
+        {id: "decisao.1", do: "comparar com a rodada anterior e o critério", ctx: "main", check: "require decision"},
+        {id: "decisao.2", do: "relatório curto ao usuário", ctx: "main", check: "require report"},
+      ],
+    },
+  },
+  // v0.3 — o que muda sem alterar ids nem strings de check (o comportamento está em ac.py):
+  //  - remedicao.1 (`runs --min 1`) só passa com ≥1 execução com `at` estritamente posterior a done["correcao.1"] E `decision` não vazia; a recusa cita correcao.1. `done remedicao` idem.
+  //  - `done <etapa>` bem-sucedido grava state.stage = primeira etapa de `order` ainda não concluída; todas concluídas → "concluida". `done` que falha não muda stage. `status` imprime `etapa: <stage>`.
+  //  - intake.3 / plano.2 / integracao.3 (ctx user): gate e preauth exigem tty + desafio; portão simulado nunca satisfaz `gate:X` em `require`.
+  changes_v03: {
+    remedicao_1: "execução posterior a correcao.1, com decision",
+    stage_final: "concluida",
+    gate_human: "tty + desafio; hook scripts/hook_aprovacao.py",
+  },
+  // v0.4 — intake.3 / plano.2 / integracao.3: gate e preauth exigem tty + FRASE do founder (tag HMAC por aprovação);
+  //  `done decisao` exige `frase-conferida` (ac.py frase conferir) posterior à última aprovação não simulada.
+  changes_v04: {gate_human: "tty + frase do founder; tag HMAC; frase conferir antes de done decisao"},
+  limits: {handoff_max_chars: 6000, max_parallel_default: 3, escalate_after_rounds_without_progress: 2},
+}

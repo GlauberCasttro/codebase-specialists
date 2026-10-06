@@ -125,7 +125,7 @@ class TestS3(unittest.TestCase):
         t = ctx.find("task", "T-1")
         pkg = brief.package(ctx, t, "review", "reviewer")
         self.assertIn("br.billing.max-discount", pkg)
-        self.assertNotIn("br.members.age", pkg)
+        self.assertNotIn("br.users.age", pkg)
         self.assertIn("PASS | FAIL | NEEDS_SPECIALIST", pkg)
         self.assertIn("<<DADO", pkg)
         self.assertLessEqual(len(pkg), 10000)
@@ -175,7 +175,7 @@ class TestCore(unittest.TestCase):
         self.assertFalse(hcore.path_matches("src/ab.py", "src/a"))
         self.assertTrue(hcore.is_reserved(".swarm/x"))
         self.assertTrue(hcore.pattern_within("src/billing/x.py", ["src/billing/**"]))
-        self.assertFalse(hcore.pattern_within("src/members/x.py", ["src/billing/**"]))
+        self.assertFalse(hcore.pattern_within("src/users/x.py", ["src/billing/**"]))
         with self.assertRaises(hcore.StateError):
             hcore.norm_rel("../x")
 

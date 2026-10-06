@@ -1,0 +1,86 @@
+# base.txt — oráculo campanha-iter13 contra a skill atual (0.8.0, sem mudanças), 2026-10-05T21:06Z
+# test_swarm_dir.py sha256 (pré-patch): d56b7014e7b82d0d4d1334445f67bec739932e6f5eb5304d7bd636065f6cf687
+
+===== python3 (Python 3.13.3) — PYTHONDONTWRITEBYTECODE=1 python3 -W ignore -m unittest -v test_menores
+test_dry_run_lista_as_skills_no_bloco_outside (test_menores.TestR1CadaPlataformaSozinha.test_dry_run_lista_as_skills_no_bloco_outside) ... FAIL
+test_emit_so_da_plataforma_gera_as_23_sem_depender_do_claude (test_menores.TestR1CadaPlataformaSozinha.test_emit_so_da_plataforma_gera_as_23_sem_depender_do_claude) ... FAIL
+test_claude_code_continua_igual (test_menores.TestR1EmitSkillsMultiplataforma.test_claude_code_continua_igual) ... ok
+test_codex_23_skills_com_texto_so_humano_e_comando_real (test_menores.TestR1EmitSkillsMultiplataforma.test_codex_23_skills_com_texto_so_humano_e_comando_real) ... FAIL
+test_copilot_23_skills_com_politica_e_comando_real (test_menores.TestR1EmitSkillsMultiplataforma.test_copilot_23_skills_com_politica_e_comando_real) ... FAIL
+test_cursor_23_skills_com_politica_e_comando_real (test_menores.TestR1EmitSkillsMultiplataforma.test_cursor_23_skills_com_politica_e_comando_real) ... FAIL
+O texto não é a única barreira: o comando `cs-auto` humano que cada skill não-Claude cita continua sendo ... FAIL
+test_validate_acusa_edicao_que_tira_a_politica (test_menores.TestR1ValidateCobre.test_validate_acusa_edicao_que_tira_a_politica) ... FAIL
+test_validate_acusa_orfao_gerado (test_menores.TestR1ValidateCobre.test_validate_acusa_orfao_gerado) ... FAIL
+test_validate_acusa_skill_ausente (test_menores.TestR1ValidateCobre.test_validate_acusa_skill_ausente) ... FAIL
+test_validate_verde_logo_apos_emit (test_menores.TestR1ValidateCobre.test_validate_verde_logo_apos_emit) ... FAIL
+test_reroute_atualiza_agent_no_arquivo_e_evento_de_para (test_menores.TestR2RerouteRetryNaArvore.test_reroute_atualiza_agent_no_arquivo_e_evento_de_para) ... FAIL
+test_retry_atualiza_route_no_arquivo_e_evento_de_para (test_menores.TestR2RerouteRetryNaArvore.test_retry_atualiza_route_no_arquivo_e_evento_de_para) ... FAIL
+test_retry_por_decisao_humana_mantem_arquivo_coerente (test_menores.TestR2RerouteRetryNaArvore.test_retry_por_decisao_humana_mantem_arquivo_coerente) ... FAIL
+test_arvore_utilizavel_e_validate_verde (test_menores.TestR3InitNasceEmArvore.test_arvore_utilizavel_e_validate_verde) ... FAIL
+test_cs_state_tree_e_board_funcionam_sem_migrate (test_menores.TestR3InitNasceEmArvore.test_cs_state_tree_e_board_funcionam_sem_migrate) ... FAIL
+test_nasce_em_arvore_sem_migracao (test_menores.TestR3InitNasceEmArvore.test_nasce_em_arvore_sem_migracao) ... FAIL
+test_reinstalar_mantem_arvore (test_menores.TestR3InitNasceEmArvore.test_reinstalar_mantem_arvore) ... FAIL
+test_selftest_verde (test_menores.TestR3InitNasceEmArvore.test_selftest_verde) ... ok
+test_zonas_da_arvore_e_nenhum_board_plano (test_menores.TestR3InitNasceEmArvore.test_zonas_da_arvore_e_nenhum_board_plano) ... FAIL
+AssertionError: '.cursor/skills/close-task/SKILL.md' not found in ' 63 escrita(s) FORA de .swarm/ (exigem --allow-outside):\n  create       .claude/agents/dev-billing.md  (novo)\n  create       .claude/agents/dev-web.md  (novo)\n  create       .claude/agents/qa.md  (novo)\n  create       .claude/agents/reviewer.md  (novo)\n  create       .claude/orchestrator.md  (novo)\n  create       .claude/rules/cs-dev-billing.md  (novo)\n  create       .claude/rules/cs-dev-web.md  (novo)\n  create       .claude/rules/cs-qa.md  (novo)\n  create       .claude/skills/auto-abort/SKILL.md  (novo)\n  create       .claude/skills/auto-amend/SKILL.md  (novo)\n  create       .claude/skills/auto-approve/SKILL.md  (novo)\n  create       .claude/skills/auto-plan/SKILL.md  (novo)\n  create       .claude/skills/auto-report/SKILL.md  (novo)\n  create       .claude/skills/auto-resolve/SKILL.md  (novo)\n  create       .claude/skills/auto-status/SKILL.md  (novo)\n  create       .claude/skills/auto-stop/SKILL.md  (novo)\n  create       .claude/skills/auto-tick/SKILL.md  (novo)\n  create       .claude/skills/board/SKILL.md  (novo)\n  create       .claude/skills/carregar-sessao/SKILL.md  (novo)\n  create       .claude/skills/close-epico/SKILL.md  (novo)\n  create       .claude/skills/close-feature/SKILL.md  (novo)\n  create       .claude/skills/close-sprint/SKILL.md  (novo)\n  create       .claude/skills/close-story/SKILL.md  (novo)\n  create       .claude/skills/close-task/SKILL.md  (novo)\n  create       .claude/skills/corrigir/SKILL.md  (novo)\n  create       .claude/skills/dev-billing-playbooks/SKILL.md  (novo)\n  create       .claude/skills/feature-autonoma/SKILL.md  (novo)\n  create       .claude/skills/move/SKILL.md  (novo)\n  create       .claude/skills/new-epico/SKILL.md  (novo)\n  create       .claude/skills/new-feature/SKILL.md  (novo)\n  create       .claude/skills/new-sprint/SKILL.md  (novo)\n  create       .claude/skills/new-story/SKILL.md  (novo)\n  create       .claude/skills/new-task/SKILL.md  (novo)\n  create       .claude/skills/park/SKILL.md  (novo)\n  create       .claude/skills/planejar-sprint/SKILL.md  (novo)\n  create       .claude/skills/reopen/SKILL.md  (novo)\n  create       .claude/skills/salvar-sessao/SKILL.md  (novo)\n  create       .codex/agents/dev-billing.toml  (novo)\n  create       .codex/agents/dev-web.toml  (novo)\n  create       .codex/agents/qa.toml  (novo)\n  create       .codex/agents/reviewer.toml  (novo)\n  create       .cursor/agents/dev-billing.md  (novo)\n  create       .cursor/agents/dev-web.md  (novo)\n  create       .cursor/agents/qa.md  (novo)\n  create       .cursor/agents/reviewer.md  (novo)\n  create       .cursor/rules/cs-core.mdc  (novo)\n  create       .cursor/rules/cs-dev-billing.mdc  (novo)\n  create       .cursor/rules/cs-dev-web.mdc  (novo)\n  create       .cursor/rules/cs-orchestrator.mdc  (novo)\n  create       .cursor/rules/cs-qa.mdc  (novo)\n  create       .github/agents/dev-billing.agent.md  (novo)\n  create       .github/agents/dev-web.agent.md  (novo)\n  create       .github/agents/qa.agent.md  (novo)\n  create       .github/agents/reviewer.agent.md  (novo)\n  create       .github/copilot-instructions.md  (novo (só bloco))\n  create       .github/instructions/cs-dev-billing.instructions.md  (novo)\n  create       .github/instructions/cs-dev-web.instructions.md  (novo)\n  create       .github/instructions/cs-qa.instructions.md  (novo)\n  create       AGENTS.md  (novo (só bloco))\n  create       CLAUDE.md  (novo (só bloco))\n  create       src/billing/AGENTS.md  (novo (só bloco))\n  create       src/web/AGENTS.md  (novo (só bloco))\n  create       tests/AGENTS.md  (novo (só bloco))\n' : escrita fora de .swarm/ precisa aparecer no bloco outside: .cursor/skills/close-task/SKILL.md
+AssertionError: False is not true : cursor sozinho: .cursor/skills/board/SKILL.md ausente
+AssertionError: False is not true : codex: skill board não emitida em .agents/skills/board/SKILL.md
+AssertionError: False is not true : copilot: skill board não emitida em .github/skills/board/SKILL.md
+AssertionError: False is not true : cursor: skill board não emitida em .cursor/skills/board/SKILL.md
+AssertionError: False is not true : cursor: skill auto-approve não emitida em .cursor/skills/auto-approve/SKILL.md
+AssertionError: False is not true : cursor: skill auto-approve não emitida em .cursor/skills/auto-approve/SKILL.md
+AssertionError: False is not true : cursor: skill board não emitida em .cursor/skills/board/SKILL.md
+AssertionError: False is not true : cursor: skill close-task não emitida em .cursor/skills/close-task/SKILL.md
+AssertionError: False is not true : cursor: skill board não emitida em .cursor/skills/board/SKILL.md
+AssertionError: 'dev-billing' != 'dev-billing-sr'
+AssertionError: {'model': 'sonnet', 'band': 'baixo'} != {'model': 'opus', 'band': 'baixo'}
+AssertionError: [] is not true : retomada (retry --decision) também registra de/para no evento
+AssertionError: 2 != 0 : cs-state: ESTADO: estado em board plano (legado): rode cs-state migrate state-tree
+AssertionError: 2 != 0 : cs-state tree deveria funcionar sem migrate: cs-state: ESTADO: estado em board plano (legado): rode cs-state migrate state-tree
+AssertionError: [] is not true : cadeia de eventos vazia
+AssertionError: Lists differ: ['state/board.json5'] != []
+AssertionError: False is not true : zona da árvore ausente: .swarm/backlog
+Ran 20 tests in 7.002s
+FAILED (failures=18)
+
+===== /usr/bin/python3 (Python 3.9.6) — PYTHONDONTWRITEBYTECODE=1 /usr/bin/python3 -W ignore -m unittest -v test_menores
+test_dry_run_lista_as_skills_no_bloco_outside (test_menores.TestR1CadaPlataformaSozinha) ... FAIL
+test_emit_so_da_plataforma_gera_as_23_sem_depender_do_claude (test_menores.TestR1CadaPlataformaSozinha) ... FAIL
+test_claude_code_continua_igual (test_menores.TestR1EmitSkillsMultiplataforma) ... ok
+test_codex_23_skills_com_texto_so_humano_e_comando_real (test_menores.TestR1EmitSkillsMultiplataforma) ... FAIL
+test_copilot_23_skills_com_politica_e_comando_real (test_menores.TestR1EmitSkillsMultiplataforma) ... FAIL
+test_cursor_23_skills_com_politica_e_comando_real (test_menores.TestR1EmitSkillsMultiplataforma) ... FAIL
+O texto não é a única barreira: o comando `cs-auto` humano que cada skill não-Claude cita continua sendo ... FAIL
+test_validate_acusa_edicao_que_tira_a_politica (test_menores.TestR1ValidateCobre) ... FAIL
+test_validate_acusa_orfao_gerado (test_menores.TestR1ValidateCobre) ... FAIL
+test_validate_acusa_skill_ausente (test_menores.TestR1ValidateCobre) ... FAIL
+test_validate_verde_logo_apos_emit (test_menores.TestR1ValidateCobre) ... FAIL
+test_reroute_atualiza_agent_no_arquivo_e_evento_de_para (test_menores.TestR2RerouteRetryNaArvore) ... FAIL
+test_retry_atualiza_route_no_arquivo_e_evento_de_para (test_menores.TestR2RerouteRetryNaArvore) ... FAIL
+test_retry_por_decisao_humana_mantem_arquivo_coerente (test_menores.TestR2RerouteRetryNaArvore) ... FAIL
+test_arvore_utilizavel_e_validate_verde (test_menores.TestR3InitNasceEmArvore) ... FAIL
+test_cs_state_tree_e_board_funcionam_sem_migrate (test_menores.TestR3InitNasceEmArvore) ... FAIL
+test_nasce_em_arvore_sem_migracao (test_menores.TestR3InitNasceEmArvore) ... FAIL
+test_reinstalar_mantem_arvore (test_menores.TestR3InitNasceEmArvore) ... FAIL
+test_selftest_verde (test_menores.TestR3InitNasceEmArvore) ... ok
+test_zonas_da_arvore_e_nenhum_board_plano (test_menores.TestR3InitNasceEmArvore) ... FAIL
+AssertionError: '.cursor/skills/close-task/SKILL.md' not found in ' 63 escrita(s) FORA de .swarm/ (exigem --allow-outside):\n  create       .claude/agents/dev-billing.md  (novo)\n  create       .claude/agents/dev-web.md  (novo)\n  create       .claude/agents/qa.md  (novo)\n  create       .claude/agents/reviewer.md  (novo)\n  create       .claude/orchestrator.md  (novo)\n  create       .claude/rules/cs-dev-billing.md  (novo)\n  create       .claude/rules/cs-dev-web.md  (novo)\n  create       .claude/rules/cs-qa.md  (novo)\n  create       .claude/skills/auto-abort/SKILL.md  (novo)\n  create       .claude/skills/auto-amend/SKILL.md  (novo)\n  create       .claude/skills/auto-approve/SKILL.md  (novo)\n  create       .claude/skills/auto-plan/SKILL.md  (novo)\n  create       .claude/skills/auto-report/SKILL.md  (novo)\n  create       .claude/skills/auto-resolve/SKILL.md  (novo)\n  create       .claude/skills/auto-status/SKILL.md  (novo)\n  create       .claude/skills/auto-stop/SKILL.md  (novo)\n  create       .claude/skills/auto-tick/SKILL.md  (novo)\n  create       .claude/skills/board/SKILL.md  (novo)\n  create       .claude/skills/carregar-sessao/SKILL.md  (novo)\n  create       .claude/skills/close-epico/SKILL.md  (novo)\n  create       .claude/skills/close-feature/SKILL.md  (novo)\n  create       .claude/skills/close-sprint/SKILL.md  (novo)\n  create       .claude/skills/close-story/SKILL.md  (novo)\n  create       .claude/skills/close-task/SKILL.md  (novo)\n  create       .claude/skills/corrigir/SKILL.md  (novo)\n  create       .claude/skills/dev-billing-playbooks/SKILL.md  (novo)\n  create       .claude/skills/feature-autonoma/SKILL.md  (novo)\n  create       .claude/skills/move/SKILL.md  (novo)\n  create       .claude/skills/new-epico/SKILL.md  (novo)\n  create       .claude/skills/new-feature/SKILL.md  (novo)\n  create       .claude/skills/new-sprint/SKILL.md  (novo)\n  create       .claude/skills/new-story/SKILL.md  (novo)\n  create       .claude/skills/new-task/SKILL.md  (novo)\n  create       .claude/skills/park/SKILL.md  (novo)\n  create       .claude/skills/planejar-sprint/SKILL.md  (novo)\n  create       .claude/skills/reopen/SKILL.md  (novo)\n  create       .claude/skills/salvar-sessao/SKILL.md  (novo)\n  create       .codex/agents/dev-billing.toml  (novo)\n  create       .codex/agents/dev-web.toml  (novo)\n  create       .codex/agents/qa.toml  (novo)\n  create       .codex/agents/reviewer.toml  (novo)\n  create       .cursor/agents/dev-billing.md  (novo)\n  create       .cursor/agents/dev-web.md  (novo)\n  create       .cursor/agents/qa.md  (novo)\n  create       .cursor/agents/reviewer.md  (novo)\n  create       .cursor/rules/cs-core.mdc  (novo)\n  create       .cursor/rules/cs-dev-billing.mdc  (novo)\n  create       .cursor/rules/cs-dev-web.mdc  (novo)\n  create       .cursor/rules/cs-orchestrator.mdc  (novo)\n  create       .cursor/rules/cs-qa.mdc  (novo)\n  create       .github/agents/dev-billing.agent.md  (novo)\n  create       .github/agents/dev-web.agent.md  (novo)\n  create       .github/agents/qa.agent.md  (novo)\n  create       .github/agents/reviewer.agent.md  (novo)\n  create       .github/copilot-instructions.md  (novo (só bloco))\n  create       .github/instructions/cs-dev-billing.instructions.md  (novo)\n  create       .github/instructions/cs-dev-web.instructions.md  (novo)\n  create       .github/instructions/cs-qa.instructions.md  (novo)\n  create       AGENTS.md  (novo (só bloco))\n  create       CLAUDE.md  (novo (só bloco))\n  create       src/billing/AGENTS.md  (novo (só bloco))\n  create       src/web/AGENTS.md  (novo (só bloco))\n  create       tests/AGENTS.md  (novo (só bloco))\n' : escrita fora de .swarm/ precisa aparecer no bloco outside: .cursor/skills/close-task/SKILL.md
+AssertionError: False is not true : cursor sozinho: .cursor/skills/board/SKILL.md ausente
+AssertionError: False is not true : codex: skill board não emitida em .agents/skills/board/SKILL.md
+AssertionError: False is not true : copilot: skill board não emitida em .github/skills/board/SKILL.md
+AssertionError: False is not true : cursor: skill board não emitida em .cursor/skills/board/SKILL.md
+AssertionError: False is not true : cursor: skill auto-approve não emitida em .cursor/skills/auto-approve/SKILL.md
+AssertionError: False is not true : cursor: skill auto-approve não emitida em .cursor/skills/auto-approve/SKILL.md
+AssertionError: False is not true : cursor: skill board não emitida em .cursor/skills/board/SKILL.md
+AssertionError: False is not true : cursor: skill close-task não emitida em .cursor/skills/close-task/SKILL.md
+AssertionError: False is not true : cursor: skill board não emitida em .cursor/skills/board/SKILL.md
+AssertionError: 'dev-billing' != 'dev-billing-sr'
+AssertionError: {'model': 'sonnet', 'band': 'baixo'} != {'model': 'opus', 'band': 'baixo'}
+AssertionError: [] is not true : retomada (retry --decision) também registra de/para no evento
+AssertionError: 2 != 0 : cs-state: ESTADO: estado em board plano (legado): rode cs-state migrate state-tree
+AssertionError: 2 != 0 : cs-state tree deveria funcionar sem migrate: cs-state: ESTADO: estado em board plano (legado): rode cs-state migrate state-tree
+AssertionError: [] is not true : cadeia de eventos vazia
+AssertionError: Lists differ: ['state/board.json5'] != []
+AssertionError: False is not true : zona da árvore ausente: .swarm/backlog
+Ran 20 tests in 7.504s
+FAILED (failures=18)

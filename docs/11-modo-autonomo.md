@@ -17,8 +17,8 @@ numa emenda (`cs-auto amend --orcamento`).
 
 1. `cs-auto propose` (`--feature FEA-nnn` ou `--sprint SPR-nnn`, `--spec`, `--objetivo`, `--nos`, `--criterio`,
    `--regressao`, `--classe`, `--portao`, `--rigor lean|standard|paranoid`) imprime `MAN-nnn`.
-2. Humano: `cs-auto status` para ler, `/auto-approve` (com a senha) para assinar. Aprovar assina o aceite, a
-   regressão e o ponto seguro.
+2. Humano: `cs-auto status` para ler, `/auto-approve` para assinar — no **terminal** dele, com a senha (ver
+   "Senha e selo"). Aprovar assina o aceite, a regressão e o ponto seguro.
 3. Plano: o modelo monta com `cs-auto plan add-node` / `edit-node` / `reset` e entrega com `cs-auto plan submit`.
    O motor valida: DAG sem ciclo, nós no território do agente, cobertura dos critérios, plano dentro do orçamento,
    ondas calculadas, lições consultadas.
@@ -49,10 +49,42 @@ numa emenda (`cs-auto amend --orcamento`).
 
 ## Portão humano
 
-`approve`, `amend`, `resolve`, `stop` e `abort` exigem `--by <humano>` e o guard bloqueia o modelo de rodá-los
+`approve`, `amend`, `resolve`, `stop` e `abort` exigem `--by <humano>` (o `approve`, também a senha no terminal) e o
+guard bloqueia o modelo de rodá-los — e também `cs-auto senha …` e `cs-auto conferir`
 (nas skills: `/auto-approve`, `/auto-amend`, `/auto-resolve`, `/auto-stop`, `/auto-abort`). As 4 skills do modelo são
 `/auto-status`, `/auto-plan`, `/auto-tick`, `/auto-report`. `cs-auto resolve --choice` aceita `retomar`,
 `trocar-agente` (com `--agent`), `emendar`, `descartar-ramo`, `encerrar`, `abortar`, sempre com `--decision`.
+
+## Senha e selo
+
+A aprovação exige a **senha do humano**, não só o `--by` e o guard (um agente que chamasse o motor por outro caminho
+— pty, import, edição do estado — aprovaria sozinho).
+
+- **1ª vez:** `cs-auto senha definir`, no terminal do humano. Senha forte (≥ 12 caracteres, ≥ 6 distintos, ≥ 3
+  classes entre minúscula, maiúscula, dígito e símbolo), digitada duas vezes com o eco desligado. O registro fica
+  **fora do repositório**: `~/.config/codebase-specialists/senha.json` (ou `$CS_SENHA_FILE`, que é só um caminho e é
+  recusado se cair dentro do alvo), modo 0600, só com sais e o verificador PBKDF2-SHA256 (600000 iterações); a senha
+  nunca é gravada. Trocar a senha pede a atual.
+- **`cs-auto approve --by <humano> [--orcamento …]`** pede a senha no terminal. Ela só é lida de `/dev/tty`, com a
+  stdin também em terminal: nenhum argumento, variável de ambiente ou stdin em pipe a fornece, e argumento extra no
+  `approve` é recusado. Sem senha definida, sem terminal ou com a senha errada: exit ≠ 0, o mandato continua
+  PROPOSED e nada é gravado. A senha não substitui o `--by` humano.
+- **Selo:** o evento `mandato.approve` grava `data.selo` = `{versao, alg: hmac-sha256, mandato, plano_sha256,
+  orcamento, seq, ts, tag}`, com `tag = HMAC-SHA256(K, …)` e `K` derivada da senha (PBKDF2 com outro sal). O
+  `plano_sha256` cobre alvo, features, spec, objetivo, classe, rigor, portões, regressão, critérios, orçamento e os
+  arquivos protegidos.
+- **Antes de qualquer avanço** (`tick`, e o mesmo ponto central em `plan submit`, `resume` e nas transições do piloto)
+  o motor lê o último `mandato.approve` do mandato na cadeia e recusa (ASK_HUMAN citando o selo, sem gravar evento)
+  se: não há selo; o selo está fora do formato; é de outro mandato; o orçamento atual difere do aprovado (só o acréscimo
+  de replano decidido pelo humano em `resolve --choice retomar` é somado); ou o hash do plano atual difere do selado.
+- **`cs-auto conferir`** (humano, no terminal, com a senha) recalcula a HMAC de **todos** os selos da cadeia e nomeia
+  cada aprovação ruim (`MAN-nnn seq N`). Não muda o estado.
+
+**Limite honesto:** o `tick` roda sem a senha, então **não verifica a HMAC**: uma tag forjada no formato certo, sobre
+os campos certos, passa por ele. O que o tick garante é que aprovação sem selo, selo malformado, de outro mandato, ou
+plano/orçamento alterados depois (mesmo reescritos de forma consistente na cadeia) não avançam. Quem verifica a HMAC
+é só o `cs-auto conferir` digitado pelo humano. E o registro da senha é legível/gravável pelo agente: ele pode apagá-lo,
+definir a senha dele e re-selar — o humano descobre ao conferir, porque a senha REAL passa a ser recusada.
 
 ## Orçamento e corte
 

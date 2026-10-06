@@ -1,3 +1,6 @@
+local/
+dist/
 __pycache__/
 *.pyc
 .DS_Store
+campanhas/*/.auto-correcao/

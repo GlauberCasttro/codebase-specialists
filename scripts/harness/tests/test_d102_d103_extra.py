@@ -19,7 +19,7 @@ import hcore  # noqa: E402
 from test_faixas_aceite import bash_payload, board, cs, hook  # noqa: E402
 
 A = fixture.A
-LEGACY = ' && test -z "$(git status --porcelain -- \':(glob)src/members/**\')"'
+LEGACY = ' && test -z "$(git status --porcelain -- \':(glob)src/users/**\')"'
 
 
 class Base(unittest.TestCase):
@@ -170,7 +170,7 @@ class TestD103(Base):
         import cmds
         fixture.process(self.root)
         base = "python3 -m unittest discover -s tests -t ."
-        cmds.add_task(self.root, A, fixture.task_spec(protected_paths=["src/members/**"], verification_command=base + LEGACY),
+        cmds.add_task(self.root, A, fixture.task_spec(protected_paths=["src/users/**"], verification_command=base + LEGACY),
                       ready=True)
         self.assertEqual(self.task()["verification_command"], base)
         cmds.amend(self.root, A, "T-1", "verification_command", base + LEGACY, "legado")
@@ -180,19 +180,19 @@ class TestD103(Base):
         """Task de motor antigo (sufixo cru gravado no board): o verify roda sem o sufixo e prova os protected."""
         import cmds
         import engine
-        fixture.dispatched(self.root, protected_paths=["src/members/**"])
+        fixture.dispatched(self.root, protected_paths=["src/users/**"])
 
         def build(ctx):  # simula o board antigo: o vc gravado com o sufixo cru
             vc = ctx.find("task", "T-1")["verification_command"] + LEGACY
             return [engine.Event("task.amend", "T-1", [["set", engine.ref("task", "T-1"), "verification_command", vc]])]
         engine.commit(self.root, A, build)
         # escrita depois do despacho, fora de qualquer allowed_path → é desta delegação (reprova nomeando o arquivo)
-        fixture.write(self.root, "src/members/outra_task.py", "X = 1\n")
+        fixture.write(self.root, "src/users/outra_task.py", "X = 1\n")
         fixture.submit_ok(self.root)
         _, ev = cmds.verify(self.root, A, "T-1")
         probs = ev[-1]["data"]["problems"]
         self.assertEqual(self.deleg()["state"], "REJECTED")
-        self.assertTrue(any("protected_path alterado por esta delegação: src/members/outra_task.py" in p for p in probs), probs)
+        self.assertTrue(any("protected_path alterado por esta delegação: src/users/outra_task.py" in p for p in probs), probs)
         self.assertFalse(any("verification_command exit" in p for p in probs), "o sufixo cru não pode rodar: %r" % probs)
 
 

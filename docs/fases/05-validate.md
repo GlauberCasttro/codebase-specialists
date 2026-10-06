@@ -154,7 +154,7 @@ ou, para todos, `cs.py probes check --all --final --allow-non-specialist --reaso
 | Quem | main (com toque humano para escrita fora) |
 | Comandos | `cs.py harness install --platforms claude-code,cursor,copilot,codex --git-hook --dry-run` → mostrar `outside` → `cs.py harness install --platforms claude-code,cursor,copilot,codex --git-hook --allow-outside` |
 | Check | `cs.py harness selftest` (gate G6: sondas negativas contra os guards **instalados**, integridade do motor por sha256 × `MANIFEST.json5`) |
-| Grava | `.swarm/harness/`, `.swarm/bin/`, `.swarm/state/`, `.swarm/memory/`; fora: `.claude/settings.json` (merge + backup `.bak-<ts>`), `.claude/hooks/cs-guard.sh`, `specialists.mk` + bloco `include specialists.mk` no `Makefile`, `.git/hooks/pre-commit` (com `--git-hook`) |
+| Grava | `.swarm/harness/`, `.swarm/bin/`, `.swarm/state/`, `.swarm/memory/`; fora: `.claude/settings.json` (merge; backup em `.swarm/backups/settings/settings.json.bak-<ts>`), `.claude/hooks/cs-guard.sh`, `specialists.mk` + bloco `include specialists.mk` no `Makefile`, `.git/hooks/pre-commit` (com `--git-hook`) |
 
 Use as **mesmas plataformas do init**: sem `--platforms`, os adapters de Cursor/Copilot/Codex não são
 instalados e essas plataformas ficam só com a prosa do cartão, sem o usuário saber. `--git-hook` sempre que o alvo

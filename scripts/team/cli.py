@@ -154,6 +154,12 @@ def _roster(args):
 def _core(args):
     from team import roster as R
     t = resolve_target(getattr(args, "target", None))
+    if args.core_cmd == "pack":
+        out, doc = R.write_core_pack(t, args.out)
+        print("pacote do core: %d atual(is), %d candidata(s) (cabem %d no S0) → %s"
+              % (len(doc["current"]), len(doc["candidates"]), doc["room"], out))
+        print("aplique com: %s" % doc["apply_cmd"])
+        return 0
     if args.core_cmd == "set":
         lines = R.core_set(t, args.file)
         print("core.lines gravado: %d linha(s)" % len(lines))
@@ -245,18 +251,20 @@ def register(subparsers):
     r4.add_argument("--to", default=None)
     r5 = rsub.add_parser("set", help="substitui o roster inteiro por um JSON5 {agents:[{name,kind,territory,reads}]}")
     r5.add_argument("--file", "--from", dest="file", required=True)
-    co = sub.add_parser("core", help="grava core.lines (S0): set --file | from-panel")
-    csub2 = co.add_subparsers(dest="core_cmd", metavar="<set|from-panel>")
+    co = sub.add_parser("core", help="grava core.lines (S0): set --file | from-panel | pack --out")
+    csub2 = co.add_subparsers(dest="core_cmd", metavar="<set|from-panel|pack>")
     csub2.required = True
     c1 = csub2.add_parser("set", help="grava core.lines de um JSON5 {lines:[{text, facts}]} (≤40)")
     c1.add_argument("--file", "--from", dest="file", required=True)
     c2 = csub2.add_parser("from-panel", help="core = atual + candidatas do painel + camadas.s0_core dos cartões")
+    c3 = csub2.add_parser("pack", help="pacote de entrada do core (atual + candidatas com fatos); não grava estado")
+    c3.add_argument("--out", required=True, help="arquivo JSON5 (em <alvo>/.swarm/tmp/ ou fora do alvo)")
     roster_parsers = [r1, r2, r3, r4, r5]
     for sp_ in roster_parsers:
         sp_.set_defaults(func=_roster)
-    for sp_ in (c1, c2):
+    for sp_ in (c1, c2, c3):
         sp_.set_defaults(func=_core)
-    for sp_ in roster_parsers + [c1, c2]:
+    for sp_ in roster_parsers + [c1, c2, c3]:
         sp_.add_argument("--target", "--root", dest="target", default=argparse.SUPPRESS)
         sp_.set_defaults(func=_wrap(sp_.get_default("func")))
     for sp_ in (ap_, ad, cs_, cr, st):

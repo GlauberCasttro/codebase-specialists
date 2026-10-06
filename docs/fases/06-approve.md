@@ -32,7 +32,7 @@ Ordem do relatório (SKILL.md): (1) modo (`--fast`\|`--full`) e GO/NO-GO em uma 
 território · placar · status (modo fechado à parte, como sinal); (3) garantia por plataforma (hook × instrução,
 do `verify`) e o que **não** é garantido; (4) lacunas (`gap.*`), pulos (`stage skip`) e desvios, inclusive
 reduções de lote por 429; (5) como usar: `.swarm/bin/cs-state next`, `.swarm/bin/cs-mem search`,
-`/corrigir`, `.swarm/bin/cs-session save|load`, modos assistido e autônomo.
+`/correct`, `.swarm/bin/cs-session save|load`, modos assistido e autônomo.
 
 ### approve.2 — decisão (toque humano)
 
@@ -59,7 +59,7 @@ O NO-GO formal é sempre alcançável: validate não fechou, ou fechou com qualq
 Ordem: o id é `approve.4` (sub-etapa nova), mas em `stages.json5` ela vem ANTES de `approve.3` — o save final
 congela o baseline já com a pasta saneada.
 
-Por que existe (DEC-SANITIZE, 2026-10-03): num repositório-piloto (projeto-legado) o init deixou 91 MB de lixo em
+Por que existe (DEC-SANITIZE, 2026-10-03): no repositório-piloto (projeto-legado) o init deixou 91 MB de lixo em
 `.swarm/tmp/` — 15 cópias de exame com `.git` próprio (86 MB), pacotes de entrada, rascunhos, 4 scripts
 de contorno do executor — mais `harness/__pycache__`, e nenhum `.gitignore`: um `git add .` commitaria 91 MB e 15
 repositórios aninhados.

@@ -1,0 +1,18 @@
+--- codebase-specialists/scripts/sanitize/tests/test_sanitize.py
++++ codebase-specialists/scripts/sanitize/tests/test_sanitize.py
+@@ -246,9 +246,13 @@
+         self.assertEqual(code, 0, o + e)
+         self.assertTrue(os.path.isdir(os.path.join(out, "repo", ".git")))
+         items = [perfect(p) for p in load_bank(self.root)["probes"] if p["agent"] == AGENT]
+-        with open(os.path.join(out, "answers.json5"), "w") as fh:
++        # iter11 (P-1): caminho ÚNICO das respostas = `answer_file` de questions.json5; check SEM --answers
++        answer_file = json5io.load(os.path.join(out, "questions.json5"))["answer_file"]
++        self.assertEqual(os.path.realpath(answer_file), os.path.realpath(os.path.join(
++            self.root, D, "probes", "exams", "%s.answers.json5" % AGENT)))
++        with open(answer_file, "w") as fh:
+             fh.write(json.dumps(items))
+-        code, o, e = cs(self.root, "probes", "check", AGENT, "--answers", os.path.join(out, "answers.json5"))
++        code, o, e = cs(self.root, "probes", "check", AGENT)
+         self.assertIn(code, (0, 1), o + e)  # G4 pode reprovar (sem baseline): o que importa é a cópia
+         self.assertIn("%s:" % AGENT, o)
+         self.assertTrue(os.path.isfile(os.path.join(self.root, D, "probes", "exams", "%s.answers.json5" % AGENT)))

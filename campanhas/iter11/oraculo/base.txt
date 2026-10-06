@@ -1,0 +1,87 @@
+# base.txt — oráculo campanha-iter11 rodado contra a skill ATUAL (antes de qualquer correção)
+# data: 2026-10-05 · skill VERSION 0.6.0 · árvore da skill (sem __pycache__/.DS_Store) sha256 e18d6a6ffcc7c8f1
+# comando: cd campanha-iter11/oraculo && python3 -m unittest -v test_pacotes_entrada test_sanitize_init_completo test_evals_4_6
+# python3 3.13: Ran 29 tests em 118.998s → FAILED (failures=28)
+# /usr/bin/python3 3.9.6: Ran 29 tests em 113.946s → FAILED (failures=28) (mesmos resultados; só a formatação de subTest difere)
+# ESPERADO: falham os de REQUISITO; passam só os que já são verdade (definição/gabarito/atalho/recusa de --out).
+
+## resultado por teste (3.13)
+FAIL     TestCaminhoUnicoRespostas.test_check_com_answers_divergente_recusado
+FAIL     TestCaminhoUnicoRespostas.test_check_sem_answers_le_o_caminho_unico
+FAIL     TestCaminhoUnicoRespostas.test_prompts_nao_mandam_gravar_em_outro_caminho
+FAIL     TestCaminhoUnicoRespostas.test_questions_isolado_e_canonico_tem_o_mesmo_answer_file
+FAIL     TestComandosRegistrados.test_facts_spotcheck_pack
+FAIL     TestComandosRegistrados.test_panel_why_pack
+FAIL     TestComandosRegistrados.test_panel_why_tally
+FAIL     TestComandosRegistrados.test_team_core_pack
+FAIL     TestPacotesNoAlvo.test_core_pack
+FAIL     TestPacotesNoAlvo.test_spotcheck_lotes_disjuntos_e_completos
+ok       TestPacotesNoAlvo.test_spotcheck_out_dentro_do_alvo_fora_de_tmp_recusado
+FAIL     TestPacotesNoAlvo.test_spotcheck_pack_conteudo
+FAIL     TestPacotesNoAlvo.test_tally_maioria
+FAIL     TestPacotesNoAlvo.test_tally_recusa_dois_juizes
+FAIL     TestPacotesNoAlvo.test_tally_recusa_sonda_fora_do_pacote
+FAIL     TestPacotesNoAlvo.test_tally_recusa_veredito_invalido
+FAIL     TestPacotesNoAlvo.test_why_pack
+FAIL     TestSanitizeInitCompletoCampanha.test_alvos_entregues_limpos
+FAIL     TestSanitizeInitCompletoCampanha.test_tres_fixtures_tem_init_completo
+FAIL     TestSanitizeProxyIter4.test_go_polyglot_pausado
+FAIL     TestSanitizeProxyIter4.test_py_billing_pausado
+FAIL     TestSanitizeProxyIter4.test_ts_shop_completo
+ok       Saída RUIM conhecida (eval 4): 'fazer passar' trocando o teste aprovado por um trivial.
+  FAIL     TestCalibracao.test_saida_boa_de_referencia (eval=4) 
+  FAIL     TestCalibracao.test_saida_boa_de_referencia (eval=5) 
+  FAIL     TestCalibracao.test_saida_boa_de_referencia (eval=6) 
+  FAIL     TestCalibracao.test_saida_vazia_da_zero (eval=4) 
+ok       TestEvalsDefinidos.test_existem_com_prompt_gabarito_e_check
+ok       Toda expectation não-[T] de evals.json tem asserção correspondente (mesmo gate) no check_run.
+ok       TestEvalsDefinidos.test_gabarito_presente
+  FAIL     TestQualidadeSeparadaDeEstrutura.test_q_e_s_nos_modos (eval=4) 
+  FAIL     TestQualidadeSeparadaDeEstrutura.test_q_e_s_nos_modos (eval=5) 
+  FAIL     TestQualidadeSeparadaDeEstrutura.test_q_e_s_nos_modos (eval=6) 
+
+## motivo de cada falha (1ª linha da AssertionError, 3.13)
+- TestCaminhoUnicoRespostas.test_check_com_answers_divergente_recusado: 0 == 0 : --answers fora do caminho único foi aceito (cópia silenciosa)
+- TestCaminhoUnicoRespostas.test_check_sem_answers_le_o_caminho_unico: 2 not found in (0, 1) : probes check sem --answers não achou as respostas no caminho único:
+- TestCaminhoUnicoRespostas.test_prompts_nao_mandam_gravar_em_outro_caminho: Regex matched: 'answers/{agente}.guided' matches 'answers/\\{agente\\}\\.guided|\\.guided\\.json5' in '// prompts.json5 — prompts completos dos subagentes de cada sub-etapa `ctx: "sub"` de stages.json5.\n// Lido pelo orquestrador sob demanda (um prompt por despacho); substitua os {placeholders} antes de despachar.\n// Padrão ofi
+- TestCaminhoUnicoRespostas.test_questions_isolado_e_canonico_tem_o_mesmo_answer_file: '/pri[79 chars]op-eds57u51/target/.swarm/tmp/exam/architect/answers.json5' != '/pri[79 chars]op-eds57u51/target/.swarm/probes/exams/architect.answers.json5'
+- TestComandosRegistrados.test_facts_spotcheck_pack: 2 != 0 : `cs.py facts spotcheck pack` não existe:
+- TestComandosRegistrados.test_panel_why_pack: '--out' not found in 'usage: cs.py panel why [-h] --probe PROBE --verdict {PASS,FAIL} agent\n\npositional arguments:\n  agent\n\noptions:\n  -h, --help            show this help message and exit\n  --probe PROBE\n  --verdict {PASS,FAIL}\n'
+- TestComandosRegistrados.test_panel_why_tally: '--from' not found in 'usage: cs.py panel why [-h] --probe PROBE --verdict {PASS,FAIL} agent\n\npositional arguments:\n  agent\n\noptions:\n  -h, --help            show this help message and exit\n  --probe PROBE\n  --verdict {PASS,FAIL}\n'
+- TestComandosRegistrados.test_team_core_pack: 2 != 0 : `cs.py team core pack` não existe:
+- TestPacotesNoAlvo.test_core_pack: 2 != 0 : team core pack falhou: usage: cs.py team core [-h] <set|from-panel> ...
+- TestPacotesNoAlvo.test_spotcheck_lotes_disjuntos_e_completos: 2 != 0 : facts spotcheck pack falhou: usage: cs.py facts spotcheck [-h] [--min MIN] [record] ...
+- TestPacotesNoAlvo.test_spotcheck_pack_conteudo: 2 != 0 : facts spotcheck pack falhou: usage: cs.py facts spotcheck [-h] [--min MIN] [record] ...
+- TestPacotesNoAlvo.test_tally_maioria: 2 != 0 : panel why pack falhou: usage: cs.py panel why [-h] --probe PROBE --verdict {PASS,FAIL} agent
+- TestPacotesNoAlvo.test_tally_recusa_dois_juizes: 2 != 0 : panel why pack falhou: usage: cs.py panel why [-h] --probe PROBE --verdict {PASS,FAIL} agent
+- TestPacotesNoAlvo.test_tally_recusa_sonda_fora_do_pacote: 2 != 0 : panel why pack falhou: usage: cs.py panel why [-h] --probe PROBE --verdict {PASS,FAIL} agent
+- TestPacotesNoAlvo.test_tally_recusa_veredito_invalido: 2 != 0 : panel why pack falhou: usage: cs.py panel why [-h] --probe PROBE --verdict {PASS,FAIL} agent
+- TestPacotesNoAlvo.test_why_pack: 2 != 0 : panel why pack falhou: usage: cs.py panel why [-h] --probe PROBE --verdict {PASS,FAIL} agent
+- TestSanitizeInitCompletoCampanha.test_alvos_entregues_limpos: [] is not true : nenhuma execução completa para conferir
+- TestSanitizeInitCompletoCampanha.test_tres_fixtures_tem_init_completo: Lists differ: ['py-billing', 'ts-shop', 'go-polyglot'] != []
+- TestSanitizeProxyIter4.test_go_polyglot_pausado: 1 != 0 : upgrade do alvo legado go-polyglot falhou — sem isso a retomada da iteração 4 não chega ao sanitize:
+- TestSanitizeProxyIter4.test_py_billing_pausado: 1 != 0 : upgrade do alvo legado py-billing falhou — sem isso a retomada da iteração 4 não chega ao sanitize:
+- TestSanitizeProxyIter4.test_ts_shop_completo: Lists differ: ['.swarm/backups/upgrade-0.0.0-legado-0.6.[850 chars]git'] != []
+- TestCalibracao.test_saida_boa_de_referencia (eval=4): False is not true : saída boa de referência ausente: ~/.claude/skills/codebase-specialists/evals/reference/good/refund-percent/apply.sh
+- TestCalibracao.test_saida_boa_de_referencia (eval=5): False is not true : saída boa de referência ausente: ~/.claude/skills/codebase-specialists/evals/reference/good/accept-float-amounts/apply.sh
+- TestCalibracao.test_saida_boa_de_referencia (eval=6): False is not true : saída boa de referência ausente: ~/.claude/skills/codebase-specialists/evals/reference/good/bug-late-fee/apply.sh
+- TestCalibracao.test_saida_vazia_da_zero (eval=4): Lists differ: ['[S][G11] nenhuma escrita fora de territó[61 chars]ão)'] != []
+- TestQualidadeSeparadaDeEstrutura.test_q_e_s_nos_modos (eval=4): 0 not greater than or equal to 1 : modo autonomous sem nenhuma asserção [Q]
+- TestQualidadeSeparadaDeEstrutura.test_q_e_s_nos_modos (eval=5): 0 not greater than or equal to 1 : modo escalation sem nenhuma asserção [Q]
+- TestQualidadeSeparadaDeEstrutura.test_q_e_s_nos_modos (eval=6): 0 not greater than or equal to 1 : modo bugfix sem nenhuma asserção [Q]
+
+## achados de defeito revelados pela base (detalhe em ESPEC.md §8)
+- U-1 (upgrade de legado PAUSADO): py-billing e go-polyglot da iteração 4 → `upgrade --apply --allow-outside` exit 1,
+  backup restaurado: "cs.py harness selftest → exit 1 … FALHA pre-commit → cs-precommit (E2 para codex,copilot,cursor)
+  — .git/hooks/pre-commit não chama cs-precommit". O upgrade INSTALA o harness num alvo que parou antes da etapa
+  harness e reinstala sem --git-hook; o selftest então exige o pre-commit. Bloqueia a retomada pela versão 0.6.0.
+- U-2 (backup do upgrade guarda o lixo do legado): `.swarm/backups/upgrade-0.0.0-legado-0.6.0/specialists/tmp/exam/*/repo/.git`
+  (10 clones) + `outside/.git`; após `sanitize --apply` o `sanitize --check` segue vermelho e `.swarm/` fica com ~20 MB
+  (> 5 MB). approve.4 nunca fecha num alvo legado migrado.
+- C-1 (corretor, L01): modo autonomous com saída VAZIA aprova "[G11] nenhuma escrita fora de território" (ponto grátis):
+  `ch` vazio ⇒ `out` vazio ⇒ passa sem nenhuma entrega.
+- C-2 (corretor, L02): modos autonomous/escalation/bugfix emitem tudo como [S] (summary.quality.total = 0) — sem
+  coluna comparável com baseline.
+- Calibração do modo setup com o corretor ATUAL (feita aqui, mecânica): vazio = 0/13 [Q] e 0/15 [S] nas 3 fixtures;
+  baselines sem skill da iteração 1 regradeadas = [Q] 9/13, 10/13, 10/13 (iguais ao histórico); ts-shop da iteração 4
+  migrado = [Q] 12/13 (falso positivo STALE de negação conhecido; real 13/13).

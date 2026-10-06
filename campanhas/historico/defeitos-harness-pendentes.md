@@ -1,0 +1,1 @@
+- H-1 (codebase-specialists, achado pela iter11): engine.run_cmd executa o acceptance_cmd do feature.json sem shell; 'PYTHONPATH=src python3 …' dá exit 127. Execução real de campanha vai falhar. Destino: campanha M5 (escopo scripts/harness/**) ou rodada da iter10 se reaberta.

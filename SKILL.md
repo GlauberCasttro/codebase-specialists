@@ -119,7 +119,7 @@ Ciclo de toda etapa:
   ou não) ⇒ `verify` decide NO-GO, sempre, em qualquer alvo. Relatório, nesta ordem: modo (`--fast`|`--full`) e
   GO/NO-GO em uma linha; tabela agente · território · placar · status;
   garantia por plataforma (hook × instrução, de `verify`) e o que **não** é garantido; lacunas, `gap.*`, pulos
-  (`stage skip`) e desvios; como usar (`cs-state next`, `cs-mem search`, `/corrigir`, `cs-session save|load`,
+  (`stage skip`) e desvios; como usar (`cs-state next`, `cs-mem search`, `/correct`, `cs-session save|load`,
   modos assistido e autônomo — ARCHITECTURE §8-sexies), sempre com `.swarm/bin/`, e as **três faixas** pela
   classe da triagem: `pergunta` → `cs-state ask <agente> "<pergunta>"` (só leitura); `trivial|pequena` →
   `cs-state add task --quick --agent <a> --title "…" --allowed-path <arq> --verify-cmd "<cmd>"`; `feature|risco` → fluxo completo. Validate não fechou →
@@ -182,16 +182,20 @@ aceita, integra e encerra é o script** (`cs-auto`).
 
 1. `cs-auto propose --feature FEA-nnn --spec <arquivo> --objetivo "…" --nos N --criterio 'AC-1|texto|<teste>'`
    (ou `--sprint SPR-nnn`). Recusa se algum critério já está verde, se a classe é trivial ou se já há mandato aberto.
-2. **Você** lê a proposta (`cs-auto status`) e aprova com `/auto-approve` (com a senha). O orçamento
-   (despachos, tentativas, replanos, minutos) é calculado pelo motor a partir do tamanho do plano; só você o muda,
-   na aprovação ou numa emenda.
+2. **Você** lê a proposta (`cs-auto status`) e aprova com `/auto-approve`: no **seu terminal** (fora do chat),
+   `cs-auto senha definir` só na 1ª vez e depois `cs-auto approve --by <você>`, que pede a senha com o eco desligado
+   (nunca por argumento, variável ou pipe). A aprovação grava um selo HMAC; o piloto não avança sem selo válido
+   para o plano atual, e `cs-auto conferir` (seu, com a senha) recalcula as HMACs — o `tick` não pode verificá-las
+   sem a senha. O orçamento (despachos, tentativas, replanos, minutos) é calculado pelo motor a partir do tamanho
+   do plano; só você o muda, na aprovação ou numa emenda.
 3. O modelo monta o plano com `cs-auto plan add-node … ` e `cs-auto plan submit` (o motor valida DAG, território e
    cobertura dos critérios), e então roda `cs-auto tick` em laço (`/auto-tick`): cada chamada devolve **uma** ação
    (despachar uma task, integrar uma onda, replanejar…); o modelo executa só ela e chama `tick` de novo.
 4. Ao fim, `/auto-report` (`cs-auto report`): critérios verdes, verificações com hash e o que foi devolvido.
 
-**Só do humano** (exigem `--by <humano>`; o guard bloqueia o modelo): `approve`, `amend`, `resolve`, `stop`, `abort`
-(`/auto-approve`, `/auto-amend`, `/auto-resolve`, `/auto-stop`, `/auto-abort`).
+**Só do humano** (exigem `--by <humano>`; o guard bloqueia o modelo): `approve` (com a senha), `amend`, `resolve`,
+`stop`, `abort` (`/auto-approve`, `/auto-amend`, `/auto-resolve`, `/auto-stop`, `/auto-abort`), além de
+`senha definir` e `conferir`. Detalhes e limites: `docs/11-modo-autonomo.md`.
 
 **Regras que você vai ver:**
 - **Corte aos 80% do orçamento**: com 5 despachos, o 4º ainda termina; o 5º nunca sai. Você recebe entrega parcial,

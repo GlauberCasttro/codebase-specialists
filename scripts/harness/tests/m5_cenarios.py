@@ -3,7 +3,7 @@
 Cada cenário recebe o `H` do oráculo de cobertura e só usa a CLI real (`cs-state`, `cs-auto`) e os hooks reais em
 subprocesso observado — exatamente como os demais cenários. A montagem do repositório (arquivos, git) é in-process;
 o estado (árvore épico→sprint→feature→task da campanha iter10) é criado pela CLI.
-Contrato das interfaces: ESPEC interna (não publicada) §2. Objetivo aqui: exercitar
+Contrato das interfaces: campanhas/m5/oraculo/ESPEC.md §2. Objetivo aqui: exercitar
 TODA aresta de `machines.mandato`, toda guarda passando e toda guarda recusando (exceto EXCLUSOES_M5, sem caminho legal).
 """
 import json
@@ -32,7 +32,7 @@ except Exception:
 
 TEAM = {"schema_version": 1, "agents": [
     {"name": "dev-billing", "kind": "dev", "territory": ["src/billing/**", "src/shared/**"]},
-    {"name": "dev-members", "kind": "dev", "territory": ["src/members/**", "src/shared/**"]},
+    {"name": "dev-users", "kind": "dev", "territory": ["src/users/**", "src/shared/**"]},
     {"name": "qa", "kind": "qa", "territory": ["tests/**"]},
     {"name": "po", "kind": "product", "territory": ["docs/stories/**"]},
     {"name": "reviewer", "kind": "gate", "territory": []},
@@ -45,13 +45,13 @@ TEST_BILLING = ("import importlib.util\nimport unittest\n\n\nclass T(unittest.Te
                 "        m = importlib.util.module_from_spec(s)\n        s.loader.exec_module(m)\n"
                 "        self.assertEqual(m.total([1, 2]), 3)\n")
 FILES = {"README.md": "# demo\n", ".gitignore": "__pycache__/\n*.pyc\n",
-         "src/billing/total.py": "def total(items):\n    return sum(items)\n", "src/members/model.py": "AGE = 18\n",
+         "src/billing/total.py": "def total(items):\n    return sum(items)\n", "src/users/model.py": "AGE = 18\n",
          "src/shared/util.py": "X = 0\n", "tests/__init__.py": "", "tests/test_billing.py": TEST_BILLING,
          "accept/__init__.py": "", "docs/stories/README.md": "x\n",
          "spec/feature.md": "# Desconto no checkout\n\nDesconto e perfil no checkout.\n"}
-ACS = [("AC-1", "src/billing/discount.py"), ("AC-2", "src/members/profile.py"), ("AC-3", "tests/test_fluxo.py")]
+ACS = [("AC-1", "src/billing/discount.py"), ("AC-2", "src/users/profile.py"), ("AC-3", "tests/test_fluxo.py")]
 ACS2 = ACS[:2]
-ACS_FROZEN = [("AC-1", "src/shared/frozen/rates.py"), ("AC-2", "src/members/profile.py"), ("AC-3", "tests/test_rates.py")]
+ACS_FROZEN = [("AC-1", "src/shared/frozen/rates.py"), ("AC-2", "src/users/profile.py"), ("AC-3", "tests/test_rates.py")]
 
 
 def N(no, agent, paths, cobre, deps=(), **kw):
@@ -60,11 +60,11 @@ def N(no, agent, paths, cobre, deps=(), **kw):
     return d
 
 
-NODES = [N("01", "dev-billing", ["src/billing/discount.py"], ["AC-1"]), N("02", "dev-members", ["src/members/profile.py"], ["AC-2"]),
+NODES = [N("01", "dev-billing", ["src/billing/discount.py"], ["AC-1"]), N("02", "dev-users", ["src/users/profile.py"], ["AC-2"]),
          N("03", "qa", ["tests/test_fluxo.py"], ["AC-3"], deps=["01"])]
 NODES2 = NODES[:2]
 NODES_FROZEN = [N("01", "dev-billing", ["src/shared/frozen/rates.py"], ["AC-1"]),
-                N("02", "dev-members", ["src/members/profile.py"], ["AC-2"]),
+                N("02", "dev-users", ["src/users/profile.py"], ["AC-2"]),
                 N("03", "qa", ["tests/test_rates.py"], ["AC-3"], deps=["01"])]
 
 EXCLUSOES_M5 = {
@@ -356,10 +356,10 @@ def m5_proposta_aprovacao_emenda_aborto(h):
     a_ok(h, root, *hum(["amend", "--reason", "orçamento", "--orcamento", ORC]))            # amend PROPOSED
     a_no(h, root, "approve", "--by", "orchestrator", guards=["by_human"])
     _write(root, "src/billing/discount.py", "OK = 1\n")
-    _write(root, "src/members/profile.py", "OK = 1\n")
+    _write(root, "src/users/profile.py", "OK = 1\n")
     a_no(h, root, *hum(["approve"]), guards=["acceptance_red"])
     os.remove(os.path.join(root, "src/billing/discount.py"))
-    os.remove(os.path.join(root, "src/members/profile.py"))
+    os.remove(os.path.join(root, "src/users/profile.py"))
     a_no(h, root, "abort", "--by", "dev-billing", "--reason", "x", guards=["by_human"])
     a_no(h, root, *hum(["abort"]), guards=["reason_present"])
     a_ok(h, root, *hum(["abort", "--reason", "rejeitada"]))                                 # abort PROPOSED
@@ -375,7 +375,7 @@ def m5_plano_recusas(h):
     plan_no(h, root, [N("01", "dev-billing", ["src/billing/discount.py"], ["AC-1", "AC-2", "AC-3"])], "not_trivial")
     plan_no(h, root, [dict(a, deps=["02"]), dict(b, deps=["01"]), c], "dag_acyclic")
     plan_no(h, root, [a, b], "dag_covers_acceptance")
-    plan_no(h, root, [dict(a, paths=["src/members/x.py"]), b, c], "nodes_in_territory")
+    plan_no(h, root, [dict(a, paths=["src/users/x.py"]), b, c], "nodes_in_territory")
     plan_no(h, root, [dict(a, paths=["src/billing/%s.py" % x for x in "abcd"]), b, c], "nodes_fit_horizon")
     root2, spr2, feas2 = repo(h, ACS)
     propose(h, root2, feas2[0], ACS)
@@ -414,16 +414,16 @@ def m5_fluxo_feliz_com_pausas(h):
 def m5_replano_recusas_escalada_e_pausa(h):
     root, d, t = ate_replanning(h)
     ref = t["evidencia"][0]["ref"]
-    n4 = N("04", "dev-members", ["src/members/profile.py"], ["AC-2"])
+    n4 = N("04", "dev-users", ["src/users/profile.py"], ["AC-2"])
     plan_no(h, root, [n4], "replan_cites_evidence", motivo="acho")
-    a_ok(h, root, "plan", "edit-node", "--id", "02", "--path", "src/members/outro.py")
+    a_ok(h, root, "plan", "edit-node", "--id", "02", "--path", "src/users/outro.py")
     a_no(h, root, "plan", "submit", "--motivo", "AC-2", "--evidencia", ref, guards=["accepted_nodes_untouched"])
     a_ok(h, root, "plan", "reset")
-    plan_no(h, root, [dict(n4, deps=["05"]), N("05", "dev-members", ["src/members/p5.py"], ["AC-2"], deps=["04"])],
+    plan_no(h, root, [dict(n4, deps=["05"]), N("05", "dev-users", ["src/users/p5.py"], ["AC-2"], deps=["04"])],
             "dag_acyclic", motivo="AC-2", ev=ref)
     plan_no(h, root, [N("04", "qa", ["tests/test_x.py"], ["AC-3"])], "dag_covers_acceptance", motivo="AC-2", ev=ref)
     plan_no(h, root, [dict(n4, paths=["src/billing/x.py"])], "nodes_in_territory", motivo="AC-2", ev=ref)
-    plan_no(h, root, [dict(n4, paths=["src/members/%s.py" % x for x in "abcd"])], "nodes_fit_horizon", motivo="AC-2", ev=ref)
+    plan_no(h, root, [dict(n4, paths=["src/users/%s.py" % x for x in "abcd"])], "nodes_fit_horizon", motivo="AC-2", ev=ref)
     a_ok(h, root, "pause")                                                                 # pause REPLANNING
     a_ok(h, root, "resume")
     a_no(h, root, "escalate", "--condicao", "inventada", "--evidencia", "spec/feature.md:1", guards=["escalation_condition"])
@@ -437,15 +437,15 @@ def m5_replano_recusas_escalada_e_pausa(h):
 
 def m5_replano_acima_do_orcamento(h):
     root, d, t = ate_replanning(h, orc="despachos=4,tentativas=40,replanos=3,minutos=600")
-    plan_no(h, root, [N("04", "dev-members", ["src/members/profile.py"], ["AC-2"]),
-                      N("05", "dev-members", ["src/members/p5.py"], ["AC-2"])],
+    plan_no(h, root, [N("04", "dev-users", ["src/users/profile.py"], ["AC-2"]),
+                      N("05", "dev-users", ["src/users/p5.py"], ["AC-2"])],
             "plan_within_budget", motivo="AC-2", ev=t["evidencia"][0]["ref"])
 
 
 def m5_replanos_esgotados(h):
     root, d, t = ate_replanning(h, orc="despachos=20,tentativas=40,replanos=1,minutos=600")
     d.mode["04"] = "partial"
-    submit(h, root, [N("04", "dev-members", ["src/members/profile.py"], ["AC-2"])], motivo="AC-2", ev=t["evidencia"][0]["ref"], drv=d)
+    submit(h, root, [N("04", "dev-users", ["src/users/profile.py"], ["AC-2"])], motivo="AC-2", ev=t["evidencia"][0]["ref"], drv=d)
     t = d.run()
     _check(t.get("acao") == "ASK_HUMAN", "replanos esgotados → escalada suave (INTEGRATING → AWAITING_HUMAN)")
 
@@ -469,7 +469,7 @@ def m5_escalada_em_planning_e_stop(h):
     a_ok(h, root, *hum(["approve", "--orcamento", ORC]))
     tick(h, root)
     a_ok(h, root, "escalate", "--condicao", "material_ambiguity", "--evidencia", "spec/feature.md:1")  # escalate PLANNING
-    a_no(h, root, *hum(["resolve", "--choice", "trocar-agente", "--agent", "dev-members", "--decision", "x"]),
+    a_no(h, root, *hum(["resolve", "--choice", "trocar-agente", "--agent", "dev-users", "--decision", "x"]),
          guards=["choice_in_package"])
     a_no(h, root, *hum(["resolve", "--choice", "descartar-ramo", "--decision", "x"]), guards=["choice_in_package"])
     a_ok(h, root, *hum(["resolve", "--choice", "retomar", "--decision", "spec vale"]))
@@ -481,7 +481,7 @@ def m5_escalada_em_planning_e_stop(h):
 
 def m5_escalada_local_e_saidas_humanas(h):
     root, d = ate_aguardar(h)
-    for ch, extra, g in (("retomar", [], "resolve_resume"), ("trocar-agente", ["--agent", "dev-members"], "resolve_reroute"),
+    for ch, extra, g in (("retomar", [], "resolve_resume"), ("trocar-agente", ["--agent", "dev-users"], "resolve_reroute"),
                          ("descartar-ramo", [], "resolve_drop")):
         a_no(h, root, "resolve", "--choice", ch, "--decision", "x", "--by", "orchestrator", *extra, guards=["by_human"])
         a_no(h, root, *hum(["resolve", "--choice", ch] + extra), guards=["decision_present"])
@@ -494,7 +494,7 @@ def m5_escalada_local_e_saidas_humanas(h):
     d.run()
     _check(estado(h, root) == "DONE", "retomar → DONE")
     root, d = ate_aguardar(h)
-    a_ok(h, root, *hum(["resolve", "--choice", "trocar-agente", "--agent", "dev-members", "--decision", "troca"]))
+    a_ok(h, root, *hum(["resolve", "--choice", "trocar-agente", "--agent", "dev-users", "--decision", "troca"]))
     d.run()
     _check(estado(h, root) == "DONE", "trocar-agente → DONE")
     root, d = ate_aguardar(h)
@@ -529,9 +529,9 @@ def m5_hack(h):
 
 
 def m5_orcamento_soft(h):
-    acs = [("AC-%d" % i, p) for i, p in enumerate(["src/billing/a.py", "src/members/b.py", "src/billing/c.py",
-                                                    "src/members/d.py", "src/billing/e.py"], 1)]
-    ags = ["dev-billing", "dev-members"] * 3
+    acs = [("AC-%d" % i, p) for i, p in enumerate(["src/billing/a.py", "src/users/b.py", "src/billing/c.py",
+                                                    "src/users/d.py", "src/billing/e.py"], 1)]
+    ags = ["dev-billing", "dev-users"] * 3
     nodes = [N("%02d" % i, ags[i - 1], [acs[i - 1][1]], [acs[i - 1][0]], deps=(["%02d" % (i - 1)] if i > 1 else []))
              for i in range(1, 6)]
     root, d = running(h, acs=acs, nodes=nodes, orc="despachos=5,tentativas=20,replanos=3,minutos=600", nos=5)
@@ -559,7 +559,7 @@ def m5_sprint(h):
     a_ok(h, root, *hum(["approve", "--orcamento", ORC]))
     plans = {feas[0]: [N("01", "dev-billing", ["src/billing/discount.py"], ["AC-1"]),
                        N("02", "qa", ["tests/test_desc.py"], ["AC-1"], deps=["01"])],
-             feas[1]: [N("04", "dev-members", ["src/members/profile.py"], ["AC-1"]),
+             feas[1]: [N("04", "dev-users", ["src/users/profile.py"], ["AC-1"]),
                        N("05", "qa", ["tests/test_perfil.py"], ["AC-1"], deps=["04"])]}
     d = D(h, root)
     d.mode["01"] = "partial"
@@ -576,9 +576,9 @@ def m5_sprint(h):
 
 
 def m5_sem_progresso(h):
-    acs = [("AC-1", "src/billing/a.py"), ("AC-2", "src/members/b.py")]
+    acs = [("AC-1", "src/billing/a.py"), ("AC-2", "src/users/b.py")]
     root, d = running(h, acs=acs, nodes=[N("01", "dev-billing", ["src/billing/a.py"], ["AC-1"]),
-                                         N("02", "dev-members", ["src/members/b.py"], ["AC-2"])],
+                                         N("02", "dev-users", ["src/users/b.py"], ["AC-2"])],
                       orc="despachos=40,tentativas=80,replanos=5,minutos=600")
     d.default = "abstain"
     seq = [2]
@@ -587,7 +587,7 @@ def m5_sem_progresso(h):
         a, b = "%02d" % (seq[0] + 1), "%02d" % (seq[0] + 2)
         seq[0] += 2
         submit(h, root, [N(a, "dev-billing", ["src/billing/a%s.py" % a], ["AC-1"]),
-                         N(b, "dev-members", ["src/members/b%s.py" % b], ["AC-2"])],
+                         N(b, "dev-users", ["src/users/b%s.py" % b], ["AC-2"])],
                motivo="abstenção", ev=t["evidencia"][0]["ref"], drv=dd)
     d.on_replan = on_replan
     d.run()                                                                                # wrap_up INTEGRATING (no_progress)

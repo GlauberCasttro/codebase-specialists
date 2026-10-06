@@ -5,7 +5,7 @@ Há **dois** mecanismos de retomada, para duas coisas diferentes:
 | O que se retoma | Mecanismo | Estado em disco |
 |---|---|---|
 | a **execução da skill** (montar o time) | `cs.py stage status` / `cs.py stage load <etapa>` / `/codebase-specialists retomar` | `.swarm/run.json5` + `.swarm/stages/*.handoff.json5` |
-| o **trabalho do dia a dia** com o time (tasks, sprints, delegações) | `.swarm/bin/cs-session save` / `load` (`/salvar-sessao`, `/carregar-sessao`) | `.swarm/session/resume.json5` + estado do harness |
+| o **trabalho do dia a dia** com o time (tasks, sprints, delegações) | `.swarm/bin/cs-session save` / `load` (`/save-session`, `/load-session`) | `.swarm/session/resume.json5` + estado do harness |
 
 Princípio comum (premissa PR-11, ARCHITECTURE §8-quater): **o disco é a âncora**. Retomar não é reler a conversa
 nem deixar o modelo abrir arquivos de estado: um script monta um pacote pequeno e o modelo segue dali.
@@ -35,7 +35,7 @@ Gate G16 (suíte `scripts/stage/tests/`): `stage load` de cada etapa cabe em 2k 
 falhando não avança; retomada no meio de uma etapa recomeça na sub-etapa certa sem repetir as feitas.
 
 Exemplo de uso real: as rodadas da iteração 4 de py-billing e go-polyglot ficaram **pausadas** em validate.3 e
-validate.2; a próxima rodada as retoma com
+validate.2; o plano da próxima rodada (`campanhas/historico/PROXIMA-RODADA.md`) as retoma com
 `/codebase-specialists retomar`, nunca do zero.
 
 ## 2. `cs-session save` — salvar o trabalho
@@ -91,8 +91,8 @@ execução (`run.json5`), e o comando do próximo passo.
 
 | Comando | Faz (template em `assets/templates/`) |
 |---|---|
-| `/salvar-sessao` | escreve 1 linha para feito/próximo/bloqueio e roda `.swarm/bin/cs-session save --did "<feito>" --next "<próximo>" [--blocked "<bloqueio>"]`; mostra a saída e para |
-| `/carregar-sessao` | injeta a saída de `` !`.swarm/bin/cs-session load` `` antes do modelo ler qualquer coisa; "use só este briefing; não abra arquivos de estado" |
+| `/save-session` | escreve 1 linha para feito/próximo/bloqueio e roda `.swarm/bin/cs-session save --did "<feito>" --next "<próximo>" [--blocked "<bloqueio>"]`; mostra a saída e para |
+| `/load-session` | injeta a saída de `` !`.swarm/bin/cs-session load` `` antes do modelo ler qualquer coisa; "use só este briefing; não abra arquivos de estado" |
 
 Nas outras plataformas, o núcleo S0 instrui a rodar os mesmos scripts no terminal.
 
@@ -106,6 +106,6 @@ tokens; após um evento novo, `load` detecta o delta; round-trip save→load é 
 | Terminou uma etapa da skill | `cs.py stage done <etapa>`; handoff curto; `/clear` ou sessão nova; `cs.py stage load <próxima>` |
 | Contexto pesando no meio de uma etapa | registre o que voltou; `cs.py stage status`; nova sessão; `cs.py stage load <etapa>` |
 | Limite de uso / sessão caiu durante a execução | `/codebase-specialists retomar` |
-| Fim do dia trabalhando com o time | `/salvar-sessao` (ou `.swarm/bin/cs-session save --did … --next …`) |
-| Começo do dia | `/carregar-sessao` (ou `.swarm/bin/cs-session load`); o hook `SessionStart` já injeta o load no Claude Code |
+| Fim do dia trabalhando com o time | `/save-session` (ou `.swarm/bin/cs-session save --did … --next …`) |
+| Começo do dia | `/load-session` (ou `.swarm/bin/cs-session load`); o hook `SessionStart` já injeta o load no Claude Code |
 | Código mudou muito | `cs.py harness selftest --drift`; re-rode `cs.py scan` e as etapas scan → approve para os territórios tocados |

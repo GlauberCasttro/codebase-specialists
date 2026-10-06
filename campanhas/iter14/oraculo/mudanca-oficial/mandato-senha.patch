@@ -1,0 +1,237 @@
+--- campanhas/m5/oraculo/test_mandato.py	2026-10-05 20:34:00
++++ campanhas/m5/oraculo/test_mandato.py	2026-10-05 20:34:49
+@@ -71,6 +71,93 @@
+ TERMINAIS = ("DONE", "HANDED_BACK", "ABORTED")
+ ORC = "despachos=20,tentativas=40,replanos=3,minutos=600,usd=50"
+ 
++
++# ---------------------------------------------------------------- iter14 (mudança oficial): o approve pede a SENHA
++# `cs-auto approve` passou a exigir a senha do humano, digitada num terminal (ver campanha-iter14/oraculo/ESPEC.md).
++# O oráculo faz o papel do humano: roda o approve num pseudo-terminal REAL (pty.fork) e digita SENHA_TESTE a cada
++# prompt `SENHA...:`. Não há bypass no produto: a senha só vale porque CS_SENHA_FILE aponta para um registro PBKDF2
++# gerado com ela (formato da ESPEC iter14 §2.1). Todas as asserções seguem iguais; só muda COMO o approve é digitado.
++import atexit as _atexit  # noqa: E402
++import hashlib as _hashlib  # noqa: E402
++import pty as _pty  # noqa: E402
++import re as _re  # noqa: E402
++import select as _select  # noqa: E402
++import signal as _signal  # noqa: E402
++import time as _time  # noqa: E402
++import unicodedata as _ud  # noqa: E402
++
++SENHA_TESTE = "Mandato-Seguro-2026"
++_SENHA_PROMPT = _re.compile(rb"SENHA[^\r\n:]*:")
++_SENHA_FILE = []
++
++
++def senha_file():
++    """Registro de senha de teste (PBKDF2-SHA256, 600000 iterações), num diretório temporário fora do alvo."""
++    if not _SENHA_FILE:
++        d = tempfile.mkdtemp(prefix="cs-senha-teste-")
++        _atexit.register(shutil.rmtree, d, True)
++        sv, sk = os.urandom(16).hex(), os.urandom(16).hex()
++        nb = _ud.normalize("NFC", SENHA_TESTE.strip()).encode("utf-8")
++        reg = {"versao": 1, "kdf": "pbkdf2-sha256", "iter": 600000, "salt_verificador": sv, "salt_chave": sk,
++               "verificador": _hashlib.pbkdf2_hmac("sha256", nb, bytes.fromhex(sv), 600000, dklen=32).hex(),
++               "criada_em": "2026-10-05T00:00:00Z"}
++        p = os.path.join(d, "senha.json")
++        with open(p, "w") as f:
++            json.dump(reg, f)
++        os.chmod(p, 0o600)
++        _SENHA_FILE.append(p)
++    return _SENHA_FILE[0]
++
++
++def is_approve(args):
++    """O subcomando (depois de --root/--actor) é `approve`?"""
++    args, i = list(args), 0
++    while i < len(args):
++        if args[i] in ("--root", "--actor"):
++            i += 2
++            continue
++        if args[i].startswith(("--root=", "--actor=")):
++            i += 1
++            continue
++        return args[i] == "approve"
++    return False
++
++
++def run_tty(argv, cwd, env, timeout=300):
++    """Roda argv num pty real (stdin = tty controlador) digitando SENHA_TESTE a cada prompt. (exit, saída)."""
++    pid, fd = _pty.fork()
++    if pid == 0:
++        try:
++            os.chdir(cwd)
++            os.execve(argv[0], argv, env)
++        finally:
++            os._exit(127)
++    buf, seen, deadline = b"", 0, _time.time() + timeout
++    try:
++        while True:
++            if _time.time() > deadline:
++                os.kill(pid, _signal.SIGKILL)
++                raise AssertionError("approve no tty não terminou em %ss: %r" % (timeout, buf[-500:]))
++            r, _, _ = _select.select([fd], [], [], 0.1)
++            if not r:
++                continue
++            try:
++                data = os.read(fd, 4096)
++            except OSError:
++                break
++            if not data:
++                break
++            buf += data
++            n = len(_SENHA_PROMPT.findall(buf))
++            while seen < n:
++                os.write(fd, (SENHA_TESTE + "\n").encode("utf-8"))
++                seen += 1
++    finally:
++        _, status = os.waitpid(pid, 0)
++        os.close(fd)
++    code = os.WEXITSTATUS(status) if os.WIFEXITED(status) else 128 + os.WTERMSIG(status)
++    return code, buf.decode("utf-8", "replace").replace("\r\n", "\n")
++
+ # ---------------------------------------------------------------- máquina M5: interface FIXADA (ESPEC §2.1)
+ FIXED_STATES = {"PROPOSED", "CHARTERED", "PLANNING", "RUNNING", "INTEGRATING", "REPLANNING", "AWAITING_HUMAN",
+                 "PAUSED", "WRAPPING_UP", "DONE", "HANDED_BACK", "ABORTED"}
+@@ -366,14 +453,20 @@
+             e.pop(k, None)
+         if self.clock is not None:
+             e["CS_NOW"] = self.clock.strftime("%Y-%m-%dT%H:%M:%SZ")
++        e["CS_SENHA_FILE"] = senha_file()  # iter14: registro da senha de teste (fora do alvo)
+         e.update(extra or {})
+         return e
+ 
+     def _run(self, root, argv, inp=None, env=None, is_auto=False):
+         before = [len(_read_lines(p)) for p in events_files(root)]
+-        p = subprocess.run(argv, cwd=root, env=env or self._env(), input=inp, stdout=subprocess.PIPE,
+-                           stderr=subprocess.PIPE, timeout=300)
+-        out, err = p.stdout.decode("utf-8", "replace"), p.stderr.decode("utf-8", "replace")
++        if is_auto and is_approve(argv[2:]):  # iter14: o approve é digitado num terminal, com a senha
++            code, out = run_tty(argv, root, env or self._env())
++            p = subprocess.CompletedProcess(argv, code)
++            err = out
++        else:
++            p = subprocess.run(argv, cwd=root, env=env or self._env(), input=inp, stdout=subprocess.PIPE,
++                               stderr=subprocess.PIPE, timeout=300)
++            out, err = p.stdout.decode("utf-8", "replace"), p.stderr.decode("utf-8", "replace")
+         for path, n in zip(events_files(root), before):
+             for e in _read_lines(path)[n:]:
+                 _account(e)
+--- codebase-specialists/scripts/harness/tests/test_cobertura_maquinas.py	2026-10-05 20:34:00
++++ codebase-specialists/scripts/harness/tests/test_cobertura_maquinas.py	2026-10-05 20:34:49
+@@ -97,6 +97,94 @@
+         "idem: par reflexivo de legalidade; ESCALATED/escalate sobre task já BLOCKED não reescreve o status",
+ }
+ 
++
++# ---------------------------------------------------------------- iter14 (mudança oficial): o approve pede a SENHA
++# `cs-auto approve` passou a exigir a senha do humano, digitada num terminal (ver campanha-iter14/oraculo/ESPEC.md).
++# O oráculo faz o papel do humano: roda o approve num pseudo-terminal REAL (pty.fork) e digita SENHA_TESTE a cada
++# prompt `SENHA...:`. Não há bypass no produto: a senha só vale porque CS_SENHA_FILE aponta para um registro PBKDF2
++# gerado com ela (formato da ESPEC iter14 §2.1). Todas as asserções seguem iguais; só muda COMO o approve é digitado.
++import atexit as _atexit  # noqa: E402
++import hashlib as _hashlib  # noqa: E402
++import pty as _pty  # noqa: E402
++import re as _re  # noqa: E402
++import select as _select  # noqa: E402
++import signal as _signal  # noqa: E402
++import time as _time  # noqa: E402
++import unicodedata as _ud  # noqa: E402
++
++SENHA_TESTE = "Mandato-Seguro-2026"
++_SENHA_PROMPT = _re.compile(rb"SENHA[^\r\n:]*:")
++_SENHA_FILE = []
++
++
++def senha_file():
++    """Registro de senha de teste (PBKDF2-SHA256, 600000 iterações), num diretório temporário fora do alvo."""
++    if not _SENHA_FILE:
++        d = tempfile.mkdtemp(prefix="cs-senha-teste-")
++        _atexit.register(shutil.rmtree, d, True)
++        sv, sk = os.urandom(16).hex(), os.urandom(16).hex()
++        nb = _ud.normalize("NFC", SENHA_TESTE.strip()).encode("utf-8")
++        reg = {"versao": 1, "kdf": "pbkdf2-sha256", "iter": 600000, "salt_verificador": sv, "salt_chave": sk,
++               "verificador": _hashlib.pbkdf2_hmac("sha256", nb, bytes.fromhex(sv), 600000, dklen=32).hex(),
++               "criada_em": "2026-10-05T00:00:00Z"}
++        p = os.path.join(d, "senha.json")
++        with open(p, "w") as f:
++            json.dump(reg, f)
++        os.chmod(p, 0o600)
++        _SENHA_FILE.append(p)
++    return _SENHA_FILE[0]
++
++
++def is_approve(args):
++    """O subcomando (depois de --root/--actor) é `approve`?"""
++    args, i = list(args), 0
++    while i < len(args):
++        if args[i] in ("--root", "--actor"):
++            i += 2
++            continue
++        if args[i].startswith(("--root=", "--actor=")):
++            i += 1
++            continue
++        return args[i] == "approve"
++    return False
++
++
++def run_tty(argv, cwd, env, timeout=300):
++    """Roda argv num pty real (stdin = tty controlador) digitando SENHA_TESTE a cada prompt. (exit, saída)."""
++    pid, fd = _pty.fork()
++    if pid == 0:
++        try:
++            os.chdir(cwd)
++            os.execve(argv[0], argv, env)
++        finally:
++            os._exit(127)
++    buf, seen, deadline = b"", 0, _time.time() + timeout
++    try:
++        while True:
++            if _time.time() > deadline:
++                os.kill(pid, _signal.SIGKILL)
++                raise AssertionError("approve no tty não terminou em %ss: %r" % (timeout, buf[-500:]))
++            r, _, _ = _select.select([fd], [], [], 0.1)
++            if not r:
++                continue
++            try:
++                data = os.read(fd, 4096)
++            except OSError:
++                break
++            if not data:
++                break
++            buf += data
++            n = len(_SENHA_PROMPT.findall(buf))
++            while seen < n:
++                os.write(fd, (SENHA_TESTE + "\n").encode("utf-8"))
++                seen += 1
++    finally:
++        _, status = os.waitpid(pid, 0)
++        os.close(fd)
++    code = os.WEXITSTATUS(status) if os.WIFEXITED(status) else 128 + os.WTERMSIG(status)
++    return code, buf.decode("utf-8", "replace").replace("\r\n", "\n")
++
++
+ # ================================================================ observador (roda no subprocesso, antes do script real)
+ SHIM = r'''
+ import json, os, runpy, sys
+@@ -281,11 +369,16 @@
+         env = dict(os.environ)
+         for k in ("CLAUDE_PROJECT_DIR", "CS_ACTOR", "CS_GUARD_OFF"):
+             env.pop(k, None)
++        env["CS_SENHA_FILE"] = senha_file()  # iter14: registro da senha de teste (fora do alvo)
+         env.update(env_extra or {})
+         argv = [sys.executable, "-c", SHIM, fixture.ENGINE, fixture.MEMORY, log, script] + list(args)
+-        p = subprocess.run(argv, cwd=root, env=env, input=stdin, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+-                           timeout=300)
+-        out, err = p.stdout.decode("utf-8", "replace"), p.stderr.decode("utf-8", "replace")
++        if script == AUTO and is_approve(args):  # iter14: o approve é digitado num terminal, com a senha
++            code, out = run_tty(argv, root, env)
++            p, err = subprocess.CompletedProcess(argv, code), out
++        else:
++            p = subprocess.run(argv, cwd=root, env=env, input=stdin, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
++                               timeout=300)
++            out, err = p.stdout.decode("utf-8", "replace"), p.stderr.decode("utf-8", "replace")
+         recs = _read_lines(log)
+         shutil.rmtree(logd, ignore_errors=True)
+         events = _read_lines(sp["events"])[n_ev:]

@@ -234,8 +234,8 @@ class TestDespachoSoDeEstado(Base):
 
 # ====================================================================== D-1-03
 class TestVerifyIsolado(Base):
-    def _paralelo(self, b_protected=("src/members/**",), verify_b=VERIFY):
-        """classe feature: po ACCEPTED; A (dev-members) e B (dev-billing) na mesma onda, territórios disjuntos;
+    def _paralelo(self, b_protected=("src/users/**",), verify_b=VERIFY):
+        """classe feature: po ACCEPTED; A (dev-users) e B (dev-billing) na mesma onda, territórios disjuntos;
         protected_paths de B cobre o território de A."""
         root = self.repo()
         if verify_b == VERIFY_B_ASSERT:
@@ -244,8 +244,8 @@ class TestVerifyIsolado(Base):
             commit_all(root)
         self.process(root, "feature")
         po = self.add_task_p(root, "po", "docs/stories/US-1.md", "detalhar a story", wave=1, ref="docs/stories/README.md:1")
-        a = self.add_task_p(root, "dev-members", "src/members/discount.py", "elegibilidade do desconto", wave=2,
-                            ref="src/members/model.py:1")
+        a = self.add_task_p(root, "dev-users", "src/users/discount.py", "elegibilidade do desconto", wave=2,
+                            ref="src/users/model.py:1")
         b = self.add_task_p(root, "dev-billing", "src/billing/discount.py", "criar desconto", wave=2,
                             protected=b_protected, verify=verify_b)
         self.ok(root, "session", "execute")
@@ -264,22 +264,22 @@ class TestVerifyIsolado(Base):
     # ---------------------------------------------------------------- (d)
     def test_d_sujeira_da_task_irma_no_protected_de_b_nao_reprova_b(self):
         root, a, b = self._paralelo()
-        self.dispatch(root, a, "dev-members", "tu-a")
+        self.dispatch(root, a, "dev-users", "tu-a")
         self.dispatch(root, b, "dev-billing", "tu-b")
         # A trabalha (não commitado) dentro do território dela == protected_paths de B
-        self.submit_only(root, a, "dev-members", "src/members/discount.py", "ELIGIBLE = True\n")
+        self.submit_only(root, a, "dev-users", "src/users/discount.py", "ELIGIBLE = True\n")
         self.submit_only(root, b, "dev-billing", "src/billing/discount.py", "RATE = 30\n")
         out = self.ok(root, "verify", "--task", b)
         self.assertIn("verify PASS", out,
                       "D-1-03: B só mexeu no próprio território; a sujeira legítima de A (em voo, não commitada) em "
-                      "src/members/** não pode reprovar B — proteção relativa à delegação de B, não à árvore:\n" + out)
+                      "src/users/** não pode reprovar B — proteção relativa à delegação de B, não à árvore:\n" + out)
         self.assertEqual(deleg(root, b)["state"], "VERIFIED")
         self._fecha(root, a, b)
 
     def test_d_sujeira_da_irma_ja_presente_antes_do_despacho_de_b_nao_reprova_b(self):
         root, a, b = self._paralelo()
-        self.dispatch(root, a, "dev-members", "tu-a")
-        self.submit_only(root, a, "dev-members", "src/members/discount.py", "ELIGIBLE = True\n")
+        self.dispatch(root, a, "dev-users", "tu-a")
+        self.submit_only(root, a, "dev-users", "src/users/discount.py", "ELIGIBLE = True\n")
         self.dispatch(root, b, "dev-billing", "tu-b")  # A já sujou a árvore antes de B sair
         self.submit_only(root, b, "dev-billing", "src/billing/discount.py", "RATE = 30\n")
         out = self.ok(root, "verify", "--task", b)
@@ -289,9 +289,9 @@ class TestVerifyIsolado(Base):
     def test_d_retentativa_de_b_com_sujeira_da_irma_ainda_passa(self):
         """não regressão D-0-13: retry sobre trabalho já na árvore, com a irmã suja no protected de B."""
         root, a, b = self._paralelo(verify_b=VERIFY_B_ASSERT)
-        self.dispatch(root, a, "dev-members", "tu-a")
+        self.dispatch(root, a, "dev-users", "tu-a")
         self.dispatch(root, b, "dev-billing", "tu-b1")
-        self.submit_only(root, a, "dev-members", "src/members/discount.py", "ELIGIBLE = True\n")
+        self.submit_only(root, a, "dev-users", "src/users/discount.py", "ELIGIBLE = True\n")
         self.submit_only(root, b, "dev-billing", "src/billing/discount.py", "RATE = 10\n")
         self.verify_fail(root, b)  # reprova pela ASSERÇÃO (RATE errado) — hoje também pela árvore; ambos REPROVAM
         self.ok(root, "retry", "--task", b, "--findings", "RATE deve ser 30 (checks/test_discount.py)")
@@ -313,14 +313,14 @@ class TestVerifyIsolado(Base):
 
     def test_e_b_alterando_protected_no_territorio_da_irma_reprova_mesmo_com_a_irma_suja(self):
         root, a, b = self._paralelo()
-        self.dispatch(root, a, "dev-members", "tu-a")
+        self.dispatch(root, a, "dev-users", "tu-a")
         self.dispatch(root, b, "dev-billing", "tu-b")
-        self.submit_only(root, a, "dev-members", "src/members/discount.py", "ELIGIBLE = True\n")
-        fixture.write(root, "src/members/model.py", "AGE = 16\n")  # B tocou um protected seu (não é trabalho de A)
+        self.submit_only(root, a, "dev-users", "src/users/discount.py", "ELIGIBLE = True\n")
+        fixture.write(root, "src/users/model.py", "AGE = 16\n")  # B tocou um protected seu (não é trabalho de A)
         self.submit_only(root, b, "dev-billing", "src/billing/discount.py", "RATE = 30\n")
         out = self.verify_fail(root, b)
-        self.assertIn("src/members/model.py", out, "a reprovação deve nomear o protected_path tocado:\n" + out)
-        self.assertNotIn("src/members/discount.py", out.split("REPROVOU", 1)[-1],
+        self.assertIn("src/users/model.py", out, "a reprovação deve nomear o protected_path tocado:\n" + out)
+        self.assertNotIn("src/users/discount.py", out.split("REPROVOU", 1)[-1],
                          "o trabalho legítimo de A não pode ser citado como culpa de B:\n" + out)
 
     # ---------------------------------------------------------------- (f)
@@ -333,14 +333,14 @@ class TestVerifyIsolado(Base):
         cru = ("git status --porcelain" in vc) or ("git diff --quiet" in vc)
         if not cru:
             return
-        self.dispatch(root, a, "dev-members", "tu-a")
+        self.dispatch(root, a, "dev-users", "tu-a")
         self.dispatch(root, b, "dev-billing", "tu-b")
-        self.submit_only(root, a, "dev-members", "src/members/discount.py", "ELIGIBLE = True\n")
+        self.submit_only(root, a, "dev-users", "src/users/discount.py", "ELIGIBLE = True\n")
         fixture.write(root, "src/billing/discount.py", "RATE = 30\n")
         p = subprocess.run(vc, shell=True, cwd=root, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=180)
         self.assertEqual(p.returncode, 0,
                          "D-1-03: o verification_command de B checa a árvore inteira (%r) e a sujeira legítima de A em "
-                         "src/members/** o faz sair %d — o subagente B não consegue nem passar no próprio check"
+                         "src/users/** o faz sair %d — o subagente B não consegue nem passar no próprio check"
                          % (vc, p.returncode))
 
 

@@ -8,7 +8,8 @@ Documentação para humanos da skill `codebase-specialists`. Dois leitores:
   garante (e o que não garante).
 
 Tudo o que está aqui foi conferido contra o código e os arquivos da própria skill (`SKILL.md`,
-`MODO-DE-USO.md`, `references/`, `scripts/`, `evals/`) e contra as saídas reais das rodadas de avaliação internas (não publicadas). Quando algo vem de uma rodada específica, o texto diz de
+`MODO-DE-USO.md`, `references/`, `scripts/`, `evals/`) e contra as saídas reais das rodadas de avaliação em
+`campanhas/`. Quando algo vem de uma rodada específica, o texto diz de
 qual (ex.: "exemplo da fixture py-billing, iteração 4").
 
 ## Índice
@@ -19,10 +20,12 @@ qual (ex.: "exemplo da fixture py-billing, iteração 4").
 | [fases/00-visao-geral.md](fases/00-visao-geral.md) | as 6 etapas, o ciclo `stage load → sub-etapas → stage done`, quem faz o quê |
 | [fases/01-init.md](fases/01-init.md) · [02-scan](fases/02-scan.md) · [03-specialize](fases/03-specialize.md) · [04-round-table](fases/04-round-table.md) · [05-validate](fases/05-validate.md) · [06-approve](fases/06-approve.md) | uma etapa por arquivo: sub-etapas, comandos, checks, arquivos, exemplos e erros comuns |
 | [02-harness.md](02-harness.md) | máquinas de estado (sessão M1, delegação M2, task M3, processo), modo autônomo, guards/hooks, enforcement por plataforma, escritas fora de `.swarm/` |
-| [03-memoria-e-licoes.md](03-memoria-e-licoes.md) | `cs-mem`: busca BM25, tipos de entrada, lições por agente, teto, decaimento, promoção, `/corrigir` |
+| [03-memoria-e-licoes.md](03-memoria-e-licoes.md) | `cs-mem`: busca BM25, tipos de entrada, lições por agente, teto, decaimento, promoção, `/correct` |
 | [04-roteador-de-modelos.md](04-roteador-de-modelos.md) | `cs-route`: faixas, tiers, Thompson sampling, regras fixas, como declarar `model` no despacho |
 | [05-sessao-e-retomada.md](05-sessao-e-retomada.md) | `cs-session save/load`, retomada da execução da skill (`stage load`), janelas de contexto |
 | [10-arvore-de-estado.md](10-arvore-de-estado.md) | estado em árvore (backlog/state/archive), tipos e DoR, `cs-state`, carimbo de sessão, 14 skills, migração 0.7.0 |
+| [11-modo-autonomo.md](11-modo-autonomo.md) | modo autônomo (mandato M5): `cs-auto`, máquina de 12 estados, orçamento e corte, ramo travado, pausa, portão humano |
+| [12-rodada-cobaia-dotnet-por-que-reprovava.md](12-rodada-cobaia-dotnet-por-que-reprovava.md) | rodada cobaia .NET: por que 15 de 16 reprovações vinham do desenho da sonda, e as correções (critério em `dependency`, `why` por documento, tópicos genéricos, `using` em string C#, cópia do exame com painel pendente) |
 | [06-referencia-cli.md](06-referencia-cli.md) | referência de todos os comandos, gerada do `--help` real |
 | [07-evals-e-qualidade.md](07-evals-e-qualidade.md) | o oráculo (fixtures, `check_run.py`, `summarize.py`), como rodar, resultados das 4 iterações |
 | [08-limites-e-defeitos-conhecidos.md](08-limites-e-defeitos-conhecidos.md) | o que não é garantido, defeitos abertos, custo medido |
@@ -102,7 +105,7 @@ melhora o agente; o que melhora são **fatos não deriváveis com evidência**, 
   └──────────────┘
          │
          ▼
-  dia a dia: .swarm/bin/cs-state next · cs-mem search · /corrigir · cs-session save|load
+  dia a dia: .swarm/bin/cs-state next · cs-mem search · /correct · cs-session save|load
 ```
 
 Cada etapa roda numa **janela de contexto própria**: começa com `cs.py stage load <etapa>` (pacote ≤2.000

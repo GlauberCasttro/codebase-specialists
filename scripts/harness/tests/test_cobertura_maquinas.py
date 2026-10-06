@@ -35,7 +35,7 @@ recusa; depois restaura. Isso está documentado no relatório como achado (guard
 Recusa da CLI = exit 1 (hcore.Refused); recusa do hook pre-* = exit 2 (cs-guard BLOQUEOU). Exit 2 do argparse NÃO conta.
 Este arquivo não edita o motor nem os testes existentes; só lê.
 
-EXTENSÃO M5 (rodada interna M5, mudança oficial — ver registro interno): a máquina `mandato`
+EXTENSÃO M5 (campanha-M5, mudança oficial — ver campanha-m5/oraculo/mudanca-oficial/PORQUE.md): a máquina `mandato`
 (modo autônomo) mora em `machines.machines` e entra no MESMO universo e nos MESMOS critérios. Acréscimos, sem afrouxar
 nada do que já existia:
   * `to: "^"` (volta ao estado de onde veio) — a aresta conta quando o destino gravado é um estado da máquina;
@@ -96,6 +96,94 @@ EXCLUSOES = {
     ("aresta", "task", "BLOCKED->BLOCKED", "BLOCKED"):
         "idem: par reflexivo de legalidade; ESCALATED/escalate sobre task já BLOCKED não reescreve o status",
 }
+
+
+# ---------------------------------------------------------------- iter14 (mudança oficial): o approve pede a SENHA
+# `cs-auto approve` passou a exigir a senha do humano, digitada num terminal (ver campanha-iter14/oraculo/ESPEC.md).
+# O oráculo faz o papel do humano: roda o approve num pseudo-terminal REAL (pty.fork) e digita SENHA_TESTE a cada
+# prompt `SENHA...:`. Não há bypass no produto: a senha só vale porque CS_SENHA_FILE aponta para um registro PBKDF2
+# gerado com ela (formato da ESPEC iter14 §2.1). Todas as asserções seguem iguais; só muda COMO o approve é digitado.
+import atexit as _atexit  # noqa: E402
+import hashlib as _hashlib  # noqa: E402
+import pty as _pty  # noqa: E402
+import re as _re  # noqa: E402
+import select as _select  # noqa: E402
+import signal as _signal  # noqa: E402
+import time as _time  # noqa: E402
+import unicodedata as _ud  # noqa: E402
+
+SENHA_TESTE = "Mandato-Seguro-2026"
+_SENHA_PROMPT = _re.compile(rb"SENHA[^\r\n:]*:")
+_SENHA_FILE = []
+
+
+def senha_file():
+    """Registro de senha de teste (PBKDF2-SHA256, 600000 iterações), num diretório temporário fora do alvo."""
+    if not _SENHA_FILE:
+        d = tempfile.mkdtemp(prefix="cs-senha-teste-")
+        _atexit.register(shutil.rmtree, d, True)
+        sv, sk = os.urandom(16).hex(), os.urandom(16).hex()
+        nb = _ud.normalize("NFC", SENHA_TESTE.strip()).encode("utf-8")
+        reg = {"versao": 1, "kdf": "pbkdf2-sha256", "iter": 600000, "salt_verificador": sv, "salt_chave": sk,
+               "verificador": _hashlib.pbkdf2_hmac("sha256", nb, bytes.fromhex(sv), 600000, dklen=32).hex(),
+               "criada_em": "2026-10-05T00:00:00Z"}
+        p = os.path.join(d, "senha.json")
+        with open(p, "w") as f:
+            json.dump(reg, f)
+        os.chmod(p, 0o600)
+        _SENHA_FILE.append(p)
+    return _SENHA_FILE[0]
+
+
+def is_approve(args):
+    """O subcomando (depois de --root/--actor) é `approve`?"""
+    args, i = list(args), 0
+    while i < len(args):
+        if args[i] in ("--root", "--actor"):
+            i += 2
+            continue
+        if args[i].startswith(("--root=", "--actor=")):
+            i += 1
+            continue
+        return args[i] == "approve"
+    return False
+
+
+def run_tty(argv, cwd, env, timeout=300):
+    """Roda argv num pty real (stdin = tty controlador) digitando SENHA_TESTE a cada prompt. (exit, saída)."""
+    pid, fd = _pty.fork()
+    if pid == 0:
+        try:
+            os.chdir(cwd)
+            os.execve(argv[0], argv, env)
+        finally:
+            os._exit(127)
+    buf, seen, deadline = b"", 0, _time.time() + timeout
+    try:
+        while True:
+            if _time.time() > deadline:
+                os.kill(pid, _signal.SIGKILL)
+                raise AssertionError("approve no tty não terminou em %ss: %r" % (timeout, buf[-500:]))
+            r, _, _ = _select.select([fd], [], [], 0.1)
+            if not r:
+                continue
+            try:
+                data = os.read(fd, 4096)
+            except OSError:
+                break
+            if not data:
+                break
+            buf += data
+            n = len(_SENHA_PROMPT.findall(buf))
+            while seen < n:
+                os.write(fd, (SENHA_TESTE + "\n").encode("utf-8"))
+                seen += 1
+    finally:
+        _, status = os.waitpid(pid, 0)
+        os.close(fd)
+    code = os.WEXITSTATUS(status) if os.WIFEXITED(status) else 128 + os.WTERMSIG(status)
+    return code, buf.decode("utf-8", "replace").replace("\r\n", "\n")
+
 
 # ================================================================ observador (roda no subprocesso, antes do script real)
 SHIM = r'''
@@ -281,11 +369,16 @@ class H(object):
         env = dict(os.environ)
         for k in ("CLAUDE_PROJECT_DIR", "CS_ACTOR", "CS_GUARD_OFF"):
             env.pop(k, None)
+        env["CS_SENHA_FILE"] = senha_file()  # iter14: registro da senha de teste (fora do alvo)
         env.update(env_extra or {})
         argv = [sys.executable, "-c", SHIM, fixture.ENGINE, fixture.MEMORY, log, script] + list(args)
-        p = subprocess.run(argv, cwd=root, env=env, input=stdin, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                           timeout=300)
-        out, err = p.stdout.decode("utf-8", "replace"), p.stderr.decode("utf-8", "replace")
+        if script == AUTO and is_approve(args):  # iter14: o approve é digitado num terminal, com a senha
+            code, out = run_tty(argv, root, env)
+            p, err = subprocess.CompletedProcess(argv, code), out
+        else:
+            p = subprocess.run(argv, cwd=root, env=env, input=stdin, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               timeout=300)
+            out, err = p.stdout.decode("utf-8", "replace"), p.stderr.decode("utf-8", "replace")
         recs = _read_lines(log)
         shutil.rmtree(logd, ignore_errors=True)
         events = _read_lines(sp["events"])[n_ev:]
@@ -581,8 +674,8 @@ def sessao_triagem_pergunta_e_planejamento(h):
 @scenario
 def sessao_execute_recusas_risco_e_replan(h):
     root = base(h, "trivial", no_rules=True)
-    add(root, agent="dev-members", paths=("src/members/a.py",), title="a")
-    add(root, agent="dev-members", paths=("src/members/b.py",), title="b", wave=2)
+    add(root, agent="dev-users", paths=("src/users/a.py",), title="a")
+    add(root, agent="dev-users", paths=("src/users/b.py",), title="b", wave=2)
     h.no(root, "session", "execute", guards=["plan_fits_class"])
 
     root = base(h, "pequena")
@@ -792,10 +885,10 @@ def deleg_accept(h):
     h.ok(root, "accept", "--task", tid)
     # VERIFIED → ACCEPTED: classe trivial (min_gate_reviews 0), sem invariantes de escopo
     root = base(h, "trivial", no_rules=True)
-    add(root, agent="dev-members", paths=("src/members/discount.py",), title="elegibilidade")
+    add(root, agent="dev-users", paths=("src/users/discount.py",), title="elegibilidade")
     execute(root)
     dispatch_ip(root, "T-1")
-    submit_ip(root, "T-1", rel="src/members/discount.py", agent="dev-members")
+    submit_ip(root, "T-1", rel="src/users/discount.py", agent="dev-users")
     verify_ip(root, "T-1")
     h.expect(root, "T-1", "VERIFIED")
     h.ok(root, "accept", "--task", "T-1")
@@ -847,7 +940,7 @@ def deleg_reject_retry_ate_esgotar(h):
 # ---------------------------------------------------------------- transições genéricas: TODA origem lida de machines.json5
 GENERIC = {
     "escalate": lambda t: ["escalate", "--task", t, "--reason", "decisão humana necessária"],
-    "reroute": lambda t: ["reroute", "--task", t, "--agent", "dev-members", "--allowed-path", "src/members/discount.py",
+    "reroute": lambda t: ["reroute", "--task", t, "--agent", "dev-users", "--allowed-path", "src/users/discount.py",
                           "--reason", "território errado"],
     "drop": lambda t: ["drop", "--task", t, "--reason", "humano descartou"],
     "abstain": lambda t: ["abstain", "--task", t, "--kind", "spec_ambiguous", "--reason", "spec ambígua"],
@@ -856,7 +949,7 @@ GENERIC = {
 }
 GENERIC_REFUSALS = {
     "escalate": [(["escalate"], ["reason_present"])],
-    "reroute": [(["reroute", "--agent", "dev-members", "--allowed-path", "src/members/discount.py"], ["reason_present"]),
+    "reroute": [(["reroute", "--agent", "dev-users", "--allowed-path", "src/users/discount.py"], ["reason_present"]),
                 (["reroute", "--agent", "dev-billing", "--reason", "x"], ["new_agent_valid"])],
     "drop": [(["drop"], ["reason_present"])],
     "abstain": [(["abstain", "--kind", "spec_ambiguous"], ["reason_present"]),
@@ -957,8 +1050,8 @@ def consulta(h):
     assert hcore.find(board(root), "consult", "ASK-1")["state"] == "ANSWERED"
     h.no(root, "consult", "cancel", "--id", "ASK-2", guards=["reason_present"])
     h.ok(root, "consult", "cancel", "--id", "ASK-2", "--reason", "não precisa mais")
-    h.ok(root, "ask", "dev-members", "quem é elegível?")
-    h.hook_ok(root, "pre-agent", agent_payload("ASK-3: responda", "dev-members", model="sonnet"))
+    h.ok(root, "ask", "dev-users", "quem é elegível?")
+    h.hook_ok(root, "pre-agent", agent_payload("ASK-3: responda", "dev-users", model="sonnet"))
     h.ok(root, "consult", "cancel", "--id", "ASK-3", "--reason", "humano respondeu antes")
 
 
@@ -1115,7 +1208,7 @@ class TestM5Presente(unittest.TestCase):
 
     def test_mandato_declarado_em_machines(self):
         self.assertIn("mandato", load_machines().get("machines") or {},
-                      "machines.json5 → machines.mandato ausente (desenho do modo autônomo §5)")
+                      "machines.json5 → machines.mandato ausente (AUTONOMIA-DESENHO §5)")
 
 
 def _excl(key):

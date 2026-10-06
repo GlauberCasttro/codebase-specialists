@@ -60,12 +60,12 @@ class TestWriteGuard(GuardBase):
     def test_subagent_territory(self):
         self.assertEqual(hook(self.root, "pre-write", W(self.root, "src/billing/discount.py", SUB))[0], 0)
         self.assertEqual(hook(self.root, "pre-write", W(self.root, "src/billing/tax.py", SUB))[0], 2)
-        other = {"agent_id": "x", "agent_type": "dev-members"}
+        other = {"agent_id": "x", "agent_type": "dev-users"}
         self.assertEqual(hook(self.root, "pre-write", W(self.root, "src/billing/discount.py", other))[0], 2)
 
     def test_x01_symlink_resolved(self):
         os.makedirs(os.path.join(self.root, "src/billing"), exist_ok=True)
-        os.symlink(os.path.join(self.root, "src/members/model.py"), os.path.join(self.root, "src/billing/discount.py"))
+        os.symlink(os.path.join(self.root, "src/users/model.py"), os.path.join(self.root, "src/billing/discount.py"))
         code, _, err = hook(self.root, "pre-write", W(self.root, "src/billing/discount.py", SUB))
         self.assertEqual(code, 2, err)
 
@@ -115,8 +115,8 @@ class TestBashGuard(GuardBase):
             self.assertEqual(self.code(cmd, {}), 2, cmd)
 
     def test_writes_outside(self):
-        for cmd in ("echo x > src/billing/tax.py", "tee src/members/model.py < /dev/null", "sed -i '' 's/a/b/' src/members/model.py",
-                    "cp README.md src/members/model.py", "cd src && rm members/model.py", "dd if=/dev/zero of=src/members/model.py"):
+        for cmd in ("echo x > src/billing/tax.py", "tee src/users/model.py < /dev/null", "sed -i '' 's/a/b/' src/users/model.py",
+                    "cp README.md src/users/model.py", "cd src && rm users/model.py", "dd if=/dev/zero of=src/users/model.py"):
             self.assertEqual(self.code(cmd), 2, cmd)
 
     def test_writes_inside_ok(self):
@@ -124,7 +124,7 @@ class TestBashGuard(GuardBase):
         self.assertEqual(self.code("python3 -m unittest discover -s tests 2>/dev/null"), 0)
 
     def test_unanalyzable(self):
-        for cmd in ("bash -c 'touch src/members/model.py'", "eval rm x", "python3 -c 'open(\"x\",\"w\")'", "echo $(ls) > a",
+        for cmd in ("bash -c 'touch src/users/model.py'", "eval rm x", "python3 -c 'open(\"x\",\"w\")'", "echo $(ls) > a",
                     "cat <<EOF > src/billing/discount.py\nx\nEOF", "find . -delete", "ls | xargs rm", "$CMD x", "echo `id`"):
             self.assertEqual(self.code(cmd), 2, cmd)
 
@@ -192,7 +192,7 @@ class TestAgentGuard(GuardBase):
         self.assertEqual(hook(self.root, "pre-agent", self.P("T-1.d1: x", model="sonnet", actor=SUB))[0], 2)
 
     def test_wrong_agent_and_readonly(self):
-        self.assertEqual(hook(self.root, "pre-agent", self.P("T-1.d1: x", st="dev-members", model="sonnet"))[0], 2)
+        self.assertEqual(hook(self.root, "pre-agent", self.P("T-1.d1: x", st="dev-users", model="sonnet"))[0], 2)
         self.assertEqual(hook(self.root, "pre-agent", self.P("explorar", st="Explore", model="haiku"))[0], 0)
         self.assertEqual(hook(self.root, "pre-agent", self.P("explorar", st="Explore"))[0], 2)
 
@@ -215,7 +215,7 @@ class TestOtherHooks(GuardBase):
         self.assertIn("<<DADO", ctx)
         self.assertIn("src/billing/discount.py", ctx)
         self.assertIn("rule.billing.cents", ctx)
-        self.assertNotIn("br.members.age", ctx)
+        self.assertNotIn("br.users.age", ctx)
         self.assertLessEqual(len(ctx), 10000)
 
     def test_subagent_stop_requires_submission(self):

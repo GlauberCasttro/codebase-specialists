@@ -1,0 +1,241 @@
+BASE — oráculo campanha-iter10 (test_estado_arvore.py) contra a skill ATUAL (com a iter9 em andamento)
+data: 2026-10-05T12:56Z · skill VERSION 0.5.0 · STATE_DIR: .swarm (cslib.paths.STATE_DIR)
+comando: cd campanha-iter10/oraculo && <py> -m unittest -v test_estado_arvore
+
+RESULTADO: python3 3.13.3 → 69 testes, 69 FAIL, 0 erro · /usr/bin/python3 3.9.6 → 69 testes, 69 FAIL, 0 erro
+
+MOTIVOS (primeira asserção que falha; iguais nos dois Pythons):
+     42 AssertionError: 2 != 0 : `cs-state new sprint --meta entregar pix` deveria passar
+      8 AssertionError: 2 != 0 : `cs-state new task --tipo US --agent dev-billing ` deveria passar
+      5 AssertionError: 2 != 0 : `cs-state new epico ` deveria passar
+      3 AssertionError: False is not true : emit gera .claude/skills/board/SKILL.md
+      2 AssertionError: False is not true : emit gera .claude/skills/new-task/SKILL.md
+      2 AssertionError: False is not true : emit gera .claude/skills/new-epico/SKILL.md
+      1 AssertionError: 2 != 0 : `cs-state new feature ` deveria passar
+      1 AssertionError: 2 != 0 : `cs-state new epico ` (exit 2): 
+      1 AssertionError: 'cs-state new task --tipo FIX --avulsa' not found in 'cs-guard BLOQUEOU: agente prin
+      1 AssertionError: 2 != 0 : `cs-state migrate state-tree` deveria passar
+      1 AssertionError: 2 != 0 : migração state-tree: `cs-state migrate state-tree` deveria passar
+      1 AssertionError: 'state-tree' not found in ('harness', 'emit', 'scan', 'facts-refresh', 'schema', 'ca
+      1 AssertionError: False is not true : emit gera .claude/skills/close-task/SKILL.md
+
+LEITURA: ~55 testes param no 1º 'cs-state new …' (subcomando inexistente, argparse exit 2), inclusive os 4 de CHORE, os 4 de
+--dry-run e os de check/--json/close-story; 8 de skills emitidas falham porque o emit (que roda: exit 0) não
+gera .claude/skills/{board,new-*,close-*,reopen,park,move}; 2 de migração (sem 'migrate state-tree'); 1 de
+catálogo (sem kind state-tree); 1 de guard (o bloqueio de escrita sem task existe, mas sem a dica
+'cs-state new task --tipo FIX --avulsa').
+
+O QUE PASSA HOJE: nada — esperado, todo cenário é requisito novo. Nenhum passa por vácuo: negativos (recusas,
+'nada se move', validate acusa, dry-run não escreve) só são alcançados depois de os positivos criarem a árvore
+pelo motor. 'cs-state init' e 'cs.py emit' já passam hoje, mas são preparação do teste, não requisito.
+Helpers do oráculo (parse_blocks, CREATED_RE, item_files, folder_of, snapshot) conferidos à parte numa árvore sintética.
+
+================ python3 3.13.3 (-v) ================
+test_tree_a_epico_sprint_feature_tasks_story_composta_e_task_da_sprint (test_estado_arvore.TestArvorePorCaso.test_tree_a_epico_sprint_feature_tasks_story_composta_e_task_da_sprint) ... FAIL
+test_tree_b_sprint_feature_sem_epico (test_estado_arvore.TestArvorePorCaso.test_tree_b_sprint_feature_sem_epico) ... FAIL
+test_tree_c_sprint_so_com_tasks (test_estado_arvore.TestArvorePorCaso.test_tree_c_sprint_so_com_tasks) ... FAIL
+test_tree_d_task_avulsa_e_o_minimo (test_estado_arvore.TestArvorePorCaso.test_tree_d_task_avulsa_e_o_minimo) ... FAIL
+test_check_de_feature_exige_aceite_vermelho (test_estado_arvore.TestCheckDoR.test_check_de_feature_exige_aceite_vermelho) ... FAIL
+test_check_por_tipo (test_estado_arvore.TestCheckDoR.test_check_por_tipo) ... FAIL
+test_chore_sem_como_quero_para_com_motivo_comeca (test_estado_arvore.TestChore.test_chore_sem_como_quero_para_com_motivo_comeca) ... FAIL
+test_chore_sem_motivo_nao_comeca (test_estado_arvore.TestChore.test_chore_sem_motivo_nao_comeca) ... FAIL
+test_chore_sem_verify_cmd_nao_comeca (test_estado_arvore.TestChore.test_chore_sem_verify_cmd_nao_comeca) ... FAIL
+test_close_de_chore_exige_verify_cmd_verde (test_estado_arvore.TestChore.test_close_de_chore_exige_verify_cmd_verde) ... FAIL
+test_close_story_recusa_com_task_aberta_e_arquiva_quando_tudo_fechado (test_estado_arvore.TestCloseStory.test_close_story_recusa_com_task_aberta_e_arquiva_quando_tudo_fechado) ... FAIL
+test_epico_dentro_de_sprint_recusado (test_estado_arvore.TestCombinacoesInvalidas.test_epico_dentro_de_sprint_recusado) ... FAIL
+test_feature_nao_iniciada_nunca_fica_em_state (test_estado_arvore.TestCombinacoesInvalidas.test_feature_nao_iniciada_nunca_fica_em_state) ... FAIL
+Feature sem sprint em execução: ou o motor recusa (nada move) ou cria a sprint junto (§1) — nunca uma ... FAIL
+test_sprint_dentro_de_feature_recusada (test_estado_arvore.TestCombinacoesInvalidas.test_sprint_dentro_de_feature_recusada) ... FAIL
+test_task_com_dois_pais_recusada (test_estado_arvore.TestCombinacoesInvalidas.test_task_com_dois_pais_recusada) ... FAIL
+test_feature_drop_com_story_composta_em_andamento_recusado (test_estado_arvore.TestD012FeatureDrop.test_feature_drop_com_story_composta_em_andamento_recusado) ... FAIL
+test_feature_drop_com_task_em_andamento_recusado (test_estado_arvore.TestD012FeatureDrop.test_feature_drop_com_task_em_andamento_recusado) ... FAIL
+test_feature_drop_sem_nada_em_andamento_passa (test_estado_arvore.TestD012FeatureDrop.test_feature_drop_sem_nada_em_andamento_passa) ... FAIL
+test_dry_run_close_e_reopen (test_estado_arvore.TestDryRun.test_dry_run_close_e_reopen) ... FAIL
+test_dry_run_dos_new_bate_com_o_real (test_estado_arvore.TestDryRun.test_dry_run_dos_new_bate_com_o_real) ... FAIL
+test_dry_run_nao_contorna_guarda (test_estado_arvore.TestDryRun.test_dry_run_nao_contorna_guarda) ... FAIL
+test_dry_run_start_park_move_promote (test_estado_arvore.TestDryRun.test_dry_run_start_park_move_promote) ... FAIL
+test_archive_1_close_sprint_com_tudo_fechado_move_arvore (test_estado_arvore.TestFechamento.test_archive_1_close_sprint_com_tudo_fechado_move_arvore) ... FAIL
+test_archive_2_close_sprint_com_task_aberta_devolve_ao_backlog (test_estado_arvore.TestFechamento.test_archive_2_close_sprint_com_task_aberta_devolve_ao_backlog) ... FAIL
+test_archive_3_close_feature_com_task_aberta_recusa_e_nada_move (test_estado_arvore.TestFechamento.test_archive_3_close_feature_com_task_aberta_recusa_e_nada_move) ... FAIL
+test_archive_4_avulsa_fechada_vai_para_ano_mes (test_estado_arvore.TestFechamento.test_archive_4_avulsa_fechada_vai_para_ano_mes) ... FAIL
+test_archive_5_reopen_devolve_ao_state_com_historico (test_estado_arvore.TestFechamento.test_archive_5_reopen_devolve_ao_state_com_historico) ... FAIL
+test_archive_6_close_epico_so_com_todas_as_sprints_fechadas (test_estado_arvore.TestFechamento.test_archive_6_close_epico_so_com_todas_as_sprints_fechadas) ... FAIL
+test_close_sem_accept_e_recusado_nenhum_atalho (test_estado_arvore.TestFechamento.test_close_sem_accept_e_recusado_nenhum_atalho) ... FAIL
+test_alteracao_de_produto_sem_task_bloqueada_com_a_dica (test_estado_arvore.TestGuard.test_alteracao_de_produto_sem_task_bloqueada_com_a_dica) ... FAIL
+test_com_uma_task_avulsa_a_escrita_e_liberada (test_estado_arvore.TestGuard.test_com_uma_task_avulsa_a_escrita_e_liberada) ... FAIL
+test_modelo_nunca_escreve_em_backlog_state_archive (test_estado_arvore.TestGuard.test_modelo_nunca_escreve_em_backlog_state_archive) ... FAIL
+test_arquivo_orfao_e_acusado (test_estado_arvore.TestIntegridade.test_arquivo_orfao_e_acusado) ... FAIL
+test_arvore_coerente_com_eventos_board_e_index (test_estado_arvore.TestIntegridade.test_arvore_coerente_com_eventos_board_e_index) ... FAIL
+test_edicao_a_mao_e_acusada (test_estado_arvore.TestIntegridade.test_edicao_a_mao_e_acusada) ... FAIL
+test_eventos_sao_append_only (test_estado_arvore.TestIntegridade.test_eventos_sao_append_only) ... FAIL
+test_fechado_dentro_de_state_e_acusado (test_estado_arvore.TestIntegridade.test_fechado_dentro_de_state_e_acusado) ... FAIL
+test_board_e_tree_em_json (test_estado_arvore.TestLeituraCompacta.test_board_e_tree_em_json) ... FAIL
+test_migrate_1_alvo_real_da_iteration_4 (test_estado_arvore.TestMigracao.test_migrate_1_alvo_real_da_iteration_4) ... FAIL
+test_migrate_1_board_legado_vira_arvore_equivalente (test_estado_arvore.TestMigracao.test_migrate_1_board_legado_vira_arvore_equivalente) ... FAIL
+test_upgrade_cataloga_a_migracao_state_tree (test_estado_arvore.TestMigracao.test_upgrade_cataloga_a_migracao_state_tree) ... FAIL
+test_move_avulsa_para_sprint_mantem_id_e_historico (test_estado_arvore.TestMoveEPlan.test_move_avulsa_para_sprint_mantem_id_e_historico) ... FAIL
+test_plan_leva_task_do_backlog_para_a_sprint (test_estado_arvore.TestMoveEPlan.test_plan_leva_task_do_backlog_para_a_sprint) ... FAIL
+test_arquivo_comum_manda_a_segunda_para_a_wave_seguinte (test_estado_arvore.TestParalelismo.test_arquivo_comum_manda_a_segunda_para_a_wave_seguinte) ... FAIL
+test_par_do_not_parallelize_manda_para_a_wave_seguinte (test_estado_arvore.TestParalelismo.test_par_do_not_parallelize_manda_para_a_wave_seguinte) ... FAIL
+test_sem_arquivo_comum_despacham_em_paralelo (test_estado_arvore.TestParalelismo.test_sem_arquivo_comum_despacham_em_paralelo) ... FAIL
+test_session_1_save_gera_os_8_blocos (test_estado_arvore.TestSessao.test_session_1_save_gera_os_8_blocos) ... FAIL
+test_session_2_nenhum_explicito_e_check_falha_sem_comando_ou_com_bloco_vazio (test_estado_arvore.TestSessao.test_session_2_nenhum_explicito_e_check_falha_sem_comando_ou_com_bloco_vazio) ... FAIL
+test_session_3_sessao_nova_so_com_load_executa_o_passo_1 (test_estado_arvore.TestSessao.test_session_3_sessao_nova_so_com_load_executa_o_passo_1) ... FAIL
+test_consulta_e_model_invocable (test_estado_arvore.TestSkillsEmitidas.test_consulta_e_model_invocable) ... FAIL
+test_criacao_decide_dor_pelo_script_check (test_estado_arvore.TestSkillsEmitidas.test_criacao_decide_dor_pelo_script_check) ... FAIL
+test_criacao_e_model_invocable_e_mostra_antes_via_dry_run (test_estado_arvore.TestSkillsEmitidas.test_criacao_e_model_invocable_e_mostra_antes_via_dry_run) ... FAIL
+test_emite_as_14_skills_e_cada_uma_cita_o_subcomando_real (test_estado_arvore.TestSkillsEmitidas.test_emite_as_14_skills_e_cada_uma_cita_o_subcomando_real) ... FAIL
+test_mudanca_de_estado_nao_e_model_invocable (test_estado_arvore.TestSkillsEmitidas.test_mudanca_de_estado_nao_e_model_invocable) ... FAIL
+test_new_task_cita_chore_e_seu_dor (test_estado_arvore.TestSkillsEmitidas.test_new_task_cita_chore_e_seu_dor) ... FAIL
+test_skills_de_criacao_carregam_o_dor_do_tipo (test_estado_arvore.TestSkillsEmitidas.test_skills_de_criacao_carregam_o_dor_do_tipo) ... FAIL
+test_skills_finas_sem_logica_do_motor (test_estado_arvore.TestSkillsEmitidas.test_skills_finas_sem_logica_do_motor) ... FAIL
+test_promote_converte_simples_em_composta_mantendo_id_e_historico (test_estado_arvore.TestStories.test_promote_converte_simples_em_composta_mantendo_id_e_historico) ... FAIL
+test_story_com_dois_agentes_vira_pasta_com_uma_task_por_agente (test_estado_arvore.TestStories.test_story_com_dois_agentes_vira_pasta_com_uma_task_por_agente) ... FAIL
+test_story_com_um_agente_vira_task_tipada (test_estado_arvore.TestStories.test_story_com_um_agente_vira_task_tipada) ... FAIL
+test_bug_com_teste_que_passa_hoje_nao_comeca (test_estado_arvore.TestTiposDeTask.test_bug_com_teste_que_passa_hoje_nao_comeca) ... FAIL
+test_bug_com_teste_vermelho_comeca (test_estado_arvore.TestTiposDeTask.test_bug_com_teste_vermelho_comeca) ... FAIL
+test_bug_sem_teste_que_falha_nao_comeca (test_estado_arvore.TestTiposDeTask.test_bug_sem_teste_que_falha_nao_comeca) ... FAIL
+test_fix_sem_fixes_nao_comeca_e_com_fixes_comeca (test_estado_arvore.TestTiposDeTask.test_fix_sem_fixes_nao_comeca_e_com_fixes_comeca) ... FAIL
+test_fix_so_fecha_com_o_teste_do_bug_verde (test_estado_arvore.TestTiposDeTask.test_fix_so_fecha_com_o_teste_do_bug_verde) ... FAIL
+test_us_sem_criterio_nao_comeca_e_com_criterio_comeca (test_estado_arvore.TestTiposDeTask.test_us_sem_criterio_nao_comeca_e_com_criterio_comeca) ... FAIL
+test_avulsa_e_task_da_sprint_nao_contam_como_feature_ativa (test_estado_arvore.TestUmaFeatureAtiva.test_avulsa_e_task_da_sprint_nao_contam_como_feature_ativa) ... FAIL
+test_segunda_feature_recusada_ate_close_ou_park (test_estado_arvore.TestUmaFeatureAtiva.test_segunda_feature_recusada_ate_close_ou_park) ... FAIL
+
+FAILED (failures=69)
+
+================ /usr/bin/python3 3.9.6 (-v) ================
+test_tree_a_epico_sprint_feature_tasks_story_composta_e_task_da_sprint (test_estado_arvore.TestArvorePorCaso) ... FAIL
+test_tree_b_sprint_feature_sem_epico (test_estado_arvore.TestArvorePorCaso) ... FAIL
+test_tree_c_sprint_so_com_tasks (test_estado_arvore.TestArvorePorCaso) ... FAIL
+test_tree_d_task_avulsa_e_o_minimo (test_estado_arvore.TestArvorePorCaso) ... FAIL
+test_check_de_feature_exige_aceite_vermelho (test_estado_arvore.TestCheckDoR) ... FAIL
+test_check_por_tipo (test_estado_arvore.TestCheckDoR) ... FAIL
+test_chore_sem_como_quero_para_com_motivo_comeca (test_estado_arvore.TestChore) ... FAIL
+test_chore_sem_motivo_nao_comeca (test_estado_arvore.TestChore) ... FAIL
+test_chore_sem_verify_cmd_nao_comeca (test_estado_arvore.TestChore) ... FAIL
+test_close_de_chore_exige_verify_cmd_verde (test_estado_arvore.TestChore) ... FAIL
+test_close_story_recusa_com_task_aberta_e_arquiva_quando_tudo_fechado (test_estado_arvore.TestCloseStory) ... FAIL
+test_epico_dentro_de_sprint_recusado (test_estado_arvore.TestCombinacoesInvalidas) ... FAIL
+test_feature_nao_iniciada_nunca_fica_em_state (test_estado_arvore.TestCombinacoesInvalidas) ... FAIL
+Feature sem sprint em execução: ou o motor recusa (nada move) ou cria a sprint junto (§1) — nunca uma ... FAIL
+test_sprint_dentro_de_feature_recusada (test_estado_arvore.TestCombinacoesInvalidas) ... FAIL
+test_task_com_dois_pais_recusada (test_estado_arvore.TestCombinacoesInvalidas) ... FAIL
+test_feature_drop_com_story_composta_em_andamento_recusado (test_estado_arvore.TestD012FeatureDrop) ... FAIL
+test_feature_drop_com_task_em_andamento_recusado (test_estado_arvore.TestD012FeatureDrop) ... FAIL
+test_feature_drop_sem_nada_em_andamento_passa (test_estado_arvore.TestD012FeatureDrop) ... FAIL
+test_dry_run_close_e_reopen (test_estado_arvore.TestDryRun) ... FAIL
+test_dry_run_dos_new_bate_com_o_real (test_estado_arvore.TestDryRun) ... FAIL
+test_dry_run_nao_contorna_guarda (test_estado_arvore.TestDryRun) ... FAIL
+test_dry_run_start_park_move_promote (test_estado_arvore.TestDryRun) ... FAIL
+test_archive_1_close_sprint_com_tudo_fechado_move_arvore (test_estado_arvore.TestFechamento) ... FAIL
+test_archive_2_close_sprint_com_task_aberta_devolve_ao_backlog (test_estado_arvore.TestFechamento) ... FAIL
+test_archive_3_close_feature_com_task_aberta_recusa_e_nada_move (test_estado_arvore.TestFechamento) ... FAIL
+test_archive_4_avulsa_fechada_vai_para_ano_mes (test_estado_arvore.TestFechamento) ... FAIL
+test_archive_5_reopen_devolve_ao_state_com_historico (test_estado_arvore.TestFechamento) ... FAIL
+test_archive_6_close_epico_so_com_todas_as_sprints_fechadas (test_estado_arvore.TestFechamento) ... FAIL
+test_close_sem_accept_e_recusado_nenhum_atalho (test_estado_arvore.TestFechamento) ... FAIL
+test_alteracao_de_produto_sem_task_bloqueada_com_a_dica (test_estado_arvore.TestGuard) ... FAIL
+test_com_uma_task_avulsa_a_escrita_e_liberada (test_estado_arvore.TestGuard) ... FAIL
+test_modelo_nunca_escreve_em_backlog_state_archive (test_estado_arvore.TestGuard) ... FAIL
+test_arquivo_orfao_e_acusado (test_estado_arvore.TestIntegridade) ... FAIL
+test_arvore_coerente_com_eventos_board_e_index (test_estado_arvore.TestIntegridade) ... FAIL
+test_edicao_a_mao_e_acusada (test_estado_arvore.TestIntegridade) ... FAIL
+test_eventos_sao_append_only (test_estado_arvore.TestIntegridade) ... FAIL
+test_fechado_dentro_de_state_e_acusado (test_estado_arvore.TestIntegridade) ... FAIL
+test_board_e_tree_em_json (test_estado_arvore.TestLeituraCompacta) ... FAIL
+test_migrate_1_alvo_real_da_iteration_4 (test_estado_arvore.TestMigracao) ... FAIL
+test_migrate_1_board_legado_vira_arvore_equivalente (test_estado_arvore.TestMigracao) ... FAIL
+test_upgrade_cataloga_a_migracao_state_tree (test_estado_arvore.TestMigracao) ... FAIL
+test_move_avulsa_para_sprint_mantem_id_e_historico (test_estado_arvore.TestMoveEPlan) ... FAIL
+test_plan_leva_task_do_backlog_para_a_sprint (test_estado_arvore.TestMoveEPlan) ... FAIL
+test_arquivo_comum_manda_a_segunda_para_a_wave_seguinte (test_estado_arvore.TestParalelismo) ... FAIL
+test_par_do_not_parallelize_manda_para_a_wave_seguinte (test_estado_arvore.TestParalelismo) ... FAIL
+test_sem_arquivo_comum_despacham_em_paralelo (test_estado_arvore.TestParalelismo) ... FAIL
+test_session_1_save_gera_os_8_blocos (test_estado_arvore.TestSessao) ... FAIL
+test_session_2_nenhum_explicito_e_check_falha_sem_comando_ou_com_bloco_vazio (test_estado_arvore.TestSessao) ... FAIL
+test_session_3_sessao_nova_so_com_load_executa_o_passo_1 (test_estado_arvore.TestSessao) ... FAIL
+test_consulta_e_model_invocable (test_estado_arvore.TestSkillsEmitidas) ... FAIL
+test_criacao_decide_dor_pelo_script_check (test_estado_arvore.TestSkillsEmitidas) ... FAIL
+test_criacao_e_model_invocable_e_mostra_antes_via_dry_run (test_estado_arvore.TestSkillsEmitidas) ... FAIL
+test_emite_as_14_skills_e_cada_uma_cita_o_subcomando_real (test_estado_arvore.TestSkillsEmitidas) ... FAIL
+test_mudanca_de_estado_nao_e_model_invocable (test_estado_arvore.TestSkillsEmitidas) ... FAIL
+test_new_task_cita_chore_e_seu_dor (test_estado_arvore.TestSkillsEmitidas) ... FAIL
+test_skills_de_criacao_carregam_o_dor_do_tipo (test_estado_arvore.TestSkillsEmitidas) ... FAIL
+test_skills_finas_sem_logica_do_motor (test_estado_arvore.TestSkillsEmitidas) ... FAIL
+test_promote_converte_simples_em_composta_mantendo_id_e_historico (test_estado_arvore.TestStories) ... FAIL
+test_story_com_dois_agentes_vira_pasta_com_uma_task_por_agente (test_estado_arvore.TestStories) ... FAIL
+test_story_com_um_agente_vira_task_tipada (test_estado_arvore.TestStories) ... FAIL
+test_bug_com_teste_que_passa_hoje_nao_comeca (test_estado_arvore.TestTiposDeTask) ... FAIL
+test_bug_com_teste_vermelho_comeca (test_estado_arvore.TestTiposDeTask) ... FAIL
+test_bug_sem_teste_que_falha_nao_comeca (test_estado_arvore.TestTiposDeTask) ... FAIL
+test_fix_sem_fixes_nao_comeca_e_com_fixes_comeca (test_estado_arvore.TestTiposDeTask) ... FAIL
+test_fix_so_fecha_com_o_teste_do_bug_verde (test_estado_arvore.TestTiposDeTask) ... FAIL
+test_us_sem_criterio_nao_comeca_e_com_criterio_comeca (test_estado_arvore.TestTiposDeTask) ... FAIL
+test_avulsa_e_task_da_sprint_nao_contam_como_feature_ativa (test_estado_arvore.TestUmaFeatureAtiva) ... FAIL
+test_segunda_feature_recusada_ate_close_ou_park (test_estado_arvore.TestUmaFeatureAtiva) ... FAIL
+
+FAILED (failures=69)
+
+================================================================ test_upgrade_u1_u2.py (U-1/U-2)
+RESULTADO: python3 3.13.3 → 11 testes, 10 FAIL, 1 ok (≈47 s) · /usr/bin/python3 3.9.6 → 11 testes, 10 FAIL, 1 ok
+MOTIVOS: U-1 (py-billing, go-polyglot): upgrade --apply sai 1 (selftest exige pre-commit → backup restaurado), então
+os 8 testes desses alvos falham já no upgrade. U-2 (ts-shop): backup tem .git aninhado (outside/.git e
+specialists/tmp/exam/*/repo/.git) e sanitize --check fica vermelho mesmo depois de --apply.
+O QUE PASSA: test_u1_alvo_finalizado_continua_exigindo_pre_commit — guarda anti-atalho (ts-shop já passou de
+validate.5; o pre-commit continua exigido). Passa hoje por design; tem de continuar passando depois da correção.
+--- python3 3.13.3 (-v)
+test_u1_alvo_retoma_do_ponto_onde_parou (test_upgrade_u1_u2.TestGoPolyglotPausado.test_u1_alvo_retoma_do_ponto_onde_parou) ... FAIL
+test_u1_upgrade_de_alvo_pausado_conclui_com_selftest_verde (test_upgrade_u1_u2.TestGoPolyglotPausado.test_u1_upgrade_de_alvo_pausado_conclui_com_selftest_verde) ... FAIL
+test_u2_backup_sem_tmp_nem_git_aninhado_e_manifest_registra_exclusao (test_upgrade_u1_u2.TestGoPolyglotPausado.test_u2_backup_sem_tmp_nem_git_aninhado_e_manifest_registra_exclusao) ... FAIL
+test_u2_sanitize_check_verde_no_alvo_migrado (test_upgrade_u1_u2.TestGoPolyglotPausado.test_u2_sanitize_check_verde_no_alvo_migrado) ... FAIL
+test_u1_alvo_retoma_do_ponto_onde_parou (test_upgrade_u1_u2.TestPyBillingPausado.test_u1_alvo_retoma_do_ponto_onde_parou) ... FAIL
+test_u1_upgrade_de_alvo_pausado_conclui_com_selftest_verde (test_upgrade_u1_u2.TestPyBillingPausado.test_u1_upgrade_de_alvo_pausado_conclui_com_selftest_verde) ... FAIL
+test_u2_backup_sem_tmp_nem_git_aninhado_e_manifest_registra_exclusao (test_upgrade_u1_u2.TestPyBillingPausado.test_u2_backup_sem_tmp_nem_git_aninhado_e_manifest_registra_exclusao) ... FAIL
+test_u2_sanitize_check_verde_no_alvo_migrado (test_upgrade_u1_u2.TestPyBillingPausado.test_u2_sanitize_check_verde_no_alvo_migrado) ... FAIL
+test_u1_alvo_finalizado_continua_exigindo_pre_commit (test_upgrade_u1_u2.TestTsShopFinalizado.test_u1_alvo_finalizado_continua_exigindo_pre_commit) ... ok
+test_u2_backup_sem_tmp_nem_git_aninhado_e_manifest_registra_exclusao (test_upgrade_u1_u2.TestTsShopFinalizado.test_u2_backup_sem_tmp_nem_git_aninhado_e_manifest_registra_exclusao) ... FAIL
+test_u2_sanitize_check_verde_no_alvo_migrado (test_upgrade_u1_u2.TestTsShopFinalizado.test_u2_sanitize_check_verde_no_alvo_migrado) ... FAIL
+    cs.py harness install --platforms codex,copilot,cursor --allow-outside: ok
+    cs.py emit --allow-outside: ok
+    cs.py harness install --platforms codex,copilot,cursor --allow-outside: ok
+    cs.py emit --allow-outside: ok
+    cs.py harness install --platforms codex,copilot,cursor --allow-outside: ok
+    cs.py emit --allow-outside: ok
+    cs.py harness install --platforms codex,copilot,cursor --allow-outside: ok
+    cs.py emit --allow-outside: ok
+    cs.py harness install --platforms codex,copilot,cursor --allow-outside: ok
+    cs.py emit --allow-outside: ok
+    cs.py harness install --platforms codex,copilot,cursor --allow-outside: ok
+    cs.py emit --allow-outside: ok
+    cs.py harness install --platforms codex,copilot,cursor --allow-outside: ok
+    cs.py emit --allow-outside: ok
+    cs.py harness install --platforms codex,copilot,cursor --allow-outside: ok
+    cs.py emit --allow-outside: ok
+--- /usr/bin/python3 3.9.6 (-v)
+test_u1_alvo_retoma_do_ponto_onde_parou (test_upgrade_u1_u2.TestGoPolyglotPausado) ... FAIL
+test_u1_upgrade_de_alvo_pausado_conclui_com_selftest_verde (test_upgrade_u1_u2.TestGoPolyglotPausado) ... FAIL
+test_u2_backup_sem_tmp_nem_git_aninhado_e_manifest_registra_exclusao (test_upgrade_u1_u2.TestGoPolyglotPausado) ... FAIL
+test_u2_sanitize_check_verde_no_alvo_migrado (test_upgrade_u1_u2.TestGoPolyglotPausado) ... FAIL
+test_u1_alvo_retoma_do_ponto_onde_parou (test_upgrade_u1_u2.TestPyBillingPausado) ... FAIL
+test_u1_upgrade_de_alvo_pausado_conclui_com_selftest_verde (test_upgrade_u1_u2.TestPyBillingPausado) ... FAIL
+test_u2_backup_sem_tmp_nem_git_aninhado_e_manifest_registra_exclusao (test_upgrade_u1_u2.TestPyBillingPausado) ... FAIL
+test_u2_sanitize_check_verde_no_alvo_migrado (test_upgrade_u1_u2.TestPyBillingPausado) ... FAIL
+test_u1_alvo_finalizado_continua_exigindo_pre_commit (test_upgrade_u1_u2.TestTsShopFinalizado) ... ok
+test_u2_backup_sem_tmp_nem_git_aninhado_e_manifest_registra_exclusao (test_upgrade_u1_u2.TestTsShopFinalizado) ... FAIL
+test_u2_sanitize_check_verde_no_alvo_migrado (test_upgrade_u1_u2.TestTsShopFinalizado) ... FAIL
+    cs.py harness install --platforms codex,copilot,cursor --allow-outside: ok
+    cs.py emit --allow-outside: ok
+    cs.py harness install --platforms codex,copilot,cursor --allow-outside: ok
+    cs.py emit --allow-outside: ok
+    cs.py harness install --platforms codex,copilot,cursor --allow-outside: ok
+    cs.py emit --allow-outside: ok
+    cs.py harness install --platforms codex,copilot,cursor --allow-outside: ok
+    cs.py emit --allow-outside: ok
+    cs.py harness install --platforms codex,copilot,cursor --allow-outside: ok
+    cs.py emit --allow-outside: ok
+    cs.py harness install --platforms codex,copilot,cursor --allow-outside: ok
+    cs.py emit --allow-outside: ok
+    cs.py harness install --platforms codex,copilot,cursor --allow-outside: ok
+    cs.py emit --allow-outside: ok
+    cs.py harness install --platforms codex,copilot,cursor --allow-outside: ok
+    cs.py emit --allow-outside: ok

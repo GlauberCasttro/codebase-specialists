@@ -52,7 +52,7 @@ status: active|promoted|stale|archived, fingerprint}`.
 
 | Origem | Como | `source` |
 |---|---|---|
-| Correção humana | `cs-mem correct --agent <a> --wrong "…" --right "…" --why "…" [--paths "<glob>"] [--check "<cmd>"] [--evidence arq:linha]` ou `/corrigir` no Claude Code | `human` (regra gravada como "Faça: <certo> — não: <errado>") |
+| Correção humana | `cs-mem correct --agent <a> --wrong "…" --right "…" --why "…" [--paths "<glob>"] [--check "<cmd>"] [--evidence arq:linha]` ou `/correct` no Claude Code | `human` (regra gravada como "Faça: <certo> — não: <errado>") |
 | Lição do próprio agente | `cs-mem add --agent <a> --kind lesson --rule "…" --why "…" --paths "<glob>"` | `human` (default) ou o `--source` dado |
 | Review FAIL/NEEDS_SPECIALIST com achados | captura automática no evento `delegation.review` | `review` |
 | Reject com motivo | captura automática em `delegation.reject` | `reject` |
@@ -122,9 +122,9 @@ Métrica: **taxa de recorrência** por agente em `cs-mem stats` (`lessons.<agent
 | `cs-mem consolidate [--task T] [--agent A]` | episódica → semântica: extrai lições de tasks fechadas (ACCEPTED/REJECTED/BLOCKED); lições similares em ≥2 tasks são marcadas para promoção; aplica decaimento/teto |
 | `cs-mem stats` | contagem por kind/status, episódios, promovidas, tamanho do índice, lições por agente com taxa de recorrência |
 
-## 5. `/corrigir`
+## 5. `/correct`
 
-Comando emitido para o Claude Code (`.claude/skills/corrigir/SKILL.md`, template `assets/templates/corrigir.md`):
+Comando emitido para o Claude Code (`.claude/skills/correct/SKILL.md`, template `assets/templates/correct.md`):
 
 1. identifica o agente, o que ele fez de errado, o certo e o porquê (1 linha cada);
 2. roda exatamente `.swarm/bin/cs-mem correct --agent <agente> --wrong "<errado>" --right "<certo>" --why "<porquê>" [--paths "<glob>"]`;

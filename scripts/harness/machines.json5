@@ -166,7 +166,7 @@
         requeue: {from: ["REJECTED", "READY", "IN_PROGRESS", "IN_REVIEW"], to: "BACKLOG", guards: ["reason_present"]},
       },
     },
-    // M5 — mandato (modo autônomo, desenho do modo autônomo §5; piloto `cs-auto`, engine/auto.py). Tudo que é mecânico é do
+    // M5 — mandato (modo autônomo, AUTONOMIA-DESENHO §5; piloto `cs-auto`, engine/auto.py). Tudo que é mecânico é do
     // motor (`cs-auto tick`: ondas, verify, accept, close, integração, orçamento, parada, escalada, retomada); o modelo
     // só executa nós de julgamento (PLAN/REPLAN, DISPATCH, REVIEW, REFLECT, FINAL_REVIEW). Portões HUMANOS (approve,
     // amend, abort, resolve_*, stop → wrap_up) exigem --by <humano> e o guard bloqueia o modelo de rodá-los.

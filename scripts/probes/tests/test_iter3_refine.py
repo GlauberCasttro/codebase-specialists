@@ -189,17 +189,30 @@ class ExamIsolated(unittest.TestCase):
         q = read_json(qpath)
         self.assertTrue(q["questions"])
         self.assertFalse(any("answer" in x for x in q["questions"]))
-        # respostas gravadas no diretório do exame chegam ao `check --all` (cópia canônica)
+        # caminho ÚNICO das respostas (campanha-iter11, M-1): answer_file do pacote isolado = canônico,
+        # fora da cópia isolada (o examinado não alcança gabarito nem respostas pela cópia)
+        canon = sp_path(self.root, "probes", "exams", "%s.answers.json5" % BAD)
+        self.assertEqual(os.path.realpath(q["answer_file"]), os.path.realpath(canon))
+        self.assertFalse(os.path.realpath(q["answer_file"]).startswith(os.path.realpath(repo) + os.sep))
         bank = load_bank(self.root)
         items = [perfect(p) for p in bank["probes"] if p["agent"] == BAD]
-        with open(os.path.join(self.out, "answers.json5"), "w") as fh:
-            import json
-            fh.write(json.dumps(items))
+        import json
         write_json(self.root, sp_path(self.root, "probes", "exams", "%s.baseline.json5" % BAD), [{"id": x["id"], "answer": "não sei"} for x in load_bank(self.root)["probes"] if x["agent"] == BAD])
         baseline_filter(self.root, BAD)
-        code, o, e = cs(self.root, "probes", "check", BAD, "--answers", os.path.join(self.out, "answers.json5"))
+        # --answers fora do caminho único ⇒ recusa citando o caminho certo (sem cópia silenciosa)
+        other = os.path.join(self.out, "answers.json5")
+        with open(other, "w") as fh:
+            fh.write(json.dumps(items))
+        code, o, e = cs(self.root, "probes", "check", BAD, "--answers", other)
+        self.assertNotEqual(code, 0, o + e)
+        self.assertIn(os.path.basename(canon), o + e)
+        self.assertFalse(os.path.isfile(canon), "recusa não pode copiar as respostas para o canônico")
+        # respostas no caminho único chegam ao check
+        with open(q["answer_file"], "w") as fh:
+            fh.write(json.dumps(items))
+        code, o, e = cs(self.root, "probes", "check", BAD)
         self.assertEqual(code, 0, o + e)
-        self.assertTrue(os.path.isfile(sp_path(self.root, "probes", "exams", "%s.answers.json5" % BAD)))
+        self.assertTrue(os.path.isfile(canon))
 
 
 if __name__ == "__main__":

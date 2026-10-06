@@ -147,8 +147,8 @@ mede cada camada e **falha** se estourar (`cs.py emit budget`).
 | S4 playbooks | receitas longas | quando o agente precisa | `.claude/skills/<n>-playbooks/SKILL.md` | `.swarm/playbooks/<n>.json5` | idem | idem | sem limite (fora do contexto até ser lido) |
 | S5 memória | o resto dos fatos e tudo o que foi aprendido | por consulta | `.swarm/bin/cs-mem search` | idem | idem | idem | top-k |
 
-Comandos emitidos para o Claude Code (como skills com `disable-model-invocation: true`): `/salvar-sessao`,
-`/carregar-sessao`, `/corrigir`, `/feature-autonoma`, `/planejar-sprint`. Orçamento: sessão ≤15 linhas,
+Comandos emitidos para o Claude Code (como skills com `disable-model-invocation: true`): `/save-session`,
+`/load-session`, `/correct`, `/feature-autonoma`, `/plan-sprint`. Orçamento: sessão ≤15 linhas,
 comandos ≤25 (`scripts/emit/budget.py`). Saída real do `cs.py emit budget` (py-billing, iteração 4):
 
 ```text

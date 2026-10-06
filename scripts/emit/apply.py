@@ -135,10 +135,21 @@ def apply(root, steps, artifacts, platforms):
             backups.append(_backup(root, s))
         if s.action == "delete":
             dest.unlink()
+            _rmdir_if_empty(root, dest.parent)
             continue
         atomic_write(dest, s.new)
     _write_manifest(root, artifacts, platforms)
     return backups
+
+
+def _rmdir_if_empty(root, d):
+    """Pasta de arquivo gerado que ficou vazia depois da poda sai (ex.: `.claude/skills/<antiga>/`); com qualquer
+    arquivo dentro (humano), fica. Só a pasta imediata, nunca a raiz."""
+    try:
+        if d != root and root in d.parents and d.is_dir() and not d.is_symlink() and not any(d.iterdir()):
+            d.rmdir()
+    except OSError:
+        pass
 
 
 def _backup(root, step):

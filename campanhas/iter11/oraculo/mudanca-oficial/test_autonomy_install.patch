@@ -1,0 +1,13 @@
+--- codebase-specialists/scripts/harness/tests/test_autonomy_install.py
++++ codebase-specialists/scripts/harness/tests/test_autonomy_install.py
+@@ -156,7 +156,9 @@
+         self.assertIn("mine.sh", cmds_)
+         self.assertTrue(any("pre-agent" in c for c in cmds_))
+         self.assertEqual(s["env"]["CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH"], "1")
+-        self.assertTrue(any(n.startswith("settings.json.bak-") for n in os.listdir(os.path.join(self.root, ".claude"))))
++        bak_dir = os.path.join(self.root, ".swarm", "backups", "settings")
++        self.assertTrue(any(n.startswith("settings.json.bak-") for n in os.listdir(bak_dir)))
++        self.assertFalse(any(n.startswith("settings.json.bak-") for n in os.listdir(os.path.join(self.root, ".claude"))))
+         res2 = install.install(self.root, platforms=["cursor"], allow_outside=True)
+         self.assertEqual(res2["changes"], [])
+         s2 = json.load(open(os.path.join(self.root, ".claude", "settings.json")))

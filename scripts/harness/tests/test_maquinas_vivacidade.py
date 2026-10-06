@@ -7,7 +7,7 @@ Regras:
 2. Estados que significam "esperando decisão humana" NUNCA são terminais e têm saída para retomar, trocar de agente
    e descartar: delegação ESCALATED e ABSTAINED.
 3. Todo estado é alcançável a partir do inicial.
-4. (M5, rodada interna M5) O modo autônomo `mandato` mora em `machines` e cumpre 1–3; `to: "^"` (volta ao estado de onde
+4. (M5, campanha-M5) O modo autônomo `mandato` mora em `machines` e cumpre 1–3; `to: "^"` (volta ao estado de onde
    veio) é expandido para os estados que levam à origem. AWAITING_HUMAN e PAUSED do mandato nunca são terminais;
    AWAITING_HUMAN sai para retomar (RUNNING), emendar (PROPOSED), encerrar (WRAPPING_UP) e abortar (ABORTED).
 """

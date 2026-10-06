@@ -1,0 +1,34 @@
+--- codebase-specialists/scripts/upgrade/tests/test_upgrade.py
++++ codebase-specialists/scripts/upgrade/tests/test_upgrade.py
+@@ -252,13 +252,26 @@
+         rc, out, err = cs(t, "upgrade", env=clean_env())
+         self.assertIn("nada a fazer", out)
+ 
+-    def test_rename_dir_reserved_is_refused(self):
++    def test_rename_dir_only_moves_this_skill_legacy_dir(self):
++        """rename-dir (SWARM-DIR-3, DEC-SWARM-DIR) só renomeia o legado DESTA skill (.specialists → .swarm).
++        Qualquer parâmetro que aponte outra pasta continua recusado (exit 2) sem escrever nada."""
+         t = self.copy(self.base)
+-        env, _ = self.next_env([{"kind": "rename-dir"}])
+-        before = tree_hash(t)
++        for bad in ({"kind": "rename-dir", "from": "src", "to": "lib"},
++                    {"kind": "rename-dir", "to": ".outra-pasta"},
++                    {"kind": "rename-dir", "from": ".claude"}):
++            env, _ = self.next_env([bad])
++            before = tree_hash(t)
++            rc, out, err = cs(t, "upgrade", "--apply", "--allow-outside", env=env)
++            self.assertEqual(rc, 2, "rename-dir com %r deveria ser recusado: %s" % (bad, out + err))
++            self.assertEqual(tree_hash(t), before)
++        t = self.copy(self.legacy)
++        env, _ = self.next_env([{"kind": "rename-dir"}])
+         rc, out, err = cs(t, "upgrade", "--apply", "--allow-outside", env=env)
+-        self.assertEqual(rc, 2, out + err)
+-        self.assertEqual(tree_hash(t), before)
++        self.assertEqual(rc, 0, out + err)
++        self.assertFalse(os.path.lexists(os.path.join(t, ".specialists")), "legado sobrou após rename-dir")
++        run = json5io.read(os.path.join(t, ".swarm", "run.json5"))
++        self.assertEqual(run["skill_version"], NEXT)
++        self.assertIn("rename-dir", run["upgrade_history"][-1]["actions"])
+ 
+ 
+ class PreservedGuard(unittest.TestCase):

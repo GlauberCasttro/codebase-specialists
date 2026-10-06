@@ -1,0 +1,7 @@
+# PORQUE — test_rename_dir_reserved_is_refused → test_rename_dir_only_moves_this_skill_legacy_dir
+- **O que o teste antigo garantia:** uma migração `{kind: "rename-dir"}` era recusada com exit 2, sem escrever nada, porque o kind estava reservado e sem implementação.
+- **Por que contradiz o requisito aprovado:** o portão `plan:DEC-SWARM-DIR` (2026-10-03) e o SWARM-DIR-3 exigem que o `rename-dir` FUNCIONE no legado desta skill (`.specialists` → `.swarm`). Com o requisito cumprido, o teste antigo reprovaria a implementação correta.
+- **O que o teste novo preserva:** o `rename-dir` continua recusado (exit 2, árvore idêntica) para qualquer parâmetro que aponte outra pasta (`from: src, to: lib`, `to: .outra-pasta`, `from: .claude`). A migração só renomeia o legado desta skill.
+- **O que o teste novo passa a exigir:** num alvo legado real (iteração 4), o `upgrade --apply` com `rename-dir` sai com 0, não sobra o diretório legado, `.swarm/run.json5` fica com `skill_version` = NEXT e `upgrade_history[-1].actions` contém `rename-dir`.
+- **O que não muda:** nenhum outro teste é alterado ou enfraquecido. Ler `run.json5` em `.swarm/` nos demais é trabalho do corretor, não desta mudança.
+- **Verificação (cópia temporária, `patch -p0` a partir de `~/.claude/skills/`):** o patch aplica. O teste novo FALHA hoje ("ação rename-dir ainda não implementada"), e as recusas da 1ª parte já passam. Os outros 7 testes de `test_upgrade.py` passam (78 s).

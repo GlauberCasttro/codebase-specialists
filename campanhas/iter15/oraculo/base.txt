@@ -1,0 +1,82 @@
+# base do oráculo iter15 contra a skill VIVA (0.8.0, árvore com o diff não commitado do render.py e da iter14) — 2026-10-05 22:12
+
+## python3 (Python 3.13.3)
+test_nenhum_nome_antigo_em_template_doc_guia_ou_codigo (test_iter15.TestR1FontesDaSkill.test_nenhum_nome_antigo_em_template_doc_guia_ou_codigo) ... FAIL
+test_cada_plataforma_tem_os_nomes_novos_no_lugar_dos_antigos (test_iter15.TestR1InitProjetoNovo.test_cada_plataforma_tem_os_nomes_novos_no_lugar_dos_antigos) ... FAIL
+test_claude_md_e_orchestrator_citam_os_novos (test_iter15.TestR1InitProjetoNovo.test_claude_md_e_orchestrator_citam_os_novos) ... FAIL
+test_emit_validate_verde (test_iter15.TestR1InitProjetoNovo.test_emit_validate_verde) ... ok
+test_nenhum_nome_antigo_em_nenhum_arquivo_gerado (test_iter15.TestR1InitProjetoNovo.test_nenhum_nome_antigo_em_nenhum_arquivo_gerado) ... FAIL
+test_renomeadas_mantem_politica_argumento_e_comando (test_iter15.TestR1InitProjetoNovo.test_renomeadas_mantem_politica_argumento_e_comando) ... FAIL
+test_apply_emit_validate_verde_sem_orfao_e_sem_nome_antigo (test_iter15.TestR2UpgradeDe08.test_apply_emit_validate_verde_sem_orfao_e_sem_nome_antigo) ... FAIL
+test_apply_grava_versao_e_e_idempotente (test_iter15.TestR2UpgradeDe08.test_apply_grava_versao_e_e_idempotente) ... ok
+test_apply_preserva_arquivo_humano_dentro_de_pasta_gerada (test_iter15.TestR2UpgradeDe08.test_apply_preserva_arquivo_humano_dentro_de_pasta_gerada) ... FAIL
+test_apply_preserva_pasta_do_usuario_fora_do_manifesto (test_iter15.TestR2UpgradeDe08.test_apply_preserva_pasta_do_usuario_fora_do_manifesto) ... ok
+test_apply_remove_as_pastas_antigas_do_manifesto_e_cria_as_novas (test_iter15.TestR2UpgradeDe08.test_apply_remove_as_pastas_antigas_do_manifesto_e_cria_as_novas) ... FAIL
+test_catalogo_tem_entrada_090_e_version (test_iter15.TestR2UpgradeDe08.test_catalogo_tem_entrada_090_e_version) ... FAIL
+test_plano_lista_a_troca_e_nao_escreve (test_iter15.TestR2UpgradeDe08.test_plano_lista_a_troca_e_nao_escreve) ... FAIL
+test_precondicao_alvo_08_tem_as_antigas_no_manifesto (test_iter15.TestR2UpgradeDe08.test_precondicao_alvo_08_tem_as_antigas_no_manifesto) ... ok
+test_controle_copia_intacta_passa (test_iter15.TestR3CheckReprovaDivergencia.test_controle_copia_intacta_passa) ... FAIL
+test_reprova_politica_de_quem_roda_trocada (test_iter15.TestR3CheckReprovaDivergencia.test_reprova_politica_de_quem_roda_trocada) ... FAIL
+test_reprova_skill_faltando (test_iter15.TestR3CheckReprovaDivergencia.test_reprova_skill_faltando) ... FAIL
+test_reprova_skill_sobrando (test_iter15.TestR3CheckReprovaDivergencia.test_reprova_skill_sobrando) ... FAIL
+Muda o argument-hint de close-task no CÓDIGO da cópia: o guia fica velho (--check reprova) e --write ... FAIL
+test_write_regenera_e_preserva_o_resto (test_iter15.TestR3CheckReprovaDivergencia.test_write_regenera_e_preserva_o_resto) ... FAIL
+test_check_verde_na_skill (test_iter15.TestR3GuiaGeradoDoCodigo.test_check_verde_na_skill) ... FAIL
+test_guia_cobre_cada_skill_gerada_com_quem_roda_e_argumento (test_iter15.TestR3GuiaGeradoDoCodigo.test_guia_cobre_cada_skill_gerada_com_quem_roda_e_argumento) ... FAIL
+test_precondicao_verdade_tem_todas_as_familias (test_iter15.TestR3GuiaGeradoDoCodigo.test_precondicao_verdade_tem_todas_as_familias) ... FAIL
+test_codex_nested_ou_territorio_tambem_corta (test_iter15.TestR4InvariantesAlemDoOrcamento.test_codex_nested_ou_territorio_tambem_corta) ... ok
+test_emit_nao_falha_e_s2_no_orcamento (test_iter15.TestR4InvariantesAlemDoOrcamento.test_emit_nao_falha_e_s2_no_orcamento) ... ok
+test_linha_mais_n_aponta_arquivo_gerado_completo (test_iter15.TestR4InvariantesAlemDoOrcamento.test_linha_mais_n_aponta_arquivo_gerado_completo) ... ok
+test_topo_e_o_de_maior_prioridade (test_iter15.TestR4InvariantesAlemDoOrcamento.test_topo_e_o_de_maior_prioridade) ... ok
+test_sem_linha_mais_quando_cabe (test_iter15.TestR4PoucosInvariantesSemCorte.test_sem_linha_mais_quando_cabe) ... ok
+Ran 28 tests in 7.280s
+FAILED (failures=19)
+
+## /usr/bin/python3 (Python 3.9.6)
+test_nenhum_nome_antigo_em_template_doc_guia_ou_codigo (test_iter15.TestR1FontesDaSkill) ... FAIL
+test_cada_plataforma_tem_os_nomes_novos_no_lugar_dos_antigos (test_iter15.TestR1InitProjetoNovo) ... FAIL
+test_claude_md_e_orchestrator_citam_os_novos (test_iter15.TestR1InitProjetoNovo) ... FAIL
+test_emit_validate_verde (test_iter15.TestR1InitProjetoNovo) ... ok
+test_nenhum_nome_antigo_em_nenhum_arquivo_gerado (test_iter15.TestR1InitProjetoNovo) ... FAIL
+test_renomeadas_mantem_politica_argumento_e_comando (test_iter15.TestR1InitProjetoNovo) ... FAIL
+test_apply_emit_validate_verde_sem_orfao_e_sem_nome_antigo (test_iter15.TestR2UpgradeDe08) ... FAIL
+test_apply_grava_versao_e_e_idempotente (test_iter15.TestR2UpgradeDe08) ... ok
+test_apply_preserva_arquivo_humano_dentro_de_pasta_gerada (test_iter15.TestR2UpgradeDe08) ... FAIL
+test_apply_preserva_pasta_do_usuario_fora_do_manifesto (test_iter15.TestR2UpgradeDe08) ... ok
+test_apply_remove_as_pastas_antigas_do_manifesto_e_cria_as_novas (test_iter15.TestR2UpgradeDe08) ... FAIL
+test_catalogo_tem_entrada_090_e_version (test_iter15.TestR2UpgradeDe08) ... FAIL
+test_plano_lista_a_troca_e_nao_escreve (test_iter15.TestR2UpgradeDe08) ... FAIL
+test_precondicao_alvo_08_tem_as_antigas_no_manifesto (test_iter15.TestR2UpgradeDe08) ... ok
+test_controle_copia_intacta_passa (test_iter15.TestR3CheckReprovaDivergencia) ... FAIL
+test_reprova_politica_de_quem_roda_trocada (test_iter15.TestR3CheckReprovaDivergencia) ... FAIL
+test_reprova_skill_faltando (test_iter15.TestR3CheckReprovaDivergencia) ... FAIL
+test_reprova_skill_sobrando (test_iter15.TestR3CheckReprovaDivergencia) ... FAIL
+Muda o argument-hint de close-task no CÓDIGO da cópia: o guia fica velho (--check reprova) e --write ... FAIL
+test_write_regenera_e_preserva_o_resto (test_iter15.TestR3CheckReprovaDivergencia) ... FAIL
+test_check_verde_na_skill (test_iter15.TestR3GuiaGeradoDoCodigo) ... FAIL
+test_guia_cobre_cada_skill_gerada_com_quem_roda_e_argumento (test_iter15.TestR3GuiaGeradoDoCodigo) ... FAIL
+test_precondicao_verdade_tem_todas_as_familias (test_iter15.TestR3GuiaGeradoDoCodigo) ... FAIL
+test_codex_nested_ou_territorio_tambem_corta (test_iter15.TestR4InvariantesAlemDoOrcamento) ... ok
+test_emit_nao_falha_e_s2_no_orcamento (test_iter15.TestR4InvariantesAlemDoOrcamento) ... ok
+test_linha_mais_n_aponta_arquivo_gerado_completo (test_iter15.TestR4InvariantesAlemDoOrcamento) ... ok
+test_topo_e_o_de_maior_prioridade (test_iter15.TestR4InvariantesAlemDoOrcamento) ... ok
+test_sem_linha_mais_quando_cabe (test_iter15.TestR4PoucosInvariantesSemCorte) ... ok
+Ran 28 tests in 7.631s
+FAILED (failures=19)
+
+# implementação de referência descartável (<scratch>): python3 e /usr/bin/python3 → Ran 28 ... OK
+# mutantes (mutate.py), cada um parte da referência:
+M1 renomeia só no Claude Code → rc=1 Ran 28 tests in 14.148s FAILED (failures=11)
+M2 upgrade não remove a antiga (sem poda) → rc=1 Ran 28 tests in 19.177s FAILED (failures=6)
+M3 upgrade deixa a pasta antiga vazia → rc=1 Ran 28 tests in 14.168s FAILED (failures=1)
+M4 upgrade apaga pasta do usuário → rc=1 Ran 28 tests in 14.293s FAILED (failures=3)
+M5 guia sem uma skill (gerador esquece feature-autonoma) → rc=1 Ran 28 tests in 12.440s FAILED (failures=1)
+M6 guia com política de quem roda errada → rc=1 Ran 28 tests in 12.103s FAILED (failures=1)
+M7 CLAUDE.md/orchestrator com nome antigo → rc=1 Ran 28 tests in 13.855s FAILED (failures=4)
+M8 sem migração 0.9.0/VERSION → rc=1 Ran 28 tests in 9.134s FAILED (failures=5)
+M9 render.py de HEAD (R4) → rc=1 Ran 28 tests in 12.911s FAILED (failures=4)
+M10 corte sem linha 'Mais N' → rc=1 Ran 28 tests in 12.779s FAILED (failures=2)
+# R4 com render.py de HEAD numa cópia da skill viva:
+FAILED (failures=4)
+Ran 5 tests in 0.630s
+emit: S2 território de 'dev-billing': invariantes+regras+armadilhas somam 78 linhas > 58. Mova armadilhas antigas para a memória (S5, `.swarm/bin/cs-mem add --kind lesson`) ou procedimentos para playbooks (S4).

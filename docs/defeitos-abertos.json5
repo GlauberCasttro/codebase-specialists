@@ -1,0 +1,28 @@
+// Iteração 4 — rodada final (parcial: só ts-shop concluiu; py-billing pausado em validate.3, go-polyglot em validate.2).
+{
+  ts_shop: {
+    decisao: "GO (simulado), --fast, 10/10 especialistas, G1–G16 verdes — após contorno manual",
+    quality: "12/13 no corretor = 13/13 real (STALE: falso positivo — 'playwright' citado para dizer que NÃO existe)",
+    baseline_quality: "10/13", minutos: 33, tokens_orquestrador: 269008, subagentes: 79,
+    contornos_manuais: 5,
+  },
+  criterio_parada: {gos: "1/1 concluída (2 pausadas)", zero_contornos: false, qualidade_ge_baseline: true, testes_verdes: true,
+                    veredito: "NÃO CUMPRIDO — 5 contornos manuais"},
+  defeitos_iter5: [
+    {p: "P0", d: "sem saneamento: repositório-piloto (projeto-legado) ficou com 91 MB de lixo em .specialists/tmp (15 clones de exame com .git) e sem .gitignore — approve.4 sanitize; spec em PROXIMA-RODADA.md"},
+    {p: "P1", d: "renomear .specialists/ → .swarm/ (colisão com .swarm/ da fábrica v8 deve ser recusada; migração rename-dir no upgrade) — spec em PROXIMA-RODADA.md"},
+    {p: "P1", d: "comando `upgrade` com VERSION + references/migrations.json5: atualiza só harness/regras/artefatos sem refazer entrevista/roster — spec e cenários UPGRADE-1..5 em PROXIMA-RODADA.md. Aprovado pelo founder em 2026-10-03."},
+    {p: "P0-MAX", d: "harness obriga o fluxo inteiro (delegação BRIEFED ← task ← story) até para perguntar a um especialista ou mudar 1 linha. Implementar 3 faixas (consulta só-leitura / task avulsa / fluxo completo) — especificação, contrato e cenários de aceite em PROXIMA-RODADA.md §PRIORIDADE MÁXIMA. Decisão de produto já aprovada pelo founder em 2026-10-03."},
+    {p: "P0", d: "--fast pula rt.2/rt.4, a única checagem de existência antes do verify → G2 falha no verify. Rodar `probes existence` em specialize.4 (ou validate.1) em todos os modos e permitir `team card revise` sem painel consolidado para consertar existência"},
+    {p: "P0", d: "verify aceita G4 com cartões alterados depois do exame: exame deve ficar ligado ao hash do cartão; cartão mudou ⇒ G4 pendente (reexame)"},
+    {p: "P1", d: "sem comando que monta os pacotes de entrada de spot-check, core e juízes POR-QUÊ (executor escreveu scripts): `facts spotcheck pack`, `team core pack`, `panel why pack` + `panel why tally` (maioria dos juízes)"},
+    {p: "P1", d: "`probes exam-pack` grava `answer_file` em questions.json5 em conflito com o caminho de respostas de prompts.json5 — um só caminho"},
+    {p: "P2", d: "corretor [Q][STALE]: negação ('não existe', 'não documentar como existente') ainda não reconhecida"},
+    // achados ao documentar (docs/08-limites-e-defeitos-conhecidos.md)
+    {p: "P1", d: "harness install --no-settings ainda grava .claude/hooks/cs-guard.sh (platforms.md §4.1 diz que não)"},
+    {p: "P2", d: "--help: `cs.py --help` omite `interview sync` e `panel pack`; harness validate|status e cs-route recommend|override|anular|stats sem descrição; `harness install --platforms` não sugere claude-code"},
+    {p: "P2", d: "ARCHITECTURE.md: título do §5 diz L0–L8 e tabela §9 só G1–G7 (L9/L10 e G8–G16 espalhados em §8-bis..§8-terdecies)"},
+    {p: "P2", d: "evals 4–6 (autônomo, escalada, bugfix) nunca foram rodados"},
+  ],
+  proximo: "rodar a iteração 5 com a skill auto-correcao (primeira campanha real), após o reset do limite; retomar py-billing e go-polyglot com `stage load validate`",
+}

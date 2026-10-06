@@ -17,7 +17,7 @@ Dono: `scripts/harness/` (motor + templates) e `scripts/memory/`. Instalado no a
 .swarm/memory/    knowledge.jsonl episodes.jsonl stale.json5 index/ (cache JSON estrito)
 .swarm/session/   resume.json5
 .claude/hooks/cs-guard.sh   wrapper fail-closed (python3/motor ausente em modo pre-* → exit 2)
-.claude/settings.json   merge (backup .bak-<ts>; chaves alheias preservadas; nossos hooks reconhecidos por "cs-guard.sh")
+.claude/settings.json   merge (backup em .swarm/backups/settings/settings.json.bak-<ts>; chaves alheias preservadas; nossos hooks reconhecidos por "cs-guard.sh")
 specialists.mk + bloco gerenciado `include specialists.mk` no Makefile (nunca sobrescreve; colisão → prefixo cs-)
 ```
 Raiz sempre = `--root` ou `$CLAUDE_PROJECT_DIR` (os bins usam o diretório onde estão instalados como fallback

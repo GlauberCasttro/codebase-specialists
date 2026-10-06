@@ -25,7 +25,84 @@ GO_BLOCK = re.compile(r"^\s*import\s*\((.*?)\)", re.M | re.S)
 GO_LINE = re.compile(r'(?:[\w.]+\s+)?"([^"]+)"')
 JVM_IMPORT = re.compile(r"^\s*import\s+(?:static\s+)?([\w.]+)(\.\*)?\s*;?", re.M)
 CS_USING = re.compile(r"^\s*using\s+(?:static\s+)?(?:\w+\s*=\s*)?([\w.]+)\s*;", re.M)
-CS_NAMESPACE = re.compile(r"^\s*namespace\s+([\w.]+)", re.M)
+CS_NAMESPACE = re.compile(r"^\s*namespace\s+([\w.]+)", re.M)  # aplicado sobre cs_blank_strings(texto) (U12)
+# 1ª declaração de tipo: `using` de arquivo vem SEMPRE antes dela; depois disso, "using X;" só aparece em string
+# literal (código-fonte de teste de source generator) — cobaia .NET 2026-10-05: 2 sondas com gabarito errado
+CS_FIRST_TYPE = re.compile(
+    r"^\s*(?:\[[^\n]*\]\s*)*(?:(?:public|internal|private|protected|static|sealed|abstract|partial|readonly|"
+    r"unsafe|file|ref)\s+)*(?:class|struct|record|interface|enum|delegate)\b", re.M)
+
+
+def cs_blank_strings(text):
+    """Apaga (troca por espaço, preservando as quebras de linha) o conteúdo de literais de string/char C#
+    — regular, verbatim `@"…"`, interpolada `$"…"` e raw (3+ aspas) — e de comentários. U12: um
+    `namespace X` dentro de string (código de teste de source generator) não é declaração do arquivo."""
+    out = []
+    i, n = 0, len(text)
+
+    def blank(a, b):
+        out.append("".join(c if c == "\n" else " " for c in text[a:b]))
+
+    while i < n:
+        c = text[i]
+        if c == "/" and text.startswith("//", i):
+            j = text.find("\n", i)
+            j = n if j < 0 else j
+            blank(i, j)
+            i = j
+            continue
+        if c == "/" and text.startswith("/*", i):
+            j = text.find("*/", i + 2)
+            j = n if j < 0 else j + 2
+            blank(i, j)
+            i = j
+            continue
+        if c == "'":
+            j = i + 1
+            while j < n and text[j] not in "'\n":
+                j += 2 if text[j] == "\\" else 1
+            j = min(n, j + 1)
+            blank(i, j)
+            i = j
+            continue
+        if c == '"':
+            k = i
+            while k < n and text[k] == '"':
+                k += 1
+            q = k - i
+            if q >= 3:  # raw string: fecha com a mesma quantidade de aspas
+                j = text.find('"' * q, k)
+                j = n if j < 0 else j + q
+            else:
+                verbatim = i > 0 and text[i - 1] == "@" or (i > 1 and text[i - 2:i] in ("@$", "$@"))
+                if q == 2:  # string vazia ""
+                    j = i + 2
+                else:
+                    j = i + 1
+                    while j < n:
+                        ch = text[j]
+                        if verbatim:
+                            if ch == '"':
+                                if j + 1 < n and text[j + 1] == '"':
+                                    j += 2
+                                    continue
+                                break
+                        else:
+                            if ch == "\\":
+                                j += 2
+                                continue
+                            if ch == '"' or ch == "\n":
+                                break
+                        j += 1
+                    j = min(n, j + 1)
+            blank(i, j)
+            i = j
+            continue
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
 RB_REQ = re.compile(r"""^\s*(require_relative|require|load)\s*\(?\s*['"]([^'"]+)['"]""", re.M)
 RS_MOD = re.compile(r"^\s*(?:pub(?:\([\w:]+\))?\s+)?mod\s+(\w+)\s*;", re.M)
 RS_USE = re.compile(r"^\s*(?:pub\s+)?use\s+((?:crate|super|self)(?:::\w+)+)", re.M)
@@ -205,9 +282,14 @@ def extract(ctx, rel, res):
                 t = res.by_suffix(key.rsplit("/", 1)[0], (".java", ".kt"), rel)
             out.append((t, None if t else ".".join(name.split(".")[:2])))
     elif lang == "csharp":
-        for m in CS_USING.finditer(text):
+        first = CS_FIRST_TYPE.search(text)
+        for m in CS_USING.finditer(text[:first.start()] if first else text):
             ns = m.group(1)
             hits = ctx._cs_ns.get(ns, [])
+            ln = text.count("\n", 0, m.start(1)) + 1  # U6: evidência = linha do `using`
+            for t in hits[:50]:
+                if t != rel:
+                    res.hints.setdefault((rel, t), ln)
             out.extend((t, None) for t in hits[:50] if t != rel)
             if not hits:
                 out.append((None, ns.split(".")[0]))
@@ -398,7 +480,7 @@ def run(ctx):
     ctx._cs_ns = {}
     for f in files:
         if paths.lang_of(f) == "csharp":
-            for m in CS_NAMESPACE.finditer(ctx.text(f)):
+            for m in CS_NAMESPACE.finditer(cs_blank_strings(ctx.text(f))):
                 ctx._cs_ns.setdefault(m.group(1), []).append(f)
     edges = {}
     external = {}

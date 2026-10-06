@@ -57,7 +57,7 @@ class G(unittest.TestCase):
 
 TRACKED = "src/billing/tax.py"       # existe no HEAD: o dev MODIFICA e não commita (caso do repositório-piloto)
 NEW = "src/billing/discount.py"      # não existe no HEAD: o dev CRIA e não commita
-OUTSIDE = "src/members/model.py"       # território de outro agente
+OUTSIDE = "src/users/model.py"       # território de outro agente
 
 
 class Base(E2E):
@@ -234,8 +234,8 @@ class TestOndasParalelas(Base):
         self.process(root, "feature")
         po = self.add_task(root, "po", "docs/stories/US-1.md", "detalhar a story", wave=1, ref="docs/stories/README.md:1")
         t_bil = self.add_task(root, "dev-billing", NEW, "criar desconto", wave=2, verify=VERIFY)
-        t_usr = self.add_task(root, "dev-members", "src/members/discount.py", "elegibilidade do desconto", wave=2,
-                              verify=VERIFY, ref="src/members/model.py:1")
+        t_usr = self.add_task(root, "dev-users", "src/users/discount.py", "elegibilidade do desconto", wave=2,
+                              verify=VERIFY, ref="src/users/model.py:1")
         self.ok(root, "session", "execute")
         self.full_task(root, po, "po", "docs/stories/US-1.md", "# US-1 detalhada\n", "tu-po")
         return t_bil, t_usr
@@ -244,9 +244,9 @@ class TestOndasParalelas(Base):
         root = self.repo()
         t_bil, t_usr = self._feature_com_po(root)
         self.dispatch(root, t_bil, "dev-billing", "tu-bil")
-        self.dispatch(root, t_usr, "dev-members", "tu-usr")
+        self.dispatch(root, t_usr, "dev-users", "tu-usr")
         self.implement(root, t_bil, "dev-billing", NEW, "RATE = 30\n")
-        self.implement(root, t_usr, "dev-members", "src/members/discount.py", "ELIGIBLE = True\n")
+        self.implement(root, t_usr, "dev-users", "src/users/discount.py", "ELIGIBLE = True\n")
         for t in (t_bil, t_usr):
             out = self.verify_out(root, t)
             self.assertNotIn(FORA, out, out)
@@ -256,9 +256,9 @@ class TestOndasParalelas(Base):
         root = self.repo()
         t_bil, t_usr = self._feature_com_po(root)
         self.dispatch(root, t_bil, "dev-billing", "tu-bil")
-        self.dispatch(root, t_usr, "dev-members", "tu-usr")
+        self.dispatch(root, t_usr, "dev-users", "tu-usr")
         self.implement(root, t_bil, "dev-billing", NEW, "RATE = 10\n")
-        self.implement(root, t_usr, "dev-members", "src/members/discount.py", "ELIGIBLE = True\n")
+        self.implement(root, t_usr, "dev-users", "src/users/discount.py", "ELIGIBLE = True\n")
         self.verify_pass(root, t_bil)
         self.review(root, t_bil, "FAIL")
         self.ok(root, "reject", "--task", t_bil, "--reason", "review FAIL: RATE deve ser 30")
@@ -269,7 +269,7 @@ class TestOndasParalelas(Base):
         self.dispatch(root, t_bil, "dev-billing", "tu-bil-2")
         self.implement(root, t_bil, "dev-billing", NEW, "RATE = 30\n")
         out = self.verify_out(root, t_bil)
-        self.assertNotIn("src/members/discount.py", out, "arquivo da irmã aceita não é da task:\n" + out)
+        self.assertNotIn("src/users/discount.py", out, "arquivo da irmã aceita não é da task:\n" + out)
         self.assertIn("verify PASS", out, out)
 
 

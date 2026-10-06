@@ -415,12 +415,14 @@ def card_revise(target, name, path=None, note=""):
         # iteração 5 (ts-shop --fast): sem mesa redonda não há painel, e o conserto de existência que o check de
         # existência (todos os modos) devolve ao autor era recusado aqui. Conserto de existência (`--file` que
         # zera as faltas do cartão ATUAL) não depende de painel; a revisão do autor (rt.4) continua exigindo um.
+        # cobaia .NET (--fast com refino liberado): exame reprovado libera a revisão do refino mesmo sem painel
+        refine = refine_slot(target, name, st[name])
         cur_miss = _existence_missing(target, team, name) if (path and ag.get("card")) else []
-        if not cur_miss:
+        if refine is None and not cur_miss:
             raise CsError("painel de %s não consolidado (.swarm/panel/%s.json5)" % (name, name),
                           "rode `cs.py panel consolidate` antes da revisão do autor; sem painel só vale o conserto "
                           "de existência (`--file` com o cartão que zera as citações inexistentes do cartão atual)")
-        fix = True
+        fix = refine is None
     elif rev and rev.get("panel_sha256") == psha:
         refine = refine_slot(target, name, st[name])
         if refine is None:

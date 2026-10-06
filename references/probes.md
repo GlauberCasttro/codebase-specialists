@@ -44,7 +44,7 @@ po) usa o produto inteiro como "território". Seleção round-robin por tipo com
 | COMANDO `command` | qual comando prova Y | `operations` com `status: verified` (exclui comando já presente em cartão) | string normalizada igual |
 | PROIBIÇÃO `prohibition` | que regra mecânica vale em Z e onde é imposta | fatos de `rules` com evidência arquivo:linha | cita arquivo da imposição (linha ±3 se dada) |
 | DEPENDÊNCIA `dependency` | quem fora do território importa X | arestas do grafo | conjunto igual (vazio = negativa) |
-| HISTÓRIA `history` | qual commit corrigiu "assunto" | `history.fixes` | sha citado é prefixo (≥7) do gabarito |
+| HISTÓRIA `history` | sha do commit cujo assunto é "assunto" | `history.fixes` | sha citado é prefixo (≥7) do gabarito |
 | POR-QUÊ `why` | por que D? cite a fonte | `rationale` (ADR/decisão com arquivo:linha) | pré-check mecânico: cita arquivo:linha existente cuja janela ±3 contém o termo-chave (ou a fonte); **mérito vai ao painel** |
 | TERMO `term` | onde é definido / termo canônico para Y / variante a nunca usar | `glossary` | local ±3; canônico como token; ≥1 variante proibida citada |
 | REGRA-DE-NEGÓCIO `business_rule` | qual o limite/estado/validação de Z e onde é imposto | `business_rules` | arquivo:linha ±3 **e** valor citado |

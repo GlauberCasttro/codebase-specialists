@@ -22,7 +22,11 @@ INSPECT_CMDS = ("git ", "grep ", "rg ", "ls ", "find ", "cat ", "sed ", "head ",
 NONE_RE = re.compile(r"^\s*(?:(?:nenhum[a]?|none|nothing|inexistente|n[ãa]o\s+(?:existe|h[áa])|does\s+not\s+exist)"
                      r"(?![\w-])|(?:n[ãa]o|no|n/a)(?=\s*(?:$|[.!;:,(—–]|-\s)))[\s.!]*", re.I)
 EXTLESS = r"(?:Makefile|GNUmakefile|Dockerfile|Containerfile|Jenkinsfile|Procfile|Gemfile|Rakefile|Justfile|Vagrantfile)"
-PATH_RE = re.compile(r"((?:[\w.@-]+/)*" + EXTLESS + r"(?![\w.])|(?:[\w.@-]+/)*[\w.@-]+\.[A-Za-z0-9]{1,8}|"
+# dotfile sem extensão na raiz (`.editorconfig:3`) não casava: o nome depois do ponto passa de 8 caracteres;
+# U2b: ponto final de frase (`… é .editorconfig.`) não impede o dotfile, e `.NET` (o stack) não é dotfile
+PATH_RE = re.compile(r"((?:[\w.@-]+/)*" + EXTLESS + r"(?![\w.])|"
+                     r"(?:[\w.@-]+/)*\.(?!NET\b)[A-Za-z][\w-]{1,30}(?![\w/]|\.\w)|"
+                     r"(?:[\w.@-]+/)*[\w.@-]+\.[A-Za-z0-9]{1,8}|"
                      r"(?:[\w.@-]+/)+[\w.@-]+)(?::(\d+))?")
 _NUMERIC = re.compile(r"^[\s\d_.,*+/()x-]+[a-zA-Z%]{0,4}$")
 SHA_RE = re.compile(r"\b[0-9a-f]{7,40}\b")
@@ -127,8 +131,10 @@ def copy_for_exam(root, dest):
 def exam_pack_isolated(target, agent, out):
     """`probes exam-pack <agente> --out <dir>`: exame guiado ISOLADO — `<dir>/repo/` = cópia do alvo sem
     `.swarm/` (gabarito inalcançável pela cópia), COM o histórico git do alvo (clone local) para as sondas de
-    histórico; + `<dir>/questions.json5`; respostas em `<dir>/answers.json5`. `--out` fica fora do alvo ou em
-    `<alvo>/.swarm/tmp/` (rascunho, nunca copiado)."""
+    histórico; + `<dir>/questions.json5`. `--out` fica fora do alvo ou em `<alvo>/.swarm/tmp/` (rascunho, nunca
+    copiado). Respostas: UM caminho por agente (campanha-iter11, P-1) — o `answer_file` do pacote canônico,
+    `.swarm/probes/exams/<agente>.answers.json5` (aqui em caminho absoluto), lido por `probes check <agente>`
+    sem `--answers`; a iteração 4 tinha 3 caminhos (`<dir>/answers.json5`, o canônico e o do prompt)."""
     import shutil
     from cslib import json5io
     out = os.path.realpath(os.path.abspath(os.path.expanduser(out)))
@@ -146,12 +152,13 @@ def exam_pack_isolated(target, agent, out):
     n, hist = copy_for_exam(root, os.path.join(out, "repo"))
     iso = dict(pack)
     iso["repo"] = os.path.join(out, "repo")
-    iso["answer_file"] = os.path.join(out, "answers.json5")
+    iso["answer_file"] = os.path.join(root, pack["answer_file"])  # caminho único (o mesmo do pacote canônico)
     git_note = (" O histórico git do repositório está na cópia: use `git -C %s log|show` (leitura)." % iso["repo"]
                 if hist["mode"] == "clone" else " A cópia não tem histórico git (%s): não invente sha; sonda de "
                 "commit sem evidência fica `nao_sei`." % hist.get("reason"))
     iso["instructions"] = pack["instructions"] + (" Trabalhe SÓ dentro de `%s` (cópia do repositório; nunca saia "
-                                                  "dela com `..`); grave as respostas em `%s`." % (
+                                                  "dela com `..`); grave as respostas SÓ em `%s` (único arquivo "
+                                                  "fora da cópia que você escreve; não leia nada ao lado dele)." % (
                                                       iso["repo"], iso["answer_file"])) + git_note
     qpath = os.path.join(out, "questions.json5")
     with open(qpath, "w", encoding="utf-8") as fh:
@@ -417,7 +424,10 @@ class Checker(object):
                 if ls is None or ln is None:
                     continue
                 win = " ".join(ls[max(0, ln - 1 - LINE_TOL): ln + LINE_TOL]).lower()
-                if (terms and any(k in win for k in terms)) or (not terms and self._near([(p, ln)], exp["sources"])):
+                # sem termos-chave: basta citar o DOCUMENTO-fonte (qualquer linha); o mérito é do painel. Exigir
+                # ±LINE_TOL do título/Status reprovava quem citava a seção de Contexto (cobaia .NET 2026-10-05)
+                if (terms and any(k in win for k in terms)) or (
+                        not terms and any(p == s.get("file") for s in exp["sources"])):
                     ok = True
                     break
             return ok, False, "fonte %s (painel decide o mérito)" % ("ok" if ok else "não citada"), ok
@@ -541,7 +551,9 @@ def check(target, agent, answers_path=None):
     # linha só com `closed_mode` (modo fechado pontuado antes do guiado) não tem `decision`: não examinado = não PASS
     agg["g4"] = "PASS" if agg["agents"] and all(v.get("decision") == "PASS" for v in agg["agents"].values()) else "FAIL"
     write_json(target, agg_p, agg)
-    removed = remove_exam_copy(target, agent)  # pontuado: a cópia do exame não serve mais (sanitize, causa)
+    # pontuado: a cópia do exame não serve mais (sanitize, causa) — EXCETO com painel why pendente: os juízes leem
+    # o repo NESSA cópia (cobaia .NET 2026-10-05: apagada antes do painel, teve de ser recriada à mão)
+    removed = None if rep.get("panel_pending") else remove_exam_copy(target, agent)
     if removed:
         rep["exam_copy_removed"] = removed
     return rep

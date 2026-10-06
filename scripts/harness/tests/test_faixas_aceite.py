@@ -1,4 +1,4 @@
-"""ORÁCULO — três faixas de interação (plano da rodada, "PRIORIDADE MÁXIMA (P0 da rodada 1)").
+"""ORÁCULO — três faixas de interação (ROADMAP-proxima-rodada.md, "PRIORIDADE MÁXIMA (P0 da rodada 1)").
 
 Cenários de aceite CONSULT-1, CONSULT-2, QUICK-1, QUICK-2, QUICK-3, PEQUENA-1 + guarda de regressão do fluxo completo.
 Tudo pelo comportamento OBSERVÁVEL: CLI real (engine/state.py = cs-state, em subprocesso) e guard real (engine/guard.py,
@@ -273,12 +273,12 @@ class TestConsulta(Base):
         # a consulta existir não abre brecha: sem citar o id → bloqueado
         self.assertEqual(hook(root, "pre-agent", agent_payload("pergunta sobre billing", "dev-billing", model=model))[0], 2)
         # consulta de dev-billing não autoriza outro agente
-        self.assertEqual(hook(root, "pre-agent", agent_payload(out, "dev-members", model=model))[0], 2)
+        self.assertEqual(hook(root, "pre-agent", agent_payload(out, "dev-users", model=model))[0], 2)
         # subagente não despacha, nem com o id
         self.assertEqual(hook(root, "pre-agent", agent_payload(out, "dev-billing", model=model,
-                                                               actor={"agent_id": "x", "agent_type": "dev-members"}))[0], 2)
+                                                               actor={"agent_id": "x", "agent_type": "dev-users"}))[0], 2)
         # subagente não cria consulta pelo Bash
-        self.assertEqual(hook(root, "pre-bash", bash_payload(root, "cs-state ask dev-members 'x'",
+        self.assertEqual(hook(root, "pre-bash", bash_payload(root, "cs-state ask dev-users 'x'",
                                                              {"agent_id": "x", "agent_type": "dev-billing"}))[0], 2)
         # despacho legítimo passa; a consulta é descartável: depois de ANSWERED o mesmo id não serve de novo
         code, _, err = hook(root, "pre-agent", agent_payload(out, "dev-billing", model=model))
@@ -336,7 +336,7 @@ class TestTaskAvulsa(Base):
         # (a) dois territórios
         root = self.repo(no_rules=True)
         start_session(self, root, "pequena")
-        self._assert_promote(root, ("src/billing/discount.py", "src/members/discount.py"))
+        self._assert_promote(root, ("src/billing/discount.py", "src/users/discount.py"))
         # (b) invariante escopado (rule.billing.cents / br.billing.max-discount em src/billing/**)
         root = self.repo()
         start_session(self, root, "pequena")

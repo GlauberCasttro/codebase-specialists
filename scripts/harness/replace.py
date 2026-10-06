@@ -1,6 +1,6 @@
 """replace — harness único: detecta OUTRO harness no alvo e, só com `--replace-harness`, o substitui.
 
-Contrato (ESPEC rodada interna 9, SWARM-DIR-2/4; decisão de produto C4 "um harness não pode existir junto com o outro"):
+Contrato (ESPEC campanha-iter9, SWARM-DIR-2/4; PONTOS-DO-FOUNDER C4 "um harness não pode existir junto com o outro"):
 - `gate()` roda ANTES de `cs.py init` e `cs.py harness install`. Sem sinal → segue. Com sinal → exit 3 sem escrever
   nada e imprime o "plano de substituição"; o diretório legado DESTA skill não é "outro harness" (é migração:
   `cs.py upgrade`).

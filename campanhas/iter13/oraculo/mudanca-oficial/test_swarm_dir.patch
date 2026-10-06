@@ -1,0 +1,14 @@
+--- codebase-specialists/scripts/harness/tests/test_swarm_dir.py
++++ codebase-specialists/scripts/harness/tests/test_swarm_dir.py
+@@ -415,7 +415,10 @@
+             p = os.path.join(sw, "bin", b)
+             self.assertTrue(os.path.isfile(p) and os.access(p, os.X_OK), "wrapper ausente: .swarm/bin/" + b)
+         self.assertTrue(os.path.isfile(os.path.join(sw, "run.json5")), ".swarm/run.json5 (cs.py init)")
+-        self.assertTrue(os.path.isfile(os.path.join(sw, "state", "board.json5")))
++        for z in ("backlog", "state", "archive"):  # estado nasce em ÁRVORE (campanha-iter13), sem board plano
++            self.assertTrue(os.path.isdir(os.path.join(sw, z)), "zona da árvore ausente: .swarm/" + z)
++        self.assertTrue(os.path.isfile(os.path.join(sw, "events.jsonl")), ".swarm/events.jsonl (cadeia do estado)")
++        self.assertFalse(os.path.lexists(os.path.join(sw, "state", "board.json5")), "board plano legado criado")
+         self.assertTrue(os.path.isfile(os.path.join(sw, "harness", "guard.py")))
+ 
+     def test_nenhum_nome_legado_no_alvo(self):

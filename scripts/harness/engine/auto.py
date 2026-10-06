@@ -4,18 +4,23 @@
 Princípio do founder: TUDO que é mecânico é deste script — próxima ação, ondas, verify, accept, close de task,
 integração (regressão + aceite por critério), progresso, orçamento (corte de 80%), parada, escalada, retomada e órfãos.
 O modelo só executa os nós de julgamento que o `tick` pede (PLAN/REPLAN, DISPATCH, REVIEW, REFLECT, FINAL_REVIEW,
-ANSWER_ORPHAN). Portões HUMANOS (approve, amend, resolve, stop, abort) exigem `--by <humano>` (+ a prova humana de
-$CS_HUMAN_PROOF_ARGS, implementada fora daqui) e o guard bloqueia o modelo de rodá-los.
+ANSWER_ORPHAN). Portões HUMANOS (approve, amend, resolve, stop, abort) exigem `--by <humano>` e o guard bloqueia o
+modelo de rodá-los. O `approve` exige ainda a SENHA do humano digitada no terminal (engine/senha.py: stdin tty +
+/dev/tty sem eco; nada por argumento, ambiente ou pipe) e grava no evento `mandato.approve` um SELO HMAC (mandato,
+hash do plano, orçamento, seq, ts). `senha definir` e `conferir` (recalcula as HMACs) também são atos humanos.
+Antes de qualquer avanço o motor confere o selo do último approve na cadeia (formato, mandato, orçamento e hash do
+plano atual); sem a senha ele NÃO verifica a HMAC — só o `cs-auto conferir` do humano verifica.
 
 Toda transição de M5 passa por engine.transition (guardas em engine.GUARDS, eventos encadeados `mandato.<transição>` com
 `de`, `para`, `guardas` e, na recusa interna, `guardas_recusadas`). Recusa pela CLI: exit 1 com `guarda <nome>: <problema>`
 no stderr. Relógio: CS_NOW (hcore.now_dt). Estado em árvore (iter10): os nós do plano viram tasks da feature ativa.
 
   cs-auto propose|approve|amend|abort|stop|resolve|tick|status|plan|reflect|orphan|final-review|escalate|pause|resume|
-          spend|report   (python3 auto.py --root <alvo> ...; ver ESPEC interna do modo autônomo §2.3)
+          spend|report|senha definir|conferir   (python3 auto.py --root <alvo> ...; ver ESPEC campanha-M5 §2.3)
 """
 import argparse
 import copy
+import hmac
 import json
 import os
 import re
@@ -31,6 +36,7 @@ for _p in (HERE, os.path.join(os.path.dirname(os.path.dirname(HERE)), "memory"))
 import hcore  # noqa: E402
 import j5  # noqa: E402
 import engine  # noqa: E402
+import senha  # noqa: E402
 from hcore import Refused, StateError  # noqa: E402
 
 KIND = "mandato"
@@ -44,7 +50,12 @@ OPCOES_SEM_NO = ("retomar", "emendar", "encerrar", "abortar")
 OPCOES_ALTERADO = ("emendar", "encerrar", "abortar")
 CHOICE_TR = {"retomar": "resolve_resume", "trocar-agente": "resolve_reroute", "descartar-ramo": "resolve_drop",
              "emendar": "amend", "encerrar": "wrap_up", "abortar": "abort"}
-HUMAN_CMDS = ("approve", "amend", "abort", "stop", "resolve")
+HUMAN_CMDS = ("approve", "amend", "abort", "stop", "resolve", "senha", "conferir")
+PROOF_CMDS = ("amend", "abort", "stop", "resolve")   # aceitam argumentos extras ($CS_HUMAN_PROOF_ARGS legado); approve NÃO
+# avanços autônomos: só passam com o selo da aprovação conferido (formato, mandato, orçamento, hash do plano)
+ADVANCE_TR = ("plan", "plan_accept", "tick", "wave_closed", "integrate_ok", "integrate_replan", "integrate_done",
+              "next_feature", "replan_accept", "resume")
+PLANO_KEYS = ("alvo", "features", "spec", "objetivo", "classe", "rigor", "portoes", "regressao", "criterios")
 CLASSES_OK = ("feature", "risco")
 CLASSES_AVULSA = ("pequena", "trivial")
 HEADER = "gerado por cs-auto (motor do mandato) — não editar à mão: cs-state validate acusa a edição"
@@ -683,8 +694,8 @@ def g_not_trivial(ctx, kind, ent, a):
 
 
 def human_proof_problems(ctx, a):
-    """Prova humana adicional (frase-senha etc.) chega por $CS_HUMAN_PROOF_ARGS — implementada por outra campanha.
-    Aqui: nenhum requisito extra (o --by humano e o guard pre-bash já valem)."""
+    """Requisito extra da guarda by_human: nenhum. A prova humana do `approve` é a SENHA digitada no terminal
+    (cmd_approve → senha.pedir_chave, antes da transição) — nunca argumento: $CS_HUMAN_PROOF_ARGS está morto."""
     return []
 
 
@@ -1067,6 +1078,10 @@ def tr(ctx, mid, tname, a=None, extra=None, data=None, recusadas=None):
     a = a if a is not None else {}
     m = ctx.find(KIND, mid)
     de = (m or {}).get("state")
+    if tname in ADVANCE_TR and m is not None and de not in ("PROPOSED",) + TERMINAL:
+        P = selo_problems(ctx.root, m)   # ponto central: nenhum avanço autônomo sem o selo do approve conferido
+        if P:
+            raise Refused(P, hint=SELO_HINT)
     box = {}
 
     def ext(to, probs):
@@ -1537,9 +1552,130 @@ def signature(m, orc, protegidos, anterior):
     return hcore.sha256_bytes(hcore.canonical(body).encode("utf-8"))
 
 
+def plano_sha256(m, orc, protegidos):
+    """sha256 do contrato aprovado, recomputável do mandato atual: alvo, features, spec, objetivo, classe, rigor,
+    portões, regressão, critérios, orçamento aprovado e arquivos protegidos (aceite/spec assinados)."""
+    body = dict((k, m.get(k)) for k in PLANO_KEYS)
+    body.update({"orcamento": orc, "protegidos": protegidos or {}})
+    return hcore.sha256_bytes(hcore.canonical(body).encode("utf-8"))
+
+
+_CHAIN_CACHE = {}
+
+
+def _chain_records(root):
+    p = hcore.state_paths(root)["events"]
+    try:
+        st = os.stat(p)
+    except OSError:
+        return []
+    key = (p, st.st_size, st.st_mtime_ns)
+    hit = _CHAIN_CACHE.get("k")
+    if hit is not None and hit[0] == key:
+        return hit[1]
+    recs, _, _ = hcore.read_chain(p)
+    _CHAIN_CACHE["k"] = (key, recs)
+    return recs
+
+
+def last_approve(root, mid):
+    """(evento mandato.approve mais recente do mandato na cadeia, eventos posteriores do mandato) ou (None, [])."""
+    recs = _chain_records(root)
+    for i in range(len(recs) - 1, -1, -1):
+        r = recs[i]
+        if r.get("type") == "mandato.approve" and r.get("entity") == mid:
+            return r, [x for x in recs[i + 1:] if x.get("entity") == mid]
+    return None, []
+
+
+SELO_HINT = ("o mandato não avança: o humano confere no terminal dele (cs-auto conferir) e decide — parar "
+             "(cs-auto stop --by <humano> --reason ...) ou reaprovar depois de emendar")
+
+
+def selo_problems(root, m):
+    """O que o motor confere SEM a senha (não verifica a HMAC — só o `cs-auto conferir` do humano verifica): o último
+    `mandato.approve` deste mandato na cadeia tem selo no formato, do mesmo mandato, com o orçamento atual (mais os
+    acréscimos de replano decididos pelo humano em `resolve`) e o hash do plano atual."""
+    mid = m.get("id")
+    ev, depois = last_approve(root, mid)
+    if ev is None:
+        return ["selo da aprovação: mandato %s sem evento mandato.approve na cadeia" % mid]
+    selo = (ev.get("data") or {}).get("selo")
+    P = ["selo da aprovação (%s, seq %s): %s" % (mid, ev.get("seq"), p) for p in senha.problemas_formato_selo(selo, mid)]
+    if P:
+        return P
+    orc = copy.deepcopy(selo["orcamento"])
+    for r in depois:
+        extra = (r.get("data") or {}).get("orcamento_extra") if r.get("type") == "mandato.resolve_resume" else None
+        for k, v in (extra or {}).items():
+            if isinstance(v, int) and not isinstance(orc.get(k), dict):
+                orc[k] = int(orc.get(k) or 0) + v
+    if orc != (m.get("orcamento") or {}):
+        P.append("selo da aprovação (%s, seq %s): o orçamento atual %s difere do aprovado %s" % (
+            mid, ev.get("seq"), hcore.canonical(m.get("orcamento")), hcore.canonical(orc)))
+    if plano_sha256(m, selo["orcamento"], m.get("protegidos")) != selo["plano_sha256"]:
+        P.append("selo da aprovação (%s, seq %s): o plano atual (objetivo/critérios/regressão/orçamento/arquivos "
+                 "protegidos) difere do que o humano aprovou" % (mid, ev.get("seq")))
+    return P
+
+
+def _human_key(root, contexto):
+    """Ato humano: registro válido fora do alvo + senha digitada no terminal. Recusa → Refused (exit 1)."""
+    try:
+        return senha.pedir_chave(root, contexto)
+    except senha.RegistroInvalido as e:
+        raise Refused(str(e), hint="1ª vez: o humano roda, no terminal dele, `cs-auto senha definir`")
+    except senha.SemTTY as e:
+        raise Refused(str(e))
+    except ValueError as e:
+        raise Refused(str(e))
+
+
+def cmd_senha(root, a):
+    if a.acao != "definir":
+        raise Syntax("uso: cs-auto senha definir")
+    try:
+        path = senha.definir(root)
+    except (senha.RegistroInvalido, senha.SemTTY, ValueError) as e:
+        raise Refused(str(e))
+    return ["senha definida: registro %s (modo 0600; só sais e verificador PBKDF2-SHA256, nunca a senha)" % path,
+            "daqui em diante `cs-auto approve` pede esta senha no terminal; `cs-auto conferir` recalcula os selos"]
+
+
+def cmd_conferir(root, actor):
+    recs = _chain_records(root)
+    aprov = [r for r in recs if r.get("type") == "mandato.approve"]
+    reg, K = _human_key(root, "conferir os selos HMAC de %d aprovação(ões) de mandato na cadeia" % len(aprov))
+    ok, bad = [], []
+    for r in aprov:
+        selo = (r.get("data") or {}).get("selo")
+        mid = r.get("entity") or ((selo or {}).get("mandato") if isinstance(selo, dict) else None)
+        P = senha.problemas_formato_selo(selo, mid)
+        if not P and not hmac.compare_digest(senha.tag_selo(K, selo), selo["tag"]):
+            P = ["tag HMAC não confere com a senha (selo forjado ou registro da senha trocado)"]
+        if P:
+            bad.append("%s seq %s: SELO INVÁLIDO — %s" % (mid, r.get("seq"), "; ".join(P)))
+        else:
+            ok.append("%s seq %s: selo OK (aprovação nº %s de %s)" % (mid, r.get("seq"), selo.get("seq"),
+                                                                     (r.get("data") or {}).get("by")))
+    m = open_mandate(ctx_of(root, actor).board)
+    if m is not None and m["state"] not in ("PROPOSED",) + TERMINAL:
+        bad += selo_problems(root, m)
+    if bad:
+        raise Refused(bad + ok, hint="selo inválido: não deixe o piloto seguir; pare o mandato (cs-auto stop) e "
+                                     "investigue quem mexeu na cadeia/registro")
+    if not aprov:
+        return ["nenhuma aprovação de mandato na cadeia"]
+    return ok + ["todos os %d selos conferem com a senha" % len(aprov)]
+
+
 def cmd_approve(root, actor, a, extras):
+    if extras:
+        raise Syntax("approve não aceita argumentos extras: a senha só é digitada no terminal")
     ctx = ctx_of(root, actor)
     m = _need(ctx.board)
+    # a senha vem antes da transição; a guarda by_human continua no engine (recusa registrada como as demais)
+    _, K = _human_key(root, "aprovar o mandato %s (%s)" % (m["id"], m.get("objetivo") or ""))
     orc = dict(m.get("orcamento") or {})
     orc.update(parse_orcamento(a.orcamento))
     protegidos = {}
@@ -1550,12 +1686,14 @@ def cmd_approve(root, actor, a, extras):
         p = os.path.join(root, f)
         if f and os.path.isfile(p):
             protegidos[hcore.norm_rel(f)] = hcore.sha256_file(p)
-    aa = {"by": a.by, "_prova": extras, "orcamento": a.orcamento}
+    aa = {"by": a.by, "_prova": [], "orcamento": a.orcamento}
     mid = m["id"]
 
     def build(ctx):
         cur = ctx.find(KIND, mid)
         sig = signature(cur, orc, protegidos, cur.get("assinatura"))
+        selo = senha.novo_selo(K, mid, plano_sha256(cur, orc, protegidos), copy.deepcopy(orc),
+                               len(cur.get("aprovacoes") or []) + 1, hcore.now_iso())
         holder = {}
 
         def ex(to):
@@ -1573,10 +1711,11 @@ def cmd_approve(root, actor, a, extras):
                                        "visto_em": hcore.now_iso()})]
         # acceptance_red mede tudo (todos os critérios de todas as features)
         aa["_med"] = medir(root, cur, todos=True)
-        ev = tr(ctx, mid, "approve", aa, ex, data={"assinatura": sig, "by": a.by})
+        ev = tr(ctx, mid, "approve", aa, ex, data={"assinatura": sig, "by": a.by, "selo": selo})
         return [ev]
     commit(root, actor, build)
-    return ["%s CHARTERED (aprovado por %s) — o piloto segue: cs-auto tick" % (mid, a.by)]
+    return ["%s CHARTERED (aprovado por %s; selo HMAC gravado no evento de aprovação) — o piloto segue: cs-auto tick" % (
+        mid, a.by)]
 
 
 def cmd_amend(root, actor, a, extras, decision=None, esc=None):
@@ -1723,8 +1862,10 @@ def cmd_resolve(root, actor, a, extras):
             pl["nos"] = nos
             ops.append(S(mid, "plano", pl))
         return ops
-    attempt(root, actor, mid, tname, aa, ex, data={"decision": a.decision, "escolha": ch,
-                                                   "escalada": (esc or {}).get("id")})
+    dres = {"decision": a.decision, "escolha": ch, "escalada": (esc or {}).get("id")}
+    if esc and esc.get("condicao") == "replans_exhausted" and ch == "retomar":
+        dres["orcamento_extra"] = {"replanos": 1}   # o selo do approve + estes acréscimos = orçamento autorizado
+    attempt(root, actor, mid, tname, aa, ex, data=dres)
     # a decisão humana entra no brief/registro das tasks do ramo (árvore) e o motor aplica a saída em M2
     if esc and esc.get("tipo") == "dura_local":
         nodes = dict((n["id"], n) for n in plano_nos(m))
@@ -2086,6 +2227,10 @@ def do_tick(root, actor):
             return tick_out(root, "ASK_HUMAN", "proposta aguarda o portão humano (aprovar, emendar ou abortar)",
                             comando="cs-auto approve --by <humano> [--orcamento despachos=,tentativas=,replanos=,minutos=]",
                             criterios=criterios_de(m) or m.get("criterios"))
+        P = selo_problems(root, m)
+        if P:   # antes de qualquer avanço: sem selo conferido o piloto não anda e não grava nada
+            return tick_out(root, "ASK_HUMAN", "; ".join(P) + " — " + SELO_HINT,
+                            comando="cs-auto conferir   (HUMANO, no terminal dele, com a senha)")
         if st == "PAUSED":
             return tick_out(root, "RESUME", "mandato pausado (estado anterior: %s)" % m.get("anterior"), comando="cs-auto resume")
         if st == "AWAITING_HUMAN":
@@ -3005,6 +3150,9 @@ def build_parser():
     p.add_argument("--classe")
     p.add_argument("--portao", action="append", default=[])
     p.add_argument("--rigor", choices=["lean", "standard", "paranoid"])
+    p = sub.add_parser("senha")
+    p.add_argument("acao", choices=["definir"])
+    sub.add_parser("conferir")
     for name in ("approve", "amend", "abort", "stop"):
         p = sub.add_parser(name)
         p.add_argument("--by")
@@ -3066,10 +3214,14 @@ def build_parser():
 
 def run(a, extras):
     root = hcore.resolve_root(a.root)
+    if a.cmd == "senha":
+        return cmd_senha(root, a)
     import tree
     tree.need_tree(root)
     actor = a.actor
     c = a.cmd
+    if c == "conferir":
+        return cmd_conferir(root, actor)
     if c == "propose":
         return cmd_propose(root, actor, a)
     if c == "approve":
@@ -3125,7 +3277,11 @@ def main(argv=None):
     if not a.cmd:
         ap.print_help(sys.stderr)
         return 2
-    if extras and a.cmd not in HUMAN_CMDS:
+    if extras and a.cmd in ("approve", "senha", "conferir"):
+        # sem eco dos extras: podem conter a senha; ela nunca vai por argumento (só digitada no terminal)
+        ap.error("%s não aceita argumentos extras (%d recusados): a senha só é digitada no terminal" % (
+            a.cmd, len(extras)))
+    if extras and a.cmd not in PROOF_CMDS:
         ap.error("argumentos não reconhecidos: %s" % " ".join(extras))
     try:
         out = run(a, extras)

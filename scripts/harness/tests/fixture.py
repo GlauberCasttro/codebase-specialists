@@ -20,7 +20,7 @@ TEAM = {
     "agents": [
         {"name": "dev-billing", "kind": "dev", "territory": ["src/billing/**"], "card": {
             "footguns": [{"text": "arredondar centavos antes de somar quebra totais", "facts": ["rule.billing.cents"]}]}},
-        {"name": "dev-members", "kind": "dev", "territory": ["src/members/**"]},
+        {"name": "dev-users", "kind": "dev", "territory": ["src/users/**"]},
         {"name": "po", "kind": "product", "territory": ["docs/stories/**"]},
         {"name": "reviewer", "kind": "gate", "territory": []},
         {"name": "security", "kind": "gate", "territory": []},
@@ -35,8 +35,8 @@ FACTS_RULES = [
 BUSINESS = [
     {"id": "br.billing.max-discount", "rule": "desconto máximo de 30% por pedido", "scope": ["src/billing/**"],
      "evidence": [{"file": "src/billing/total.py", "line": 2}]},
-    {"id": "br.members.age", "rule": "usuário precisa ter 18 anos ou mais", "scope": ["src/members/**"],
-     "evidence": [{"file": "src/members/model.py", "line": 1}]},
+    {"id": "br.users.age", "rule": "usuário precisa ter 18 anos ou mais", "scope": ["src/users/**"],
+     "evidence": [{"file": "src/users/model.py", "line": 1}]},
 ]
 GLOSSARY = [{"id": "term.invoice", "term": "invoiceTotal", "canonical": "invoice total", "never_use": ["fatura_total"],
              "scope": ["src/billing/**"], "evidence": [{"file": "src/billing/total.py", "line": 1}]}]
@@ -53,7 +53,7 @@ def make_repo(with_state=True, with_collision=None, no_invariant_scope=False, no
         ".gitignore": "__pycache__/\n*.pyc\n",
         "src/billing/total.py": "def total(items):\n    return sum(items)\n",
         "src/billing/tax.py": "RATE = 0\n",
-        "src/members/model.py": "AGE = 18\n",
+        "src/users/model.py": "AGE = 18\n",
         "tests/test_billing.py": "import unittest\nclass T(unittest.TestCase):\n    def test_ok(self):\n        self.assertTrue(True)\n",
         "tests/__init__.py": "",
         "docs/stories/README.md": "stories\n",

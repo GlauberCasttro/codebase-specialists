@@ -246,13 +246,31 @@ class ExamCopyRemovedAfterCheck(unittest.TestCase):
         self.assertEqual(code, 0, o + e)
         self.assertTrue(os.path.isdir(os.path.join(out, "repo", ".git")))
         items = [perfect(p) for p in load_bank(self.root)["probes"] if p["agent"] == AGENT]
-        with open(os.path.join(out, "answers.json5"), "w") as fh:
+        # iter11 (P-1): caminho ÚNICO das respostas = `answer_file` de questions.json5; check SEM --answers
+        answer_file = json5io.load(os.path.join(out, "questions.json5"))["answer_file"]
+        self.assertEqual(os.path.realpath(answer_file), os.path.realpath(os.path.join(
+            self.root, D, "probes", "exams", "%s.answers.json5" % AGENT)))
+        with open(answer_file, "w") as fh:
             fh.write(json.dumps(items))
-        code, o, e = cs(self.root, "probes", "check", AGENT, "--answers", os.path.join(out, "answers.json5"))
+        code, o, e = cs(self.root, "probes", "check", AGENT)
         self.assertIn(code, (0, 1), o + e)  # G4 pode reprovar (sem baseline): o que importa é a cópia
         self.assertIn("%s:" % AGENT, o)
         self.assertTrue(os.path.isfile(os.path.join(self.root, D, "probes", "exams", "%s.answers.json5" % AGENT)))
         self.assertTrue(os.path.isfile(os.path.join(self.root, D, "probes", "reports", "%s.json5" % AGENT)))
+        # iter6 (cobaia .NET): com painel POR-QUÊ pendente a cópia FICA (os juízes leem o repo nela); só sai no check
+        # que roda depois de o painel registrar os vereditos
+        pend = json5io.load(os.path.join(self.root, D, "probes", "reports", "%s.json5" % AGENT)).get("panel_pending")
+        # pré-condição EXPLÍCITA (iter16): sem `why` pendente o contrato novo não seria exercido e o teste passaria
+        # em silêncio; o banco do synth tem POR-QUÊ para dev-billing e `perfect` cita a fonte → painel pendente
+        self.assertTrue(pend, "pré-condição: o exame de %s precisa de sonda why pendente de painel" % AGENT)
+        self.assertTrue(os.path.isdir(os.path.join(out, "repo")), "cópia apagada com painel pendente")
+        for pid in pend:
+            code, o, e = cs(self.root, "panel", "why", AGENT, "--probe", pid, "--verdict", "PASS")
+            self.assertEqual(code, 0, o + e)
+        code, o, e = cs(self.root, "probes", "check", AGENT)
+        self.assertIn(code, (0, 1), o + e)
+        self.assertFalse(json5io.load(os.path.join(self.root, D, "probes", "reports", "%s.json5" % AGENT))
+                         .get("panel_pending"), "painel registrado: nada pendente no check seguinte")
 
     def test_copy_inside_tmp_is_removed_after_check(self):
         out = os.path.join(self.root, D, "tmp", "exam", AGENT)

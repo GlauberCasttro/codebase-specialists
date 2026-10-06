@@ -1,0 +1,27 @@
+ORIGEM do motor embutido (auto-correcao) — copiado, não desenvolvido aqui.
+fonte: repositório privado de skills, `git show HEAD:auto-correcao/<arq>`
+HEAD da fonte na cópia: da3ea45 · último commit que tocou auto-correcao/: 7ac0666 (2026-10-05 17:53:02 -0300)
+copiado em: 2026-10-06 11:46 -03
+layout: scripts/{ac,frase,hook_aprovacao}.py -> ac/*.py ; references/*.json5 -> ac/references/
+
+sha256 ORIGINAL (como está na fonte):
+  0aae87ecd8dfee02693091014044d5312b07ddaa476e049d2c677ad87d494ffb  scripts/ac.py
+  99d350febbf1a41f7de6f7af8b97e4f4fa973855e2743843c641eb4590668ff8  scripts/frase.py
+  add3bd6cd0e53ae91a75ee3bf7d3241a59162bc2cc664901a561a72212d2720d  scripts/hook_aprovacao.py
+  4427bda5beeac5763fb3f9215f49e6e6d9a9b271926f33cecdf3d8fe322e5079  references/ciclo.json5
+  7b954bfd1967e4afa32a771e9ea06ce1d065a6893a44a264fd15ee1e62f06d9d  references/formatos.json5
+  1cccf36a833cb2f79c3c4ca4840982b8b5830009ff653bf4863f7759dda46700  references/licoes.json5
+  12b3c5f67a5d31295dad2e0f20dae5085ee43ae22072fee4c3320f3a47849a58  references/prompts.json5
+
+sha256 EMBUTIDO (como está aqui):
+  fbd0f1cd4d9875e4bee866ef4f022b33db767e6b2ad62d8453710f804add0cfa  ac.py
+  99d350febbf1a41f7de6f7af8b97e4f4fa973855e2743843c641eb4590668ff8  frase.py
+  add3bd6cd0e53ae91a75ee3bf7d3241a59162bc2cc664901a561a72212d2720d  hook_aprovacao.py
+  4427bda5beeac5763fb3f9215f49e6e6d9a9b271926f33cecdf3d8fe322e5079  references/ciclo.json5
+  7b954bfd1967e4afa32a771e9ea06ce1d065a6893a44a264fd15ee1e62f06d9d  references/formatos.json5
+  1cccf36a833cb2f79c3c4ca4840982b8b5830009ff653bf4863f7759dda46700  references/licoes.json5
+  12b3c5f67a5d31295dad2e0f20dae5085ee43ae22072fee4c3320f3a47849a58  references/prompts.json5
+
+única diferença (ac.py): depois da linha CICLO = ..., 2 linhas que procuram references/ ao lado do ac.py quando
+a pasta-pai não tem references/ (layout embutido). Nada mais mudou; os demais arquivos são byte a byte iguais.
+Para atualizar: copie de novo da fonte, reaplique as 2 linhas e regrave este arquivo (sha256 dos dois lados).

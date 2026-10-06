@@ -40,7 +40,7 @@ Markdown só onde a plataforma exige (§8-decies); o que é da skill sai em JSON
 | S4 playbooks | `.claude/skills/<n>-playbooks/SKILL.md` (não listado em `skills:` para não pré-carregar) | `.swarm/playbooks/<n>.json5` | idem | idem |
 | S5 mapas | `.swarm/knowledge/tree.json5`, `stack.json5` (gerados aqui); `deps.json5`, `collision.json5` (do `cs.py team`, só validados) | idem | idem | idem |
 | Skills de estado (14) e do mandato (9) | `.claude/skills/<n>/SKILL.md` | `.cursor/skills/<n>/SKILL.md` | `.github/skills/<n>/SKILL.md` | `.agents/skills/<n>/SKILL.md` |
-| Comandos (≤15 / ≤25) | `/salvar-sessao`, `/carregar-sessao`, `/corrigir`, `/feature-autonoma`, `/planejar-sprint` como skills com `disable-model-invocation: true` | linhas de terminal no S0 | linhas de terminal no S0 | linhas de terminal no S0 |
+| Comandos (≤15 / ≤25) | `/save-session`, `/load-session`, `/correct`, `/feature-autonoma`, `/plan-sprint` como skills com `disable-model-invocation: true` | linhas de terminal no S0 | linhas de terminal no S0 | linhas de terminal no S0 |
 
 **Skills de estado (14) e do mandato (9).** As 23 skills finas (só chamam `.swarm/bin/cs-state <sub>` /
 `.swarm/bin/cs-auto <sub>`) saem para as 4 plataformas, arquivo inteiro gerado (marcador de gerado), `name` = diretório.
@@ -66,7 +66,7 @@ faz a emissão **falhar** com a sugestão de para onde mover.
   Bash→`execute`, WebFetch/WebSearch→`web`.
 - **Globs**: Claude recebe a lista como está; Cursor e Copilot recebem string com vírgulas e chaves
   expandidas (`*.{ts,tsx}` → `*.ts,*.tsx`), porque a vírgula é o separador deles.
-- **Sessão**: `/carregar-sessao` usa `` !`.swarm/bin/cs-session load` `` para injetar o briefing sem o modelo ler
+- **Sessão**: `/load-session` usa `` !`.swarm/bin/cs-session load` `` para injetar o briefing sem o modelo ler
   arquivos; o hook `SessionStart` opcional (`cs-session load --brief`) é instalado pelo harness.
 - **Nomes**: arquivos gerados de regra levam prefixo `cs-` para não colidir com regras humanas;
   agentes usam o `name` exato.

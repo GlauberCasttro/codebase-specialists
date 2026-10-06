@@ -1,0 +1,243 @@
+# base do oráculo iter16 (uso real cobaia .NET: U1–U12, congelamento) — 2026-10-06 09:27
+# (1) ANTES = skill no commit HEAD 18e3496 (git archive; arquivos alterados/novos desde então ficam na versão do HEAD/ausentes)
+#     CS_SKILL_DIR=<scratch>
+# (2) VIVA  = ~/.claude/skills/codebase-specialists (árvore viva, diff não commitado)
+# Medição por requisito com medir.py. Esperado HOJE: U2b (2), U5 (4 de 7), U6 (1) e U12 (1 de 2) FALHAM nas duas
+# medições — ainda NÃO implementados (o corretor implementa depois).
+
+## (1) ANTES — python3 (Python 3.13.3)
+U11  FAIL  TestU11CopiaDoExameComPainelPendente.test_copia_fica_com_painel_pendente_e_sai_depois_do_painel
+U12  FAIL  TestU12NamespaceEmStringCSharp.test_namespace_em_string_nao_vira_alvo_de_using
+U12  ok    TestU12NamespaceEmStringCSharp.test_regressao_namespace_real_continua_resolvendo
+U1   FAIL  TestU1BomGrafoDoScan.test_arquivo_com_bom_nao_fica_com_in_zero
+U1   FAIL  TestU1BomGrafoDoScan.test_grafo_exato
+U1   FAIL  TestU1BomGrafoDoScan.test_namespace_interno_nao_vira_dependencia_externa
+U1   FAIL  TestU1BomGrafoDoScan.test_namespace_na_linha_1_com_bom_e_resolvido
+U1   ok    TestU1BomGrafoDoScan.test_precondicao_fixture_tem_bom_so_onde_deve
+U1   ok    TestU1BomGrafoDoScan.test_regressao_sem_bom_continua_igual
+U6   FAIL  TestU1BomGrafoDoScan.test_u6_aresta_csharp_registra_a_linha_do_using
+U7   FAIL  TestU1BomGrafoDoScan.test_u7_using_em_string_literal_nao_e_import
+U1   FAIL  TestU1BomGrafoDoScan.test_using_na_linha_1_com_bom_e_resolvido
+U1   FAIL  TestU1BomLeituraDoContexto.test_bom_nao_aparece_no_texto
+U1   FAIL  TestU1BomLeituraDoContexto.test_linha_1_com_bom_e_a_declaracao
+U1   ok    TestU1BomLeituraDoContexto.test_regressao_feff_no_meio_e_preservado
+U1   ok    TestU1BomLeituraDoContexto.test_regressao_texto_sem_bom_identico_ao_bruto
+U2   ok    TestU2DotfileNoExame.test_editorconfig_na_raiz_com_linha
+U2   ok    TestU2DotfileNoExame.test_eslintrc_em_subpasta_com_linha
+U2   ok    TestU2DotfileNoExame.test_outros_dotfiles_na_raiz
+U2   ok    TestU2DotfileNoExame.test_regressao_caminhos_normais_intactos
+U2   ok    TestU2DotfileNoExame.test_sem_falso_positivo_de_dotfile_em_prosa
+U2   ok    TestU2DotfileNoExame.test_sonda_de_localizacao_em_dotfile_e_pontuada
+U2b  FAIL  TestU2DotfileNoExame.test_u2b_dotfile_em_fim_de_frase_sem_linha
+U2b  FAIL  TestU2DotfileNoExame.test_u2b_dotnet_nao_vira_caminho
+U3   ok    TestU3RefinoNoFastSemPainel.test_conserto_de_existencia_sem_painel_continua
+U3   ok    TestU3RefinoNoFastSemPainel.test_exame_aprovado_nao_abre_refino
+U3   FAIL  TestU3RefinoNoFastSemPainel.test_refino_e_unico_por_ciclo_reprovado
+U3   FAIL  TestU3RefinoNoFastSemPainel.test_refino_sem_painel_ainda_checa_existencia_do_cartao_novo
+U3   ok    TestU3RefinoNoFastSemPainel.test_reprovacao_de_outro_agente_nao_abre_refino
+U3   FAIL  TestU3RefinoNoFastSemPainel.test_reprovado_com_refino_aberto_revisa_com_file
+U3   FAIL  TestU3RefinoNoFastSemPainel.test_reprovado_com_refino_aberto_revisa_sem_mudanca_com_note
+U3   ok    TestU3RefinoNoFastSemPainel.test_sem_ciclo_sem_falta_rt4_sem_painel_recusada
+U4   ok    TestU4SondaHistory.test_exame_aprova_o_sha_do_assunto_e_reprova_o_commit_posterior
+U4   ok    TestU4SondaHistory.test_gabarito_e_o_proprio_commit_do_assunto_citado
+U4   FAIL  TestU4SondaHistory.test_pergunta_e_pelo_sha_do_commit_com_aquele_assunto
+U4   ok    TestU4SondaHistory.test_precondicao_ha_sonda_history
+U4   FAIL  TestU4SondaHistory.test_probes_md_linha_historia_coerente
+U5   FAIL  TestU5CheckDiffDepoisDoAceite.test_aceita_e_aberta_libera_no_pre_commit_staged
+U5   FAIL  TestU5CheckDiffDepoisDoAceite.test_aceita_e_aberta_libera_os_allowed_paths
+U5   FAIL  TestU5CheckDiffDepoisDoAceite.test_aceita_mas_arquivo_fora_continua_barrado
+U5   ok    TestU5CheckDiffDepoisDoAceite.test_briefed_ou_ready_barra
+U5   ok    TestU5CheckDiffDepoisDoAceite.test_fechada_barra
+U5   ok    TestU5CheckDiffDepoisDoAceite.test_guard_off_nao_afeta_o_check_diff
+U5   FAIL  TestU5OrchestratorInstruiCommitAntesDoClose.test_fluxo_manda_commitar_allowed_paths_depois_do_pass_e_antes_do_close
+U10  ok    TestU8aU10Sondas.test_u10_regressao_outro_documento_e_key_terms_continuam_valendo
+U10  FAIL  TestU8aU10Sondas.test_u10_why_sem_key_terms_aceita_qualquer_linha_do_documento
+U8   FAIL  TestU8aU10Sondas.test_u8_dependency_traz_o_criterio_de_importa
+U9   FAIL  TestU8aU10Sondas.test_u9_why_sem_topico_generico_nem_repetido
+placar: U1 4/11  U2 6/6  U2b 0/2  U3 4/8  U4 3/5  U5 3/7  U6 0/1  U7 0/1  U8 0/1  U9 0/1  U10 1/2  U11 0/1  U12 1/2
+total: 22/48 passam
+
+## (2) VIVA — python3 (Python 3.13.3)
+U11  ok    TestU11CopiaDoExameComPainelPendente.test_copia_fica_com_painel_pendente_e_sai_depois_do_painel
+U12  FAIL  TestU12NamespaceEmStringCSharp.test_namespace_em_string_nao_vira_alvo_de_using
+U12  ok    TestU12NamespaceEmStringCSharp.test_regressao_namespace_real_continua_resolvendo
+U1   ok    TestU1BomGrafoDoScan.test_arquivo_com_bom_nao_fica_com_in_zero
+U1   ok    TestU1BomGrafoDoScan.test_grafo_exato
+U1   ok    TestU1BomGrafoDoScan.test_namespace_interno_nao_vira_dependencia_externa
+U1   ok    TestU1BomGrafoDoScan.test_namespace_na_linha_1_com_bom_e_resolvido
+U1   ok    TestU1BomGrafoDoScan.test_precondicao_fixture_tem_bom_so_onde_deve
+U1   ok    TestU1BomGrafoDoScan.test_regressao_sem_bom_continua_igual
+U6   FAIL  TestU1BomGrafoDoScan.test_u6_aresta_csharp_registra_a_linha_do_using
+U7   ok    TestU1BomGrafoDoScan.test_u7_using_em_string_literal_nao_e_import
+U1   ok    TestU1BomGrafoDoScan.test_using_na_linha_1_com_bom_e_resolvido
+U1   ok    TestU1BomLeituraDoContexto.test_bom_nao_aparece_no_texto
+U1   ok    TestU1BomLeituraDoContexto.test_linha_1_com_bom_e_a_declaracao
+U1   ok    TestU1BomLeituraDoContexto.test_regressao_feff_no_meio_e_preservado
+U1   ok    TestU1BomLeituraDoContexto.test_regressao_texto_sem_bom_identico_ao_bruto
+U2   ok    TestU2DotfileNoExame.test_editorconfig_na_raiz_com_linha
+U2   ok    TestU2DotfileNoExame.test_eslintrc_em_subpasta_com_linha
+U2   ok    TestU2DotfileNoExame.test_outros_dotfiles_na_raiz
+U2   ok    TestU2DotfileNoExame.test_regressao_caminhos_normais_intactos
+U2   ok    TestU2DotfileNoExame.test_sem_falso_positivo_de_dotfile_em_prosa
+U2   ok    TestU2DotfileNoExame.test_sonda_de_localizacao_em_dotfile_e_pontuada
+U2b  FAIL  TestU2DotfileNoExame.test_u2b_dotfile_em_fim_de_frase_sem_linha
+U2b  FAIL  TestU2DotfileNoExame.test_u2b_dotnet_nao_vira_caminho
+U3   ok    TestU3RefinoNoFastSemPainel.test_conserto_de_existencia_sem_painel_continua
+U3   ok    TestU3RefinoNoFastSemPainel.test_exame_aprovado_nao_abre_refino
+U3   ok    TestU3RefinoNoFastSemPainel.test_refino_e_unico_por_ciclo_reprovado
+U3   ok    TestU3RefinoNoFastSemPainel.test_refino_sem_painel_ainda_checa_existencia_do_cartao_novo
+U3   ok    TestU3RefinoNoFastSemPainel.test_reprovacao_de_outro_agente_nao_abre_refino
+U3   ok    TestU3RefinoNoFastSemPainel.test_reprovado_com_refino_aberto_revisa_com_file
+U3   ok    TestU3RefinoNoFastSemPainel.test_reprovado_com_refino_aberto_revisa_sem_mudanca_com_note
+U3   ok    TestU3RefinoNoFastSemPainel.test_sem_ciclo_sem_falta_rt4_sem_painel_recusada
+U4   ok    TestU4SondaHistory.test_exame_aprova_o_sha_do_assunto_e_reprova_o_commit_posterior
+U4   ok    TestU4SondaHistory.test_gabarito_e_o_proprio_commit_do_assunto_citado
+U4   ok    TestU4SondaHistory.test_pergunta_e_pelo_sha_do_commit_com_aquele_assunto
+U4   ok    TestU4SondaHistory.test_precondicao_ha_sonda_history
+U4   ok    TestU4SondaHistory.test_probes_md_linha_historia_coerente
+U5   FAIL  TestU5CheckDiffDepoisDoAceite.test_aceita_e_aberta_libera_no_pre_commit_staged
+U5   FAIL  TestU5CheckDiffDepoisDoAceite.test_aceita_e_aberta_libera_os_allowed_paths
+U5   FAIL  TestU5CheckDiffDepoisDoAceite.test_aceita_mas_arquivo_fora_continua_barrado
+U5   ok    TestU5CheckDiffDepoisDoAceite.test_briefed_ou_ready_barra
+U5   ok    TestU5CheckDiffDepoisDoAceite.test_fechada_barra
+U5   ok    TestU5CheckDiffDepoisDoAceite.test_guard_off_nao_afeta_o_check_diff
+U5   FAIL  TestU5OrchestratorInstruiCommitAntesDoClose.test_fluxo_manda_commitar_allowed_paths_depois_do_pass_e_antes_do_close
+U10  ok    TestU8aU10Sondas.test_u10_regressao_outro_documento_e_key_terms_continuam_valendo
+U10  ok    TestU8aU10Sondas.test_u10_why_sem_key_terms_aceita_qualquer_linha_do_documento
+U8   ok    TestU8aU10Sondas.test_u8_dependency_traz_o_criterio_de_importa
+U9   ok    TestU8aU10Sondas.test_u9_why_sem_topico_generico_nem_repetido
+placar: U1 11/11  U2 6/6  U2b 0/2  U3 8/8  U4 5/5  U5 3/7  U6 0/1  U7 1/1  U8 1/1  U9 1/1  U10 2/2  U11 1/1  U12 1/2
+total: 40/48 passam
+
+## (1) ANTES — /usr/bin/python3 (Python 3.9.6)
+U11  FAIL  TestU11CopiaDoExameComPainelPendente.test_copia_fica_com_painel_pendente_e_sai_depois_do_painel
+U12  FAIL  TestU12NamespaceEmStringCSharp.test_namespace_em_string_nao_vira_alvo_de_using
+U12  ok    TestU12NamespaceEmStringCSharp.test_regressao_namespace_real_continua_resolvendo
+U1   FAIL  TestU1BomGrafoDoScan.test_arquivo_com_bom_nao_fica_com_in_zero
+U1   FAIL  TestU1BomGrafoDoScan.test_grafo_exato
+U1   FAIL  TestU1BomGrafoDoScan.test_namespace_interno_nao_vira_dependencia_externa
+U1   FAIL  TestU1BomGrafoDoScan.test_namespace_na_linha_1_com_bom_e_resolvido
+U1   ok    TestU1BomGrafoDoScan.test_precondicao_fixture_tem_bom_so_onde_deve
+U1   ok    TestU1BomGrafoDoScan.test_regressao_sem_bom_continua_igual
+U6   FAIL  TestU1BomGrafoDoScan.test_u6_aresta_csharp_registra_a_linha_do_using
+U7   FAIL  TestU1BomGrafoDoScan.test_u7_using_em_string_literal_nao_e_import
+U1   FAIL  TestU1BomGrafoDoScan.test_using_na_linha_1_com_bom_e_resolvido
+U1   FAIL  TestU1BomLeituraDoContexto.test_bom_nao_aparece_no_texto
+U1   FAIL  TestU1BomLeituraDoContexto.test_linha_1_com_bom_e_a_declaracao
+U1   ok    TestU1BomLeituraDoContexto.test_regressao_feff_no_meio_e_preservado
+U1   ok    TestU1BomLeituraDoContexto.test_regressao_texto_sem_bom_identico_ao_bruto
+U2   ok    TestU2DotfileNoExame.test_editorconfig_na_raiz_com_linha
+U2   ok    TestU2DotfileNoExame.test_eslintrc_em_subpasta_com_linha
+U2   ok    TestU2DotfileNoExame.test_outros_dotfiles_na_raiz
+U2   ok    TestU2DotfileNoExame.test_regressao_caminhos_normais_intactos
+U2   ok    TestU2DotfileNoExame.test_sem_falso_positivo_de_dotfile_em_prosa
+U2   ok    TestU2DotfileNoExame.test_sonda_de_localizacao_em_dotfile_e_pontuada
+U2b  FAIL  TestU2DotfileNoExame.test_u2b_dotfile_em_fim_de_frase_sem_linha
+U2b  FAIL  TestU2DotfileNoExame.test_u2b_dotnet_nao_vira_caminho
+U3   ok    TestU3RefinoNoFastSemPainel.test_conserto_de_existencia_sem_painel_continua
+U3   ok    TestU3RefinoNoFastSemPainel.test_exame_aprovado_nao_abre_refino
+U3   FAIL  TestU3RefinoNoFastSemPainel.test_refino_e_unico_por_ciclo_reprovado
+U3   FAIL  TestU3RefinoNoFastSemPainel.test_refino_sem_painel_ainda_checa_existencia_do_cartao_novo
+U3   ok    TestU3RefinoNoFastSemPainel.test_reprovacao_de_outro_agente_nao_abre_refino
+U3   FAIL  TestU3RefinoNoFastSemPainel.test_reprovado_com_refino_aberto_revisa_com_file
+U3   FAIL  TestU3RefinoNoFastSemPainel.test_reprovado_com_refino_aberto_revisa_sem_mudanca_com_note
+U3   ok    TestU3RefinoNoFastSemPainel.test_sem_ciclo_sem_falta_rt4_sem_painel_recusada
+U4   ok    TestU4SondaHistory.test_exame_aprova_o_sha_do_assunto_e_reprova_o_commit_posterior
+U4   ok    TestU4SondaHistory.test_gabarito_e_o_proprio_commit_do_assunto_citado
+U4   FAIL  TestU4SondaHistory.test_pergunta_e_pelo_sha_do_commit_com_aquele_assunto
+U4   ok    TestU4SondaHistory.test_precondicao_ha_sonda_history
+U4   FAIL  TestU4SondaHistory.test_probes_md_linha_historia_coerente
+U5   FAIL  TestU5CheckDiffDepoisDoAceite.test_aceita_e_aberta_libera_no_pre_commit_staged
+U5   FAIL  TestU5CheckDiffDepoisDoAceite.test_aceita_e_aberta_libera_os_allowed_paths
+U5   FAIL  TestU5CheckDiffDepoisDoAceite.test_aceita_mas_arquivo_fora_continua_barrado
+U5   ok    TestU5CheckDiffDepoisDoAceite.test_briefed_ou_ready_barra
+U5   ok    TestU5CheckDiffDepoisDoAceite.test_fechada_barra
+U5   ok    TestU5CheckDiffDepoisDoAceite.test_guard_off_nao_afeta_o_check_diff
+U5   FAIL  TestU5OrchestratorInstruiCommitAntesDoClose.test_fluxo_manda_commitar_allowed_paths_depois_do_pass_e_antes_do_close
+U10  ok    TestU8aU10Sondas.test_u10_regressao_outro_documento_e_key_terms_continuam_valendo
+U10  FAIL  TestU8aU10Sondas.test_u10_why_sem_key_terms_aceita_qualquer_linha_do_documento
+U8   FAIL  TestU8aU10Sondas.test_u8_dependency_traz_o_criterio_de_importa
+U9   FAIL  TestU8aU10Sondas.test_u9_why_sem_topico_generico_nem_repetido
+placar: U1 4/11  U2 6/6  U2b 0/2  U3 4/8  U4 3/5  U5 3/7  U6 0/1  U7 0/1  U8 0/1  U9 0/1  U10 1/2  U11 0/1  U12 1/2
+total: 22/48 passam
+
+## (2) VIVA — /usr/bin/python3 (Python 3.9.6)
+U11  ok    TestU11CopiaDoExameComPainelPendente.test_copia_fica_com_painel_pendente_e_sai_depois_do_painel
+U12  FAIL  TestU12NamespaceEmStringCSharp.test_namespace_em_string_nao_vira_alvo_de_using
+U12  ok    TestU12NamespaceEmStringCSharp.test_regressao_namespace_real_continua_resolvendo
+U1   ok    TestU1BomGrafoDoScan.test_arquivo_com_bom_nao_fica_com_in_zero
+U1   ok    TestU1BomGrafoDoScan.test_grafo_exato
+U1   ok    TestU1BomGrafoDoScan.test_namespace_interno_nao_vira_dependencia_externa
+U1   ok    TestU1BomGrafoDoScan.test_namespace_na_linha_1_com_bom_e_resolvido
+U1   ok    TestU1BomGrafoDoScan.test_precondicao_fixture_tem_bom_so_onde_deve
+U1   ok    TestU1BomGrafoDoScan.test_regressao_sem_bom_continua_igual
+U6   FAIL  TestU1BomGrafoDoScan.test_u6_aresta_csharp_registra_a_linha_do_using
+U7   ok    TestU1BomGrafoDoScan.test_u7_using_em_string_literal_nao_e_import
+U1   ok    TestU1BomGrafoDoScan.test_using_na_linha_1_com_bom_e_resolvido
+U1   ok    TestU1BomLeituraDoContexto.test_bom_nao_aparece_no_texto
+U1   ok    TestU1BomLeituraDoContexto.test_linha_1_com_bom_e_a_declaracao
+U1   ok    TestU1BomLeituraDoContexto.test_regressao_feff_no_meio_e_preservado
+U1   ok    TestU1BomLeituraDoContexto.test_regressao_texto_sem_bom_identico_ao_bruto
+U2   ok    TestU2DotfileNoExame.test_editorconfig_na_raiz_com_linha
+U2   ok    TestU2DotfileNoExame.test_eslintrc_em_subpasta_com_linha
+U2   ok    TestU2DotfileNoExame.test_outros_dotfiles_na_raiz
+U2   ok    TestU2DotfileNoExame.test_regressao_caminhos_normais_intactos
+U2   ok    TestU2DotfileNoExame.test_sem_falso_positivo_de_dotfile_em_prosa
+U2   ok    TestU2DotfileNoExame.test_sonda_de_localizacao_em_dotfile_e_pontuada
+U2b  FAIL  TestU2DotfileNoExame.test_u2b_dotfile_em_fim_de_frase_sem_linha
+U2b  FAIL  TestU2DotfileNoExame.test_u2b_dotnet_nao_vira_caminho
+U3   ok    TestU3RefinoNoFastSemPainel.test_conserto_de_existencia_sem_painel_continua
+U3   ok    TestU3RefinoNoFastSemPainel.test_exame_aprovado_nao_abre_refino
+U3   ok    TestU3RefinoNoFastSemPainel.test_refino_e_unico_por_ciclo_reprovado
+U3   ok    TestU3RefinoNoFastSemPainel.test_refino_sem_painel_ainda_checa_existencia_do_cartao_novo
+U3   ok    TestU3RefinoNoFastSemPainel.test_reprovacao_de_outro_agente_nao_abre_refino
+U3   ok    TestU3RefinoNoFastSemPainel.test_reprovado_com_refino_aberto_revisa_com_file
+U3   ok    TestU3RefinoNoFastSemPainel.test_reprovado_com_refino_aberto_revisa_sem_mudanca_com_note
+U3   ok    TestU3RefinoNoFastSemPainel.test_sem_ciclo_sem_falta_rt4_sem_painel_recusada
+U4   ok    TestU4SondaHistory.test_exame_aprova_o_sha_do_assunto_e_reprova_o_commit_posterior
+U4   ok    TestU4SondaHistory.test_gabarito_e_o_proprio_commit_do_assunto_citado
+U4   ok    TestU4SondaHistory.test_pergunta_e_pelo_sha_do_commit_com_aquele_assunto
+U4   ok    TestU4SondaHistory.test_precondicao_ha_sonda_history
+U4   ok    TestU4SondaHistory.test_probes_md_linha_historia_coerente
+U5   FAIL  TestU5CheckDiffDepoisDoAceite.test_aceita_e_aberta_libera_no_pre_commit_staged
+U5   FAIL  TestU5CheckDiffDepoisDoAceite.test_aceita_e_aberta_libera_os_allowed_paths
+U5   FAIL  TestU5CheckDiffDepoisDoAceite.test_aceita_mas_arquivo_fora_continua_barrado
+U5   ok    TestU5CheckDiffDepoisDoAceite.test_briefed_ou_ready_barra
+U5   ok    TestU5CheckDiffDepoisDoAceite.test_fechada_barra
+U5   ok    TestU5CheckDiffDepoisDoAceite.test_guard_off_nao_afeta_o_check_diff
+U5   FAIL  TestU5OrchestratorInstruiCommitAntesDoClose.test_fluxo_manda_commitar_allowed_paths_depois_do_pass_e_antes_do_close
+U10  ok    TestU8aU10Sondas.test_u10_regressao_outro_documento_e_key_terms_continuam_valendo
+U10  ok    TestU8aU10Sondas.test_u10_why_sem_key_terms_aceita_qualquer_linha_do_documento
+U8   ok    TestU8aU10Sondas.test_u8_dependency_traz_o_criterio_de_importa
+U9   ok    TestU8aU10Sondas.test_u9_why_sem_topico_generico_nem_repetido
+placar: U1 11/11  U2 6/6  U2b 0/2  U3 8/8  U4 5/5  U5 3/7  U6 0/1  U7 1/1  U8 1/1  U9 1/1  U10 2/2  U11 1/1  U12 1/2
+total: 40/48 passam
+
+## Histórico U2 (1ª rodada): o PATH_RE de dotfile já está no HEAD (9d1ab30), então U2 passa no ANTES acima.
+## Prova do defeito U2 contra exam.py de 2c90621 (resto = HEAD), python3:
+test_editorconfig_na_raiz_com_linha (test_uso_real.TestU2DotfileNoExame.test_editorconfig_na_raiz_com_linha) ... FAIL
+`src/.eslintrc:10` (exigido pelo requisito; já casava antes pelo ramo `dir/nome` — regressão). ... ok
+test_outros_dotfiles_na_raiz (test_uso_real.TestU2DotfileNoExame.test_outros_dotfiles_na_raiz) ... FAIL
+test_regressao_caminhos_normais_intactos (test_uso_real.TestU2DotfileNoExame.test_regressao_caminhos_normais_intactos) ... ok
+Prosa com ponto não vira dotfile nem caminho+linha (o ramo novo não pode inventar `.algo`). ... ok
+Efeito no exame: a sonda de localização com gabarito `.editorconfig:3` aprova quem cita `.editorconfig:3`. ... FAIL
+U2b: dotfile sem linha no fim da frase (sonda de existência/proibição em nível de arquivo). ... FAIL
+U2b: `.NET 8` (o próprio stack da cobaia .NET) não é dotfile. ... ok
+Ran 8 tests in 0.048s
+FAILED (failures=4)
+
+## Mutação de controle U5: guard.py com ACCEPTED somado ingenuamente à tupla de check_diff (cópia da viva), python3:
+test_aceita_e_aberta_libera_no_pre_commit_staged (test_uso_real.TestU5CheckDiffDepoisDoAceite.test_aceita_e_aberta_libera_no_pre_commit_staged) ... ok
+test_aceita_e_aberta_libera_os_allowed_paths (test_uso_real.TestU5CheckDiffDepoisDoAceite.test_aceita_e_aberta_libera_os_allowed_paths) ... ok
+test_aceita_mas_arquivo_fora_continua_barrado (test_uso_real.TestU5CheckDiffDepoisDoAceite.test_aceita_mas_arquivo_fora_continua_barrado) ... ok
+test_briefed_ou_ready_barra (test_uso_real.TestU5CheckDiffDepoisDoAceite.test_briefed_ou_ready_barra) ... ok
+test_fechada_barra (test_uso_real.TestU5CheckDiffDepoisDoAceite.test_fechada_barra) ... FAIL
+test_guard_off_nao_afeta_o_check_diff (test_uso_real.TestU5CheckDiffDepoisDoAceite.test_guard_off_nao_afeta_o_check_diff) ... FAIL
+Ran 6 tests in 5.358s
+FAILED (failures=2)
+## → test_fechada_barra e test_guard_off… FALHAM: task fechada (archive/) continua no board com a delegação ACCEPTED;
+##   a correção tem de excluir a task arquivada, não só somar ACCEPTED.
+
+## Mudança oficial sanitize (mudanca-oficial/test_sanitize-iter16.patch): cópia da viva com o patch → sanitize.tests.test_sanitize
+# python3: Ran 8 tests in 3.755s OK 
+# /usr/bin/python3: Ran 8 tests in 4.211s OK 

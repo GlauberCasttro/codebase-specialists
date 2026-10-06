@@ -23,7 +23,7 @@ prova.**
 .swarm/memory/    knowledge.jsonl  episodes.jsonl  stale.json5  index/ (cache)
 .swarm/session/   resume.json5
 .claude/hooks/cs-guard.sh   wrapper fail-closed dos hooks
-.claude/settings.json       merge dos hooks (backup .bak-<ts>; chaves alheias preservadas)
+.claude/settings.json       merge dos hooks (backup em .swarm/backups/settings/settings.json.bak-<ts>; chaves alheias preservadas)
 specialists.mk + bloco `include specialists.mk` no Makefile
 .git/hooks/pre-commit       (com --git-hook) → .swarm/bin/cs-precommit
 ```

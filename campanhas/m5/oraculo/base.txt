@@ -1,0 +1,174 @@
+BASE — oráculo campanha-M5 (test_mandato.py + mudança oficial) contra a skill REAL 0.7.0 (iter10 entregue, 3127bf9)
+data: 2026-10-05T16:34Z · skill VERSION 0.7.0 · STATE_DIR: .swarm
+
+A) test_mandato.py — cd campanha-m5/oraculo && <py> -m unittest -v test_mandato
+   python3 3.13.3 → Ran 52 tests in 30.751s · FAILED (failures=51) · 0 ERROR
+   /usr/bin/python3 3.9.6 → Ran 52 tests in 33.178s · FAILED (failures=51) · 0 ERROR
+   MOTIVOS (primeira asserção; iguais nos dois Pythons):
+     39 AssertionError: 2 != 0 : `cs-auto propose …` (auto.py inexistente: exit 2)
+      4 AssertionError: unexpectedly None : machines.json5 deve declarar a máquina M5 `mandato` (fonte única; ESPEC §2.1)
+      2 AssertionError: 2 != 1 : `cs-auto propose …` (auto.py inexistente: exit 2)
+      1 AssertionError: False is not true : o piloto mora em scripts/harness/engine/auto.py
+      1 AssertionError: 2 != 1 : risco sem portões declarados: `cs-auto propose …` (auto.py inexistente: exit 2)
+      1 AssertionError: 127 != 0 : engine.run_cmd('PYTHONPATH=src python3 -m h1mod') → exit 127 (esperado 0: shell, cwd do alvo, exit
+      1 AssertionError: 0 != 1 : aceite JÁ VERDE (via shell) tem de ser visto como verde — 127 não é 'vermelho': pronto: FEA-002 (fea
+      1 AssertionError: 'cs-auto propose' not found in 'Conduz o toque único de aprovação do modo autônomo para a feature `$$0` (spec
+      1 AssertionError: 'PASS' not found in "verify REPROVOU FEA-001/01 (exit 127):\n  - verification_command exit=127 (sha saída 87d
+   LEITURA: com a árvore real a PREPARAÇÃO passa em todos os testes (sprint, feature, start, tasks); 42 param no
+   primeiro `cs-auto` (piloto do mandato inexistente) — inclusive as recusas, que vêm exit 2 em vez de 1; 4 AUTO-LIVE
+   (machines.machines sem `mandato`); 1 instalação; 1 prosa (D12); 3 H-1 (abaixo). Passa hoje (1): regra CONGELADA
+   de M2 reafirmada. Nenhum requisito novo passa por vácuo.
+   H-1 (3 FAIL, defeito real do motor): engine.run_cmd('PYTHONPATH=src python3 -m h1mod') → 127; `cs-state verify`
+   de task com verify-cmd `PYTHONPATH=src python3 -m unittest …` → "REPROVOU (exit 127)"; `cs-state check` de feature
+   com aceite JÁ VERDE via `PYTHONPATH=src …` → "pronto" (o 127 foi lido como aceite vermelho).
+   Ajuste à interface real: critérios no formato testável `AC-n|Dado … Quando … Então …|<test-id>` (o curto é "vago").
+
+B) MUDANÇA OFICIAL (mudanca-oficial/m5-cobertura-vivacidade.patch; originais congelados idênticos na 0.7.0; aplicado
+   numa CÓPIA com patch -p0). Suíte: test_maquinas_vivacidade test_faixas_aceite test_despacho_e_verify_isolado
+   test_legacy_hierarquia test_swarm_dir test_workflow_e2e test_cobertura_maquinas
+   - 0.7.0 sem patch: 128 testes OK.
+   - 0.7.0 com patch (python3 3.13.3): 144 testes = 128 antigos OK + 16 FAIL só de M5, 0 ERROR:
+       14 cenários m5_* → passam a preparação na árvore real e param no `cs-auto` (FileNotFoundError: engine/auto.py)
+        1 TestM5Presente + 1 vivacidade M5 → machines.machines sem `mandato`
+     test_cobertura_100 OK e inalterado: 78/80 transições, 113/115 arestas, 71/71 guardas OK e RECUSANDO.
+   - 0.7.0 com patch (/usr/bin/python3 3.9.6, vivacidade + cobertura): 67 testes, 16 FAIL — todos M5; antigos OK.
+   - (rodada anterior, 0.6.0 + M5 do §2.1 injetada) vivacidade 4/4 OK; duas M5 quebradas reprovadas; cobertura com
+     157 FALTAs todas `mandato/*`, nenhuma outra máquina perde cobertura.
+
+================ test_mandato · python3 3.13.3 (-v) ================
+test_aguardando_humano_e_pausado_nao_terminais_com_saidas (test_mandato.TestAutoLive.test_aguardando_humano_e_pausado_nao_terminais_com_saidas) ... FAIL
+test_m2_escalated_e_abstained_seguem_com_saidas (test_mandato.TestAutoLive.test_m2_escalated_e_abstained_seguem_com_saidas) ... ok
+test_maquina_mandato_com_interface_fixada (test_mandato.TestAutoLive.test_maquina_mandato_com_interface_fixada) ... FAIL
+test_sem_beco_sem_saida_e_terminais_sem_saida (test_mandato.TestAutoLive.test_sem_beco_sem_saida_e_terminais_sem_saida) ... FAIL
+test_todo_estado_alcancavel (test_mandato.TestAutoLive.test_todo_estado_alcancavel) ... FAIL
+test_esc_cite_brief_que_so_cita_invariante_nao_escala (test_mandato.TestEscalada.test_esc_cite_brief_que_so_cita_invariante_nao_escala) ... FAIL
+test_esc_local_congela_o_ramo_e_o_resto_segue (test_mandato.TestEscalada.test_esc_local_congela_o_ramo_e_o_resto_segue) ... FAIL
+test_esc_resolve_abortar (test_mandato.TestEscalada.test_esc_resolve_abortar) ... FAIL
+test_esc_resolve_descartar_ramo_entrega_parcial (test_mandato.TestEscalada.test_esc_resolve_descartar_ramo_entrega_parcial) ... FAIL
+test_esc_resolve_emendar_volta_a_proposta_com_assinatura_encadeada (test_mandato.TestEscalada.test_esc_resolve_emendar_volta_a_proposta_com_assinatura_encadeada) ... FAIL
+test_esc_resolve_encerrar_devolve_abertos_ao_backlog (test_mandato.TestEscalada.test_esc_resolve_encerrar_devolve_abertos_ao_backlog) ... FAIL
+test_esc_resolve_retomar_com_recusas_de_portao_humano (test_mandato.TestEscalada.test_esc_resolve_retomar_com_recusas_de_portao_humano) ... FAIL
+test_esc_resolve_trocar_agente (test_mandato.TestEscalada.test_esc_resolve_trocar_agente) ... FAIL
+test_escalada_manual_em_planning_e_replanning_e_retomada_ao_estado_de_origem (test_mandato.TestEscalada.test_escalada_manual_em_planning_e_replanning_e_retomada_ao_estado_de_origem) ... FAIL
+test_hack_aceite_alterado_por_fora_detectado_pelo_hash (test_mandato.TestEscalada.test_hack_aceite_alterado_por_fora_detectado_pelo_hash) ... FAIL
+test_hack_tentativa_bloqueada_pelo_guard_escala_global (test_mandato.TestEscalada.test_hack_tentativa_bloqueada_pelo_guard_escala_global) ... FAIL
+test_retry_exige_reflexao_ancorada_e_grava_licao_candidata (test_mandato.TestFalhaERecuperacao.test_retry_exige_reflexao_ancorada_e_grava_licao_candidata) ... FAIL
+test_same_fail_duas_vezes_nao_tenta_a_terceira_com_o_mesmo_agente (test_mandato.TestFalhaERecuperacao.test_same_fail_duas_vezes_nao_tenta_a_terceira_com_o_mesmo_agente) ... FAIL
+test_happy_done_sem_toque_humano_apos_approve (test_mandato.TestFluxoFeliz.test_happy_done_sem_toque_humano_apos_approve) ... FAIL
+test_aceite_com_atribuicao_de_variavel_e_medido_de_verdade (test_mandato.TestH1ComandoDoMotor.test_aceite_com_atribuicao_de_variavel_e_medido_de_verdade) ... FAIL
+test_run_cmd_usa_shell_no_cwd_do_alvo_e_propaga_o_exit (test_mandato.TestH1ComandoDoMotor.test_run_cmd_usa_shell_no_cwd_do_alvo_e_propaga_o_exit) ... FAIL
+test_verify_da_task_com_atribuicao_de_variavel_passa (test_mandato.TestH1ComandoDoMotor.test_verify_da_task_com_atribuicao_de_variavel_passa) ... FAIL
+test_cs_auto_instalavel_com_hook_pre_compact (test_mandato.TestInstalacao.test_cs_auto_instalavel_com_hook_pre_compact) ... FAIL
+test_prosa_nao_conduz_o_loop (test_mandato.TestInstalacao.test_prosa_nao_conduz_o_loop) ... FAIL
+test_e2e_propose_ao_done_com_escalada_e_janela (test_mandato.TestIntegridade.test_e2e_propose_ao_done_com_escalada_e_janela) ... FAIL
+test_tamper_mandato_e_plano_editados_a_mao (test_mandato.TestIntegridade.test_tamper_mandato_e_plano_editados_a_mao) ... FAIL
+test_compact_pausa_com_checkpoint_e_retoma_no_mesmo_passo (test_mandato.TestJanelas.test_compact_pausa_com_checkpoint_e_retoma_no_mesmo_passo) ... FAIL
+test_pausa_e_retomada_em_planning_e_integrating (test_mandato.TestJanelas.test_pausa_e_retomada_em_planning_e_integrating) ... FAIL
+test_resume_orfa_com_diff_vai_para_verify (test_mandato.TestJanelas.test_resume_orfa_com_diff_vai_para_verify) ... FAIL
+test_resume_orfa_sem_diff_volta_para_a_fila (test_mandato.TestJanelas.test_resume_orfa_sem_diff_volta_para_a_fila) ... FAIL
+test_stop_humano_em_planning_replanning_e_pausado (test_mandato.TestJanelas.test_stop_humano_em_planning_replanning_e_pausado) ... FAIL
+test_stophook_bloqueia_com_a_acao_e_tem_anti_loop (test_mandato.TestJanelas.test_stophook_bloqueia_com_a_acao_e_tem_anti_loop) ... FAIL
+test_budget_soft_80_por_cento_encerra_com_entrega_parcial (test_mandato.TestOrcamento.test_budget_soft_80_por_cento_encerra_com_entrega_parcial) ... FAIL
+test_budget_time_conta_so_minutos_ativos (test_mandato.TestOrcamento.test_budget_time_conta_so_minutos_ativos) ... FAIL
+test_noprog_replaneja_uma_vez_e_encerra_sem_escalar (test_mandato.TestOrcamento.test_noprog_replaneja_uma_vez_e_encerra_sem_escalar) ... FAIL
+test_usd_autodeclarado_nao_e_controle (test_mandato.TestOrcamento.test_usd_autodeclarado_nao_e_controle) ... FAIL
+test_plan1_plano_acima_do_orcamento (test_mandato.TestPlano.test_plan1_plano_acima_do_orcamento) ... FAIL
+test_plan1_recusas_com_o_problema_exato (test_mandato.TestPlano.test_plan1_recusas_com_o_problema_exato) ... FAIL
+test_plan2_ondas_calculadas_e_paralelo_real (test_mandato.TestPlano.test_plan2_ondas_calculadas_e_paralelo_real) ... FAIL
+test_plan3_arquivo_comum_vai_para_subondas (test_mandato.TestPlano.test_plan3_arquivo_comum_vai_para_subondas) ... FAIL
+test_plan3_par_do_not_parallelize_vai_para_subondas (test_mandato.TestPlano.test_plan3_par_do_not_parallelize_vai_para_subondas) ... FAIL
+test_mandato_nunca_aprova_portao_humano (test_mandato.TestPortaoHumano.test_mandato_nunca_aprova_portao_humano) ... FAIL
+test_approve_so_humano_e_com_aceite_ainda_vermelho_grava_baseline (test_mandato.TestPropose.test_approve_so_humano_e_com_aceite_ainda_vermelho_grava_baseline) ... FAIL
+test_proposta_orcamento_derivado_emenda_e_abort_humanos (test_mandato.TestPropose.test_proposta_orcamento_derivado_emenda_e_abort_humanos) ... FAIL
+test_start1_recusas_acionaveis_e_nada_criado (test_mandato.TestPropose.test_start1_recusas_acionaveis_e_nada_criado) ... FAIL
+test_start2_um_no_e_classe_avulsa_recusam_use_task_avulsa (test_mandato.TestPropose.test_start2_um_no_e_classe_avulsa_recusam_use_task_avulsa) ... FAIL
+test_regress_onda_quebra_teste_verde_replano_com_no_fix_citando_o_teste (test_mandato.TestReplano.test_regress_onda_quebra_teste_verde_replano_com_no_fix_citando_o_teste) ... FAIL
+test_replan1_dag_esgotado_replaneja_com_evidencia_e_nos_aceitos_intocados (test_mandato.TestReplano.test_replan1_dag_esgotado_replaneja_com_evidencia_e_nos_aceitos_intocados) ... FAIL
+test_replan_cap_esgotado_escala_suave_com_opcoes (test_mandato.TestReplano.test_replan_cap_esgotado_escala_suave_com_opcoes) ... FAIL
+test_lane_consulta_contada_e_avulsa_que_colide_recusada (test_mandato.TestSprintEFaixas.test_lane_consulta_contada_e_avulsa_que_colide_recusada) ... FAIL
+test_risk_portoes_param_antes_do_dispatch_e_o_resto_roda (test_mandato.TestSprintEFaixas.test_risk_portoes_param_antes_do_dispatch_e_o_resto_roda) ... FAIL
+test_sprint_uma_feature_ativa_por_vez (test_mandato.TestSprintEFaixas.test_sprint_uma_feature_ativa_por_vez) ... FAIL
+
+================ test_mandato · /usr/bin/python3 3.9.6 (-v) ================
+test_aguardando_humano_e_pausado_nao_terminais_com_saidas (test_mandato.TestAutoLive) ... FAIL
+test_m2_escalated_e_abstained_seguem_com_saidas (test_mandato.TestAutoLive) ... ok
+test_maquina_mandato_com_interface_fixada (test_mandato.TestAutoLive) ... FAIL
+test_sem_beco_sem_saida_e_terminais_sem_saida (test_mandato.TestAutoLive) ... FAIL
+test_todo_estado_alcancavel (test_mandato.TestAutoLive) ... FAIL
+test_esc_cite_brief_que_so_cita_invariante_nao_escala (test_mandato.TestEscalada) ... FAIL
+test_esc_local_congela_o_ramo_e_o_resto_segue (test_mandato.TestEscalada) ... FAIL
+test_esc_resolve_abortar (test_mandato.TestEscalada) ... FAIL
+test_esc_resolve_descartar_ramo_entrega_parcial (test_mandato.TestEscalada) ... FAIL
+test_esc_resolve_emendar_volta_a_proposta_com_assinatura_encadeada (test_mandato.TestEscalada) ... FAIL
+test_esc_resolve_encerrar_devolve_abertos_ao_backlog (test_mandato.TestEscalada) ... FAIL
+test_esc_resolve_retomar_com_recusas_de_portao_humano (test_mandato.TestEscalada) ... FAIL
+test_esc_resolve_trocar_agente (test_mandato.TestEscalada) ... FAIL
+test_escalada_manual_em_planning_e_replanning_e_retomada_ao_estado_de_origem (test_mandato.TestEscalada) ... FAIL
+test_hack_aceite_alterado_por_fora_detectado_pelo_hash (test_mandato.TestEscalada) ... FAIL
+test_hack_tentativa_bloqueada_pelo_guard_escala_global (test_mandato.TestEscalada) ... FAIL
+test_retry_exige_reflexao_ancorada_e_grava_licao_candidata (test_mandato.TestFalhaERecuperacao) ... FAIL
+test_same_fail_duas_vezes_nao_tenta_a_terceira_com_o_mesmo_agente (test_mandato.TestFalhaERecuperacao) ... FAIL
+test_happy_done_sem_toque_humano_apos_approve (test_mandato.TestFluxoFeliz) ... FAIL
+test_aceite_com_atribuicao_de_variavel_e_medido_de_verdade (test_mandato.TestH1ComandoDoMotor) ... FAIL
+test_run_cmd_usa_shell_no_cwd_do_alvo_e_propaga_o_exit (test_mandato.TestH1ComandoDoMotor) ... FAIL
+test_verify_da_task_com_atribuicao_de_variavel_passa (test_mandato.TestH1ComandoDoMotor) ... FAIL
+test_cs_auto_instalavel_com_hook_pre_compact (test_mandato.TestInstalacao) ... FAIL
+test_prosa_nao_conduz_o_loop (test_mandato.TestInstalacao) ... FAIL
+test_e2e_propose_ao_done_com_escalada_e_janela (test_mandato.TestIntegridade) ... FAIL
+test_tamper_mandato_e_plano_editados_a_mao (test_mandato.TestIntegridade) ... FAIL
+test_compact_pausa_com_checkpoint_e_retoma_no_mesmo_passo (test_mandato.TestJanelas) ... FAIL
+test_pausa_e_retomada_em_planning_e_integrating (test_mandato.TestJanelas) ... FAIL
+test_resume_orfa_com_diff_vai_para_verify (test_mandato.TestJanelas) ... FAIL
+test_resume_orfa_sem_diff_volta_para_a_fila (test_mandato.TestJanelas) ... FAIL
+test_stop_humano_em_planning_replanning_e_pausado (test_mandato.TestJanelas) ... FAIL
+test_stophook_bloqueia_com_a_acao_e_tem_anti_loop (test_mandato.TestJanelas) ... FAIL
+test_budget_soft_80_por_cento_encerra_com_entrega_parcial (test_mandato.TestOrcamento) ... FAIL
+test_budget_time_conta_so_minutos_ativos (test_mandato.TestOrcamento) ... FAIL
+test_noprog_replaneja_uma_vez_e_encerra_sem_escalar (test_mandato.TestOrcamento) ... FAIL
+test_usd_autodeclarado_nao_e_controle (test_mandato.TestOrcamento) ... FAIL
+test_plan1_plano_acima_do_orcamento (test_mandato.TestPlano) ... FAIL
+test_plan1_recusas_com_o_problema_exato (test_mandato.TestPlano) ... FAIL
+test_plan2_ondas_calculadas_e_paralelo_real (test_mandato.TestPlano) ... FAIL
+test_plan3_arquivo_comum_vai_para_subondas (test_mandato.TestPlano) ... FAIL
+test_plan3_par_do_not_parallelize_vai_para_subondas (test_mandato.TestPlano) ... FAIL
+test_mandato_nunca_aprova_portao_humano (test_mandato.TestPortaoHumano) ... FAIL
+test_approve_so_humano_e_com_aceite_ainda_vermelho_grava_baseline (test_mandato.TestPropose) ... FAIL
+test_proposta_orcamento_derivado_emenda_e_abort_humanos (test_mandato.TestPropose) ... FAIL
+test_start1_recusas_acionaveis_e_nada_criado (test_mandato.TestPropose) ... FAIL
+test_start2_um_no_e_classe_avulsa_recusam_use_task_avulsa (test_mandato.TestPropose) ... FAIL
+test_regress_onda_quebra_teste_verde_replano_com_no_fix_citando_o_teste (test_mandato.TestReplano) ... FAIL
+test_replan1_dag_esgotado_replaneja_com_evidencia_e_nos_aceitos_intocados (test_mandato.TestReplano) ... FAIL
+test_replan_cap_esgotado_escala_suave_com_opcoes (test_mandato.TestReplano) ... FAIL
+test_lane_consulta_contada_e_avulsa_que_colide_recusada (test_mandato.TestSprintEFaixas) ... FAIL
+test_risk_portoes_param_antes_do_dispatch_e_o_resto_roda (test_mandato.TestSprintEFaixas) ... FAIL
+test_sprint_uma_feature_ativa_por_vez (test_mandato.TestSprintEFaixas) ... FAIL
+
+================ suíte congelada COM o patch na 0.7.0 (falhas) ================
+FAIL: test_mandato_m5_presente_e_espera_nunca_tranca (test_maquinas_vivacidade.VivacidadeTest.test_mandato_m5_presente_e_espera_nunca_tranca)
+FAIL: test_m5_escalada_em_planning_e_stop (test_cobertura_maquinas.TestCenarios.test_m5_escalada_em_planning_e_stop)
+FAIL: test_m5_escalada_local_e_saidas_humanas (test_cobertura_maquinas.TestCenarios.test_m5_escalada_local_e_saidas_humanas)
+FAIL: test_m5_fluxo_feliz_com_pausas (test_cobertura_maquinas.TestCenarios.test_m5_fluxo_feliz_com_pausas)
+FAIL: test_m5_hack (test_cobertura_maquinas.TestCenarios.test_m5_hack)
+FAIL: test_m5_orcamento_soft (test_cobertura_maquinas.TestCenarios.test_m5_orcamento_soft)
+FAIL: test_m5_plano_recusas (test_cobertura_maquinas.TestCenarios.test_m5_plano_recusas)
+FAIL: test_m5_proposta_aprovacao_emenda_aborto (test_cobertura_maquinas.TestCenarios.test_m5_proposta_aprovacao_emenda_aborto)
+FAIL: test_m5_regressao (test_cobertura_maquinas.TestCenarios.test_m5_regressao)
+FAIL: test_m5_replano_acima_do_orcamento (test_cobertura_maquinas.TestCenarios.test_m5_replano_acima_do_orcamento)
+FAIL: test_m5_replano_recusas_escalada_e_pausa (test_cobertura_maquinas.TestCenarios.test_m5_replano_recusas_escalada_e_pausa)
+FAIL: test_m5_replanos_esgotados (test_cobertura_maquinas.TestCenarios.test_m5_replanos_esgotados)
+FAIL: test_m5_sem_progresso (test_cobertura_maquinas.TestCenarios.test_m5_sem_progresso)
+FAIL: test_m5_sprint (test_cobertura_maquinas.TestCenarios.test_m5_sprint)
+FAIL: test_m5_stop_humano_replanning_e_pausado (test_cobertura_maquinas.TestCenarios.test_m5_stop_humano_replanning_e_pausado)
+FAIL: test_mandato_declarado_em_machines (test_cobertura_maquinas.TestM5Presente.test_mandato_declarado_em_machines)
+
+FAILED (failures=16)
+
+================ ADENDO — defeito do Driver corrigido (revisão pedida pelo construtor) ================
+Defeito do ORÁCULO confirmado: Driver.step() executava a ação ANTES de run(stop_on=...) devolver o tick — REPLAN sem
+on_replan disparava fail("REPLAN inesperado") e FINAL_REVIEW em stop_on era executada (test_pausa_*). Correção única:
+ação que está em stop_on (exceto FIM/ASK_HUMAN, que não executam nada) volta intacta ao teste. Mesmo ajuste em
+m5_cenarios.py (D.step(stop)), instalado e no patch. Nenhuma outra asserção mudou.
+Contra o produto atual (0.7.0 + auto.py do construtor, patch oficial instalado):
+  test_mandato: python3 3.13.3 → 52 OK · /usr/bin/python3 3.9.6 → 52 OK
+  test_maquinas_vivacidade + test_cobertura_maquinas: 67 OK nos dois Pythons; cobertura 99/101 transições,
+  147/149 arestas (as 2 exclusões antigas), 129/129 guardas OK, 115/129 RECUSANDO (= 129 − 14 exclusões M5).

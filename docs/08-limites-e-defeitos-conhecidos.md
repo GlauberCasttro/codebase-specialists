@@ -2,7 +2,7 @@
 
 Este documento diz o que a skill **não** garante, o que está quebrado hoje e quanto ela custa. Fontes:
 `references/harness.md` §9, `references/platforms.md` §5, `references/probes.md` §11, `evals/README.md`,
-o registro de resultados e defeitos da iteração 4 (interno), notas das execuções e o próprio código.
+`campanhas/iteration-4/RESULTADOS-E-DEFEITOS.json5`, notas das execuções e o próprio código.
 
 ## 1. O que não é garantido
 
@@ -49,7 +49,7 @@ o registro de resultados e defeitos da iteração 4 (interno), notas das execuç
 
 ## 2. Defeitos abertos (iteração 4)
 
-De registro interno de defeitos da iteração 4 (`defeitos_iter5`), conferidos contra o código atual:
+De `iteration-4/RESULTADOS-E-DEFEITOS.json5 → defeitos_iter5`, conferidos contra o código atual:
 
 | Prio | Defeito | Estado no código hoje | Efeito prático |
 |---|---|---|---|
@@ -70,8 +70,8 @@ Contornos manuais da única execução concluída da iteração 4 (ts-shop, `out
 
 Critério de parada da campanha (≥2/3 GO; zero contornos manuais; [Q] ≥ baseline nos 3; testes verdes):
 **não cumprido** (`criterio_parada.veredito: "NÃO CUMPRIDO — 5 contornos manuais"`). As execuções de py-billing
-(validate.3) e go-polyglot (validate.2) ficaram pausadas; a retomada fica para a próxima
-rodada.
+(validate.3) e go-polyglot (validate.2) ficaram pausadas; o plano da próxima rodada está em
+`campanhas/historico/PROXIMA-RODADA.md`.
 
 ## 3. Divergências documentação × código encontradas
 

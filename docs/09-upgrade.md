@@ -90,9 +90,9 @@ ordem e ações fora do schema.
 
 ## Testes
 
-`scripts/upgrade/tests/test_upgrade.py` cobre UPGRADE-1..6 contra uma **cópia** (mktemp) de um alvo legado real
-(gerado por uma versão anterior da skill), apontado por `$CS_UPGRADE_LEGACY_TARGET`; sem a variável, os cenários
-que precisam dele são pulados. Versões futuras são simuladas com `$CS_SKILL_VERSION_FILE` e `$CS_MIGRATIONS_FILE`.
+`scripts/upgrade/tests/test_upgrade.py` cobre UPGRADE-1..6 contra uma **cópia** (mktemp) do alvo real legado da
+iteração 4 (`campanhas/iteration-4/ts-shop-setup-vague/with_skill/target`; outro caminho via
+`$CS_UPGRADE_LEGACY_TARGET`). Versões futuras são simuladas com `$CS_SKILL_VERSION_FILE` e `$CS_MIGRATIONS_FILE`.
 
 | Cenário | Prova |
 |---|---|
@@ -122,3 +122,27 @@ A entrada `to: "0.8.0"` do catálogo declara só `harness` e `emit`. O `harness`
 (passa a incluir o `cs-auto` e o hook PreCompact, que pausa um mandato em andamento) e o `emit` reemite os artefatos,
 incluindo as 9 skills `/auto-*`. Nada de entrevista, roster, cartões, memória ou board é refeito; sem mandato
 aberto o PreCompact não faz nada. Veja [11-modo-autonomo.md](11-modo-autonomo.md).
+
+## Migração 0.9.0: skills com nome em inglês
+
+A entrada `to: "0.9.0"` do catálogo declara `harness` e `emit`. As skills geradas passam a ter nome em inglês
+(verbo-objeto), em todas as plataformas onde já saíam:
+
+| 0.8.x | 0.9.0 |
+|---|---|
+| `/salvar-sessao` | `/save-session` |
+| `/carregar-sessao` | `/load-session` |
+| `/corrigir` | `/correct` |
+| `/planejar-sprint` | `/plan-sprint` |
+| `/new-epico` | `/new-epic` |
+| `/close-epico` | `/close-epic` |
+
+Só o nome muda: política (`disable-model-invocation`, "só o humano executa" no Codex), `argument-hint`,
+`allowed-tools` e os comandos `.swarm/bin/cs-*` citados ficam iguais. Os subcomandos do motor também ficam
+(`cs-state new epico`, `cs-mem correct`).
+
+O `emit` da migração gera as pastas novas e poda as antigas pelo manifesto (`.swarm/emit/manifest.json5`): sai só a
+`SKILL.md` que o emit gerou e que ainda tem o marcador `codebase-specialists:generated`; a pasta sai quando fica vazia.
+Arquivo humano dentro da pasta antiga fica (com a pasta). Pasta de mesmo nome fora do manifesto (do usuário) nunca é
+tocada. O plano (`cs.py upgrade`, sem `--apply`) lista cada `delete` e cada `create` e não escreve nada. Depois do
+`--apply`, `emit validate` sai verde, sem órfão.

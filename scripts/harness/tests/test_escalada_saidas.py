@@ -121,12 +121,12 @@ class TestEscalada(Base):
     def test_escalate_reroute_troca_de_agente(self):
         self.dispatched()
         self.ok("escalate", "--task", "T-1", "--reason", "é território de users")
-        self.ok("reroute", "--task", "T-1", "--agent", "dev-members", "--allowed-path", "src/members/discount.py",
-                "--decision", "mover para dev-members")
+        self.ok("reroute", "--task", "T-1", "--agent", "dev-users", "--allowed-path", "src/users/discount.py",
+                "--decision", "mover para dev-users")
         t = task(self.root)
         ds = t["delegations"]
         self.assertEqual(ds[-2]["state"], "REROUTED")
-        self.assertEqual((ds[-1]["state"], ds[-1]["agent"], t["status"], t["agent"]), ("PLANNED", "dev-members", "DRAFT", "dev-members"))
+        self.assertEqual((ds[-1]["state"], ds[-1]["agent"], t["status"], t["agent"]), ("PLANNED", "dev-users", "DRAFT", "dev-users"))
         self.assertFalse(t.get("block_reason"))
         self.ok("ready", "--task", "T-1")
         self.assertEqual(deleg(self.root)["state"], "BRIEFED")

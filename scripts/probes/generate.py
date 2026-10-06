@@ -5,6 +5,7 @@ Tipos: location, existence, command, prohibition, dependency, history, why, term
 Gabarito vem do grafo/scan/operations/rules/history/rationale/glossary/business_rules; negativas são
 verificadas contra o repo (grep de palavra inteira) antes de entrar no banco.
 """
+import os
 import random
 import re
 
@@ -23,6 +24,27 @@ FAB_SNAKE = ["reconcile", "rebalance", "escalate", "quarantine", "throttle", "sn
 # suficientes (ops com 12/12 "não existe" na iteração 3) completa com fatos dos arquivos que o agente LÊ e, por
 # fim, do produto — a sonda leva `source: reads|product`.
 HARD_MIN = 6
+GENERIC_TOPICS = {
+    "o que foi feito", "resumo", "sumario", "contexto", "notas", "observacoes", "proximos passos", "decisoes",
+    "decisao", "status", "visao geral", "introducao", "conclusao", "pendencias", "historico", "referencias",
+    "summary", "context", "overview", "notes", "next steps", "decisions", "decision", "background",
+    "introduction", "conclusion", "what was done", "references", "changelog",
+}
+
+
+def _topic_key(topic):
+    import unicodedata
+    t = unicodedata.normalize("NFKD", str(topic or "")).encode("ascii", "ignore").decode().lower()
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", t).split())
+
+
+# o que "importar" significa no gabarito (grafo de imports do L1), por extensão do arquivo-alvo
+IMPORT_CRITERION = {
+    ".cs": " (critério: o arquivo tem `using <namespace declarado em X>;` no topo, antes da 1ª declaração de tipo"
+           " — nível namespace, mesmo sem usar o símbolo; menção em string/comentário não conta)",
+    "": " (critério: declaração de import/require/use do arquivo ou do seu módulo, em nível de arquivo;"
+        " menção em string/comentário não conta)",
+}
 HARD_TYPES = ("location", "dependency", "prohibition", "history", "why", "business_rule", "existence")
 
 
@@ -151,7 +173,10 @@ class Builder(object):
             if x not in self.owner or not is_code_file(x):
                 continue  # "quem importa o Makefile/go.mod" não é pergunta de import
             outside = sorted(i for i in importers.get(x, ()) if self.owner.get(i) != self.owner[x])
-            q = "Quais arquivos fora de %s importam `%s`? Liste todos (ou NENHUM)." % (self.label([x]), x)
+            # o critério vai NA pergunta: sem ele o examinado responde por uso do símbolo e o gabarito (grafo
+            # de imports do L1) o reprova — cobaia .NET 2026-10-05: maior causa de reprovação em 3 de 8 agentes
+            q = "Quais arquivos fora de %s importam `%s`%s? Liste todos (ou NENHUM)." % (
+                self.label([x]), x, IMPORT_CRITERION.get(os.path.splitext(x)[1], IMPORT_CRITERION[""]))
             item = dict(type="dependency", question=q, answer={"exists": bool(outside), "files": outside, "subject": x},
                         atomic_facts=["%s imports %s" % (i, x) for i in outside] or ["no external importer of %s" % x])
             if outside:
@@ -210,10 +235,18 @@ class Builder(object):
                 continue
             P["history"].append(dict(
                 type="history",
-                question="Qual commit (sha) corrigiu \"%s\" (tocou %d arquivo(s))?" % (c["subject"], len(c["files"])),
+                # o gabarito é o PRÓPRIO commit com esse assunto ("corrigiu X" levava a procurar um fix posterior)
+                question="Qual o sha do commit cujo assunto é \"%s\" (tocou %d arquivo(s))?" % (c["subject"], len(c["files"])),
                 answer={"exists": True, "sha": c["sha"]}, atomic_facts=[c["fact"] or c["sha"]]))
         seen_adr = set()
+        topic_n = {}
+        for r in self.f.rationale():
+            topic_n[_topic_key(r["topic"])] = topic_n.get(_topic_key(r["topic"]), 0) + 1
         for r in sorted(self.f.rationale(), key=lambda r: r["fact"]):
+            # cabeçalho genérico ("O que foi feito", "Resumo") ou repetido em ≥3 documentos não tem UM porquê:
+            # cobaia .NET 2026-10-05, "Por que O que foi feito?" com gabarito num log de sessão qualquer
+            if _topic_key(r["topic"]) in GENERIC_TOPICS or topic_n[_topic_key(r["topic"])] >= 3:
+                continue
             # ADR com fatos por decisão (rat.adr.<adr>.dN): UMA sonda POR-QUÊ por documento (sem redundância)
             adr_key = tuple(sorted(set(s["file"] for s in r["sources"]))) or (r["fact"],)
             if adr_key in seen_adr:

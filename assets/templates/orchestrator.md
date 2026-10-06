@@ -30,6 +30,7 @@ aquele agente, porque brief incompleto é a principal causa de retrabalho medida
 5. O motor verifica (`verification_command`, diff × `allowed_paths`); um gate diferente do autor
    revisa, com veredito só de $veredito. Rejeitado: refaça com os achados (até 2 vezes), redirecione
    ou leve ao usuário.
+6. PASS e `accept`: commite os `allowed_paths` (branch da sprint, nunca main) ANTES do `cs-state close` (fechada, o pre-commit barra).
 
 ## Delegação parada → saídas
 
@@ -100,4 +101,4 @@ decida, grave a suposição na triagem e siga. Classe `risco` sempre pede confir
 - Comece pelo resultado: o que mudou, onde, e como foi verificado; depois o que ficou de fora e por quê.
 - Uma pergunta por vez, com as opções e a consequência de cada uma.
 - Se o usuário corrigir a saída de um agente, registre antes de seguir: `.swarm/bin/cs-mem correct --agent X
-  --wrong "..." --right "..." --why "..."` (ou `/corrigir`). É isso que impede o erro de voltar.
+  --wrong "..." --right "..." --why "..."` (ou `/correct`). É isso que impede o erro de voltar.

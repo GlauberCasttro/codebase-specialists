@@ -1,0 +1,159 @@
+BASE — test_senha_mandato.py contra a skill ATUAL (~/.claude/skills/codebase-specialists, sem a senha), 2026-10-05
+Esperado: falhar provando o defeito. Só as 2 guardas de regressão marcadas passam.
+
+### python3 Python 3.13.3 x skill atual
+test_caminho_dentro_do_alvo_recusado ... FAIL
+test_caminho_padrao_no_home_do_usuario_fora_do_alvo ... FAIL
+test_definir_confirmacao_diferente_recusa ... FAIL
+test_definir_grava_so_sal_e_verificador_pbkdf2_modo_0600 ... FAIL
+test_definir_recusa_senha_fraca ... FAIL
+test_definir_sem_terminal_recusa_e_nao_grava ... FAIL
+test_nao_depende_da_auto_correcao ... FAIL
+test_redefinir_exige_a_senha_atual ... FAIL
+test_approve_com_a_senha_certa_no_terminal ... FAIL
+test_approve_nao_aceita_senha_por_argumento_nem_ambiente ... FAIL
+test_approve_sem_senha_definida_manda_rodar_senha_definir ... FAIL
+test_approve_sem_terminal_recusa ... FAIL
+test_approve_senha_errada_nao_sai_de_proposed ... FAIL
+test_approve_stdin_em_pipe_recusa_mesmo_com_tty_controlador ... FAIL
+Regressão (passa na base): a senha não substitui o --by humano. ... ok
+test_registro_de_senha_invalido_recusa ... FAIL
+test_selo_hmac_da_senha_sobre_mandato_plano_orcamento_seq_ts ... FAIL
+test_selo_muda_com_o_orcamento_aprovado ... FAIL
+O forjador reescreve o ORÇAMENTO na projeção E no evento de aprovação (cadeia re-encadeada), mas não sabe ... FAIL
+Regressão (passa na base): selo válido não trava o piloto, nem depois do uso do orçamento mudar. ... ok
+test_tick_recusa_aprovacao_sem_selo ... FAIL
+test_tick_recusa_contrato_alterado_depois_da_aprovacao ... FAIL
+test_tick_recusa_orcamento_inflado_em_running ... FAIL
+test_tick_recusa_selo_fora_do_formato ... FAIL
+test_conferir_denuncia_aprovacao_sem_selo ... FAIL
+test_conferir_denuncia_tag_aleatoria ... FAIL
+test_conferir_denuncia_tag_de_outra_senha ... FAIL
+test_conferir_legitimo_passa_e_nao_muda_o_mandato ... FAIL
+test_conferir_senha_errada_ou_sem_terminal_recusa ... FAIL
+Limite honesto: o agente troca o registro por um da senha DELE e re-sela. O humano, ao conferir com a ... FAIL
+test_doc_modo_autonomo_descreve_senha_selo_conferir_e_o_limite ... FAIL
+test_guard_trata_senha_conferir_e_approve_como_so_do_humano ... FAIL
+test_skill_auto_approve_descreve_o_fluxo_real_com_a_senha ... FAIL
+Ran 33 tests in 36.497s
+FAILED (failures=31)
+### /usr/bin/python3 Python 3.9.6 x skill atual
+test_caminho_dentro_do_alvo_recusado ... FAIL
+test_caminho_padrao_no_home_do_usuario_fora_do_alvo ... FAIL
+test_definir_confirmacao_diferente_recusa ... FAIL
+test_definir_grava_so_sal_e_verificador_pbkdf2_modo_0600 ... FAIL
+test_definir_recusa_senha_fraca ... FAIL
+test_definir_sem_terminal_recusa_e_nao_grava ... FAIL
+test_nao_depende_da_auto_correcao ... FAIL
+test_redefinir_exige_a_senha_atual ... FAIL
+test_approve_com_a_senha_certa_no_terminal ... FAIL
+test_approve_nao_aceita_senha_por_argumento_nem_ambiente ... FAIL
+test_approve_sem_senha_definida_manda_rodar_senha_definir ... FAIL
+test_approve_sem_terminal_recusa ... FAIL
+test_approve_senha_errada_nao_sai_de_proposed ... FAIL
+test_approve_stdin_em_pipe_recusa_mesmo_com_tty_controlador ... FAIL
+Regressão (passa na base): a senha não substitui o --by humano. ... ok
+test_registro_de_senha_invalido_recusa ... FAIL
+test_selo_hmac_da_senha_sobre_mandato_plano_orcamento_seq_ts ... FAIL
+test_selo_muda_com_o_orcamento_aprovado ... FAIL
+O forjador reescreve o ORÇAMENTO na projeção E no evento de aprovação (cadeia re-encadeada), mas não sabe ... FAIL
+Regressão (passa na base): selo válido não trava o piloto, nem depois do uso do orçamento mudar. ... ok
+test_tick_recusa_aprovacao_sem_selo ... FAIL
+test_tick_recusa_contrato_alterado_depois_da_aprovacao ... FAIL
+test_tick_recusa_orcamento_inflado_em_running ... FAIL
+test_tick_recusa_selo_fora_do_formato ... FAIL
+test_conferir_denuncia_aprovacao_sem_selo ... FAIL
+test_conferir_denuncia_tag_aleatoria ... FAIL
+test_conferir_denuncia_tag_de_outra_senha ... FAIL
+test_conferir_legitimo_passa_e_nao_muda_o_mandato ... FAIL
+test_conferir_senha_errada_ou_sem_terminal_recusa ... FAIL
+Limite honesto: o agente troca o registro por um da senha DELE e re-sela. O humano, ao conferir com a ... FAIL
+test_doc_modo_autonomo_descreve_senha_selo_conferir_e_o_limite ... FAIL
+test_guard_trata_senha_conferir_e_approve_como_so_do_humano ... FAIL
+test_skill_auto_approve_descreve_o_fluxo_real_com_a_senha ... FAIL
+Ran 33 tests in 45.990s
+FAILED (failures=31)
+### /usr/bin/python3 x referencia
+Ran 33 tests in 72.771s
+OK
+  (implementação de REFERÊNCIA só em scratchpad iter14-mut/ref, nunca na skill; python3 3.13.3 também 33 OK)
+
+================ MUTAÇÕES (cópias da referência; mutar.py; CS_SKILL_DIR=<cópia>) — todas reprovam ================
+== M1-aceita-qualquer-senha: Ran 33 tests in 51.418s FAILED (failures=2)
+   reprova: test_approve_nao_aceita_senha_por_argumento_nem_ambiente
+   reprova: test_approve_senha_errada_nao_sai_de_proposed
+== M2-sem-selo-e-tick-nao-confere: Ran 33 tests in 47.579s FAILED (failures=13)
+   reprova: test_conferir_denuncia_aprovacao_sem_selo
+   reprova: test_conferir_denuncia_tag_aleatoria
+   reprova: test_conferir_denuncia_tag_de_outra_senha
+   reprova: test_conferir_legitimo_passa_e_nao_muda_o_mandato
+   reprova: test_conferir_senha_errada_ou_sem_terminal_recusa
+   reprova: test_forja_consistente_na_cadeia_sem_a_senha_recusada
+   reprova: test_selo_hmac_da_senha_sobre_mandato_plano_orcamento_seq_ts
+   reprova: test_selo_muda_com_o_orcamento_aprovado
+   reprova: test_tick_recusa_aprovacao_sem_selo
+   reprova: test_tick_recusa_contrato_alterado_depois_da_aprovacao
+   reprova: test_tick_recusa_orcamento_inflado_em_running
+   reprova: test_tick_recusa_selo_fora_do_formato
+   reprova: test_troca_do_registro_de_senha_pelo_agente_e_denunciada
+== M3-tick-nao-confere-selo: Ran 33 tests in 51.421s FAILED (failures=5)
+   reprova: test_forja_consistente_na_cadeia_sem_a_senha_recusada
+   reprova: test_tick_recusa_aprovacao_sem_selo
+   reprova: test_tick_recusa_contrato_alterado_depois_da_aprovacao
+   reprova: test_tick_recusa_orcamento_inflado_em_running
+   reprova: test_tick_recusa_selo_fora_do_formato
+== M4-tick-so-formato-sem-hash-do-plano: Ran 33 tests in 54.895s FAILED (failures=3)
+   reprova: test_forja_consistente_na_cadeia_sem_a_senha_recusada
+   reprova: test_tick_recusa_contrato_alterado_depois_da_aprovacao
+   reprova: test_tick_recusa_orcamento_inflado_em_running
+== M5-conferir-aceita-tudo: Ran 33 tests in 57.143s FAILED (failures=3)
+   reprova: test_conferir_denuncia_aprovacao_sem_selo
+   reprova: test_conferir_denuncia_tag_aleatoria
+   reprova: test_conferir_denuncia_tag_de_outra_senha
+== M6-senha-por-ambiente-sem-tty: Ran 33 tests in 60.634s FAILED (failures=1)
+   reprova: test_approve_nao_aceita_senha_por_argumento_nem_ambiente
+== M7-tag-sem-chave-da-senha: Ran 33 tests in 59.029s FAILED (failures=3)
+   reprova: test_conferir_legitimo_passa_e_nao_muda_o_mandato
+   reprova: test_conferir_senha_errada_ou_sem_terminal_recusa
+   reprova: test_selo_hmac_da_senha_sobre_mandato_plano_orcamento_seq_ts
+== M8-guard-sem-senha-conferir: Ran 33 tests in 55.723s FAILED (failures=1)
+   reprova: test_guard_trata_senha_conferir_e_approve_como_so_do_humano
+== M9-approve-sem-tty-cai-no-stdin: Ran 33 tests in 57.121s FAILED (failures=4)
+   reprova: test_approve_sem_terminal_recusa
+   reprova: test_approve_stdin_em_pipe_recusa_mesmo_com_tty_controlador
+   reprova: test_conferir_senha_errada_ou_sem_terminal_recusa
+   reprova: test_definir_sem_terminal_recusa_e_nao_grava
+
+  M1 aceita qualquer senha (confere desligado) | M2 não grava selo e tick não confere | M3 tick não confere selo
+  M4 tick só formato (sem hash do plano/orçamento) | M5 conferir aceita tudo | M6 senha por $CS_SENHA sem tty
+  M7 tag com chave fixa (não derivada da senha) | M8 guard sem senha/conferir | M9 sem tty cai para stdin
+
+================ S7 REGRESSÃO (mudanca-oficial/mandato-senha.patch) ================
+### patched M5 x skill atual (python3)
+Ran 52 tests in 225.432s
+
+OK
+### patched M5 x referencia (python3)
+Ran 52 tests in 245.692s
+
+OK
+### M5 SEM patch x referencia (python3)
+Ran 52 tests in 54.842s
+FAILED (failures=40)
+### test_cobertura_maquinas SEM patch x referencia (python3)
+Ran 63 tests in 59.759s
+FAILED (failures=15)
+### cobertura+vivacidade (patch) x cur
+  transições exercitadas : 99/101
+  arestas (t × origem)   : 147/149
+  guardas vistas OK      : 129/129
+  guardas vistas RECUSA  : 115/129
+Ran 67 tests in 179.050s
+OK
+### cobertura+vivacidade (patch) x ref
+  transições exercitadas : 99/101
+  arestas (t × origem)   : 147/149
+  guardas vistas OK      : 129/129
+  guardas vistas RECUSA  : 115/129
+Ran 67 tests in 178.529s
+OK

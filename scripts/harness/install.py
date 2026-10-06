@@ -27,7 +27,7 @@ import j5  # noqa: E402
 
 ENGINE_FILES = ["hcore.py", "j5.py", "engine.py", "cmds.py", "views.py", "brief.py", "router.py", "autonomy.py",
                 "session.py", "state.py", "validate.py", "guard.py", "bashscan.py", "selftest.py",
-                "envfail.py", "tree.py", "auto.py"]
+                "envfail.py", "tree.py", "auto.py", "senha.py"]
 DATA_FILES = [(os.path.join(HERE, "machines.json5"), "machines.json5"), (os.path.join(HERE, "routing.json5"), "routing.json5"),
               (os.path.join(MEMORY, "mem.py"), "mem.py")]
 BINS = ["cs-state", "cs-mem", "cs-session", "cs-route", "cs-precommit", "cs-auto"]
@@ -234,10 +234,13 @@ def merge_settings(root, changes, path_env=False):
         env["PATH"] = os.path.join(root, hcore.STATE_DIR, "bin") + os.pathsep + os.environ.get("PATH", "/usr/bin:/bin")
     if new != cur:
         if os.path.isfile(p) and _PLAN is None:
-            shutil.copy2(p, p + ".bak-%s" % time.strftime("%Y%m%d%H%M%S"))
+            bdir = os.path.join(root, hcore.STATE_DIR, "backups", "settings")
+            os.makedirs(bdir, exist_ok=True)
+            shutil.copy2(p, os.path.join(bdir, "settings.json.bak-%s" % time.strftime("%Y%m%d%H%M%S")))
         _write(p, (json.dumps(new, indent=2, ensure_ascii=False) + "\n").encode("utf-8"),
-               reason="merge dos hooks cs-guard%s (evite: --no-settings)" % (" + backup .bak-*" if os.path.isfile(p)
-                                                                              else ""))
+               reason="merge dos hooks cs-guard%s (evite: --no-settings)" % (
+                   " + backup em %s/backups/settings/settings.json.bak-*" % hcore.STATE_DIR if os.path.isfile(p)
+                   else ""))
         changes.append(".claude/settings.json")
 
 

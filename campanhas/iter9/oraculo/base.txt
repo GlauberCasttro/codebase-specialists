@@ -1,0 +1,214 @@
+# base.txt — oráculo SWARM-DIR rodado contra a skill ATUAL (VERSION 0.5.0), 2026-10-04 13:01
+# Comando: python3 test_swarm_dir.py -v   (e /usr/bin/python3)
+
+================ python3 (Python 3.13.3)
+test_constante_em_cslib_paths ... FAIL
+test_motor_espelha_a_constante ... FAIL
+test_nome_legado_fora_de_docs_de_entrada_e_corretor ... FAIL
+test_nome_legado_so_na_allowlist_codigo_e_templates ... FAIL
+Negativo do 'apagar em vez de renomear': os wrappers/hooks continuam existindo, agora em .swarm/. ... FAIL
+test_residuo_reprova_e_limpo_aprova ... FAIL
+test_cria_swarm_com_wrappers_estado_e_run ... FAIL
+test_hooks_e_precommit_apontam_para_swarm ... FAIL
+test_nenhum_nome_legado_no_alvo ... FAIL
+Negativo (falso positivo): o harness desta skill em .swarm/ NÃO é 'outro harness'. ... FAIL
+test_selftest_verde_com_probe_harness_unico ... FAIL
+test_wrapper_funciona_e_guard_protege_swarm_state ... FAIL
+test_cada_sinal_sozinho_bloqueia_init_e_install ... 
+  test_cada_sinal_sozinho_bloqueia_init_e_install (sinal='instance-v8') ... FAIL
+  test_cada_sinal_sozinho_bloqueia_init_e_install (sinal='scripts-harness') ... FAIL
+  test_cada_sinal_sozinho_bloqueia_init_e_install (sinal='kernel') ... FAIL
+  test_cada_sinal_sozinho_bloqueia_init_e_install (sinal='hooks-terceiros') ... FAIL
+test_legado_desta_skill_aponta_upgrade ... FAIL
+Negativo (falso positivo): settings.json só com permissions/env não é harness → init segue em .swarm/. ... FAIL
+test_repo-v8_v8_init_sem_flag_mostra_plano_e_nao_escreve ... FAIL
+test_caminhos_reescritos_em_hooks_settings_makefile_emitidos ... FAIL
+Negativo: legado + `.swarm/instance.json` de outro harness → upgrade não mescla às cegas. ... FAIL
+test_move_para_swarm_sem_sobrar_legado ... FAIL
+test_plano_anuncia_rename_e_nao_escreve ... FAIL
+test_preserva_board_eventos_memoria_aprovacoes ... 
+  test_preserva_board_eventos_memoria_aprovacoes (arquivo='state/board.json5') ... FAIL
+  test_preserva_board_eventos_memoria_aprovacoes (arquivo='team.json5') ... FAIL
+  test_preserva_board_eventos_memoria_aprovacoes (arquivo='state/events.jsonl') ... FAIL
+  test_preserva_board_eventos_memoria_aprovacoes (arquivo='memory/episodes.jsonl') ... FAIL
+  test_preserva_board_eventos_memoria_aprovacoes (arquivo='interview.jsonl') ... FAIL
+  test_preserva_board_eventos_memoria_aprovacoes (arquivo='team-approvals.jsonl') ... FAIL
+  test_preserva_board_eventos_memoria_aprovacoes (arquivo='approvals.jsonl') ... FAIL
+  test_preserva_board_eventos_memoria_aprovacoes (arquivo='state/harness-ledger.jsonl') ... FAIL
+test_selftest_e_validate_verdes_depois ... FAIL
+test_backup_completo_do_harness_anterior ... FAIL
+test_gate_precommit_e_makefile_do_v8_desinstalados_preservando_o_resto ... FAIL
+test_hooks_kernel_scripts_do_v8_removidos ... FAIL
+test_invariantes_do_v8_importados_como_fatos_citaveis ... FAIL
+Sanidade do oráculo (passa hoje): a cópia é um v8 de verdade. ... ok
+test_produto_intacto ... FAIL
+Negativo: rodar de novo não acha 'outro harness' (o backup não conta como harness ativo). ... FAIL
+test_sem_nome_legado_e_selftest_verde_com_harness_unico ... FAIL
+test_um_unico_conjunto_de_hooks_em_settings ... FAIL
+AssertionError: None != '.swarm' : cslib.paths.STATE_DIR deve ser '.swarm'
+AssertionError: Lists differ: ['None', '/r/.specialists/state'] != ['.swarm', '/r/.swarm/state']
+AssertionError: {'SKILL.md': 13, 'MODO-DE-USO.md': 13, 'evals/check_run.py': 45} != {}
+AssertionError: {'scripts/doctests/tests/test_commands_par[5255 chars]': 2} != {}
+AssertionError: unexpectedly None : selftest sem a sonda 'harness único'
+OK    integridade do motor (sha256 × MANIFEST)
+OK    principal escreve produto
+OK    subagente dentro do território (controle positivo)
+OK    subagente fora do território
+OK    X-01 symlink no território apontando para fora
+OK    subagente escreve no estado
+OK    G-01 Bash apaga o próprio estado
+OK    Bash redireciona para fora
+OK    Bash não analisável
+OK    Bash $(...)
+OK    subagente roda cs-state accept
+OK    principal se auto-aprova (review)
+OK    despacho sem id de delegação
+OK    subagente despacha subagente
+OK    leitura simples permitida
+OK    kill-switch libera e registra
+OK    estado ausente bloqueia (fail-closed)
+OK    validate --strict verde no estado legítimo
+OK    validate --strict detecta edição manual
+OK    alvo real: principal escrevendo produto é bloqueado
+OK    validate --strict do alvo (allow-empty: recém-instalado)
+AssertionError: False is not true : wrapper ausente: .swarm/bin/cs-state
+AssertionError: True is not false : diretório legado criado
+AssertionError: False is not true
+AssertionError: unexpectedly None : selftest sem a sonda 'harness único'
+AssertionError: False is not true : .swarm/bin/cs-state ausente
+AssertionError: {'.specialists/': 'dir', '.swarm/': 'dir', 's[2225 chars]cda'} != {'.swarm/': 'dir', 'src/': 'dir', 'tests/': '[1974 chars]cda'}
+AssertionError: {'.specialists/': 'dir', 'scripts/': 'dir',[2264 chars]cda'} != {'scripts/': 'dir', 'src/': 'dir', 'tests/'[2013 chars]cda'}
+AssertionError: {'.claude/': 'dir', '.specialists/': 'dir', 'src/': 'dir', 'te[2242 chars]cda'} != {'.claude/': 'dir', 'src/': 'dir', 'tests/': 'dir', 'README.md[1991 chars]cda'}
+AssertionError: {'.claude/': 'dir', '.specialists/': 'dir', 'src/': 'dir', 'te[2341 chars]cda'} != {'.claude/': 'dir', 'src/': 'dir', 'tests/': 'dir', 'README.md[2090 chars]cda'}
+AssertionError: {'.sp[267 chars]5': '5b824fa1e968aae841f8f327a3a28effcb8615122[1944 chars]cda'} != {'.sp[267 chars]5': 'a8c055838cdb53170a6196c554e0569ca74f71935[1841 chars]cda'}
+AssertionError: False is not true
+AssertionError: {'.ag[52 chars], '.specialists/': 'dir', '.swarm/': 'dir', '_[134882 chars]cda'} != {'.ag[52 chars], '.swarm/': 'dir', '_to_delete/': 'dir', 'bra[134631 chars]cda'}
+AssertionError: Lists differ: [('.specialists/', 'diretório legado'), ('[3896 chars]it')] != []
+AssertionError: 0 != 3 : upgrade: /private/var/folders/bz/rkyyq55x3v5g3jqsxjq8vg8r0000gn/T/o-legado-3f9plclb/conflito
+AssertionError: True is not false : diretório legado sobrou
+AssertionError: False is not true : sumiu: .swarm/state/board.json5
+AssertionError: False is not true : sumiu: .swarm/team.json5
+AssertionError: False is not true : sumiu: .swarm/state/events.jsonl
+AssertionError: False is not true : sumiu: .swarm/memory/episodes.jsonl
+AssertionError: False is not true : sumiu: .swarm/interview.jsonl
+AssertionError: False is not true : sumiu: .swarm/team-approvals.jsonl
+AssertionError: False is not true : sumiu: .swarm/approvals.jsonl
+AssertionError: False is not true : sumiu: .swarm/state/harness-ledger.jsonl
+AssertionError: None is not true : sonda 'harness único' ausente/vermelha: None
+AssertionError: 2 != 0 : usage: cs.py [-h] [--target TARGET] <subcomando> ...
+AssertionError: 2 != 0 : usage: cs.py [-h] [--target TARGET] <subcomando> ...
+AssertionError: 2 != 0 : usage: cs.py [-h] [--target TARGET] <subcomando> ...
+AssertionError: 2 != 0 : usage: cs.py [-h] [--target TARGET] <subcomando> ...
+AssertionError: 2 != 0 : usage: cs.py [-h] [--target TARGET] <subcomando> ...
+AssertionError: 2 != 0 : usage: cs.py [-h] [--target TARGET] <subcomando> ...
+AssertionError: 2 != 0 : usage: cs.py [-h] [--target TARGET] <subcomando> ...
+AssertionError: 2 != 0 : usage: cs.py [-h] [--target TARGET] <subcomando> ...
+Ran 31 tests in 28.099s
+FAILED (failures=40)
+tempo de parede: 28s
+
+================ /usr/bin/python3 (Python 3.9.6)
+test_constante_em_cslib_paths ... FAIL
+test_motor_espelha_a_constante ... FAIL
+test_nome_legado_fora_de_docs_de_entrada_e_corretor ... FAIL
+test_nome_legado_so_na_allowlist_codigo_e_templates ... FAIL
+Negativo do 'apagar em vez de renomear': os wrappers/hooks continuam existindo, agora em .swarm/. ... FAIL
+test_residuo_reprova_e_limpo_aprova ... FAIL
+test_cria_swarm_com_wrappers_estado_e_run ... FAIL
+test_hooks_e_precommit_apontam_para_swarm ... FAIL
+test_nenhum_nome_legado_no_alvo ... FAIL
+Negativo (falso positivo): o harness desta skill em .swarm/ NÃO é 'outro harness'. ... FAIL
+test_selftest_verde_com_probe_harness_unico ... FAIL
+test_wrapper_funciona_e_guard_protege_swarm_state ... FAIL
+test_cada_sinal_sozinho_bloqueia_init_e_install ... test_legado_desta_skill_aponta_upgrade (__main__.TestSwarmDir2OutroHarnessNaoEscreve) ... FAIL
+Negativo (falso positivo): settings.json só com permissions/env não é harness → init segue em .swarm/. ... FAIL
+test_repo-v8_v8_init_sem_flag_mostra_plano_e_nao_escreve ... FAIL
+test_caminhos_reescritos_em_hooks_settings_makefile_emitidos ... FAIL
+Negativo: legado + `.swarm/instance.json` de outro harness → upgrade não mescla às cegas. ... FAIL
+test_move_para_swarm_sem_sobrar_legado ... FAIL
+test_plano_anuncia_rename_e_nao_escreve ... FAIL
+test_preserva_board_eventos_memoria_aprovacoes ... test_selftest_e_validate_verdes_depois (__main__.TestSwarmDir3UpgradeLegado) ... FAIL
+test_backup_completo_do_harness_anterior ... FAIL
+test_gate_precommit_e_makefile_do_v8_desinstalados_preservando_o_resto ... FAIL
+test_hooks_kernel_scripts_do_v8_removidos ... FAIL
+test_invariantes_do_v8_importados_como_fatos_citaveis ... FAIL
+Sanidade do oráculo (passa hoje): a cópia é um v8 de verdade. ... ok
+test_produto_intacto ... FAIL
+Negativo: rodar de novo não acha 'outro harness' (o backup não conta como harness ativo). ... FAIL
+test_sem_nome_legado_e_selftest_verde_com_harness_unico ... FAIL
+test_um_unico_conjunto_de_hooks_em_settings ... FAIL
+AssertionError: None != '.swarm' : cslib.paths.STATE_DIR deve ser '.swarm'
+AssertionError: Lists differ: ['None', '/r/.specialists/state'] != ['.swarm', '/r/.swarm/state']
+AssertionError: {'SKILL.md': 13, 'MODO-DE-USO.md': 13, 'evals/check_run.py': 45} != {}
+AssertionError: {'scripts/doctests/tests/test_commands_par[5255 chars]': 2} != {}
+AssertionError: unexpectedly None : selftest sem a sonda 'harness único'
+OK    integridade do motor (sha256 × MANIFEST)
+OK    principal escreve produto
+OK    subagente dentro do território (controle positivo)
+OK    subagente fora do território
+OK    X-01 symlink no território apontando para fora
+OK    subagente escreve no estado
+OK    G-01 Bash apaga o próprio estado
+OK    Bash redireciona para fora
+OK    Bash não analisável
+OK    Bash $(...)
+OK    subagente roda cs-state accept
+OK    principal se auto-aprova (review)
+OK    despacho sem id de delegação
+OK    subagente despacha subagente
+OK    leitura simples permitida
+OK    kill-switch libera e registra
+OK    estado ausente bloqueia (fail-closed)
+OK    validate --strict verde no estado legítimo
+OK    validate --strict detecta edição manual
+OK    alvo real: principal escrevendo produto é bloqueado
+OK    validate --strict do alvo (allow-empty: recém-instalado)
+AssertionError: False is not true : wrapper ausente: .swarm/bin/cs-state
+AssertionError: True is not false : diretório legado criado
+AssertionError: False is not true
+AssertionError: unexpectedly None : selftest sem a sonda 'harness único'
+AssertionError: False is not true : .swarm/bin/cs-state ausente
+AssertionError: {'.specialists/': 'dir', '.swarm/': 'dir', 's[2225 chars]cda'} != {'.swarm/': 'dir', 'src/': 'dir', 'tests/': '[1974 chars]cda'}
+AssertionError: {'.specialists/': 'dir', 'scripts/': 'dir',[2264 chars]cda'} != {'scripts/': 'dir', 'src/': 'dir', 'tests/'[2013 chars]cda'}
+AssertionError: {'.claude/': 'dir', '.specialists/': 'dir', 'src/': 'dir', 'te[2242 chars]cda'} != {'.claude/': 'dir', 'src/': 'dir', 'tests/': 'dir', 'README.md[1991 chars]cda'}
+AssertionError: {'.claude/': 'dir', '.specialists/': 'dir', 'src/': 'dir', 'te[2341 chars]cda'} != {'.claude/': 'dir', 'src/': 'dir', 'tests/': 'dir', 'README.md[2090 chars]cda'}
+AssertionError: {'.sp[267 chars]5': '2ec7f56cea3c92c89b083015029318ee2f5e372ae[1944 chars]cda'} != {'.sp[267 chars]5': 'a8c055838cdb53170a6196c554e0569ca74f71935[1841 chars]cda'}
+AssertionError: False is not true
+AssertionError: {'.ag[52 chars], '.specialists/': 'dir', '.swarm/': 'dir', '_[134882 chars]cda'} != {'.ag[52 chars], '.swarm/': 'dir', '_to_delete/': 'dir', 'bra[134631 chars]cda'}
+AssertionError: Lists differ: [('.specialists/', 'diretório legado'), ('[3896 chars]it')] != []
+AssertionError: 0 != 3 : upgrade: /private/var/folders/bz/rkyyq55x3v5g3jqsxjq8vg8r0000gn/T/o-legado-wyuea2rh/conflito
+AssertionError: True is not false : diretório legado sobrou
+AssertionError: False is not true : sumiu: .swarm/state/board.json5
+AssertionError: False is not true : sumiu: .swarm/team.json5
+AssertionError: False is not true : sumiu: .swarm/state/events.jsonl
+AssertionError: False is not true : sumiu: .swarm/memory/episodes.jsonl
+AssertionError: False is not true : sumiu: .swarm/interview.jsonl
+AssertionError: False is not true : sumiu: .swarm/team-approvals.jsonl
+AssertionError: False is not true : sumiu: .swarm/approvals.jsonl
+AssertionError: False is not true : sumiu: .swarm/state/harness-ledger.jsonl
+AssertionError: None is not true : sonda 'harness único' ausente/vermelha: None
+AssertionError: 2 != 0 : usage: cs.py [-h] [--target TARGET] <subcomando> ...
+AssertionError: 2 != 0 : usage: cs.py [-h] [--target TARGET] <subcomando> ...
+AssertionError: 2 != 0 : usage: cs.py [-h] [--target TARGET] <subcomando> ...
+AssertionError: 2 != 0 : usage: cs.py [-h] [--target TARGET] <subcomando> ...
+AssertionError: 2 != 0 : usage: cs.py [-h] [--target TARGET] <subcomando> ...
+AssertionError: 2 != 0 : usage: cs.py [-h] [--target TARGET] <subcomando> ...
+AssertionError: 2 != 0 : usage: cs.py [-h] [--target TARGET] <subcomando> ...
+AssertionError: 2 != 0 : usage: cs.py [-h] [--target TARGET] <subcomando> ...
+Ran 31 tests in 30.954s
+FAILED (failures=40)
+tempo de parede: 31s
+
+================ LEITURA
+31 testes; 30 falham hoje (40 falhas contando subTests). O único que passa é
+TestSwarmDir4ReplaceHarness.test_pre_condicoes_da_copia — sanidade do PRÓPRIO oráculo (a cópia do repo v8 é um v8
+real: BIZ-1..3 em DOMAIN_INVARIANTS.yaml, .swarm/instance.json, .claude/kernel, ≥5 hooks v8). Não é requisito; deve
+passar sempre — se falhar, o insumo mudou, não a skill.
+Motivos de falha hoje (por classe):
+  ConstanteUnica   — cslib.paths sem STATE_DIR/LEGACY_STATE_DIR; hcore.state_paths → .specialists; ~141 arquivos citam
+                     o nome legado fora da allowlist; SKILL.md/MODO-DE-USO.md também; templates apontam p/ o legado.
+  SWARM-DIR-1      — init/install criam o diretório legado; nada em .swarm/; selftest sem sonda 'harness único'.
+  SWARM-DIR-2      — init e install escrevem (exit 0) com v8/kernel/scripts/harness/hooks de terceiros presentes.
+  SWARM-DIR-3      — upgrade --apply (exit 0) mantém o legado (rename-dir é reservado); nada em .swarm/.
+  SWARM-DIR-4      — `init --replace-harness --allow-outside` → argparse exit 2 (flag inexistente).
+  Harness único    — selftest não tem a sonda.

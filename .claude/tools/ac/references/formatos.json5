@@ -1,0 +1,38 @@
+// formatos.json5 — schemas dos artefatos da campanha (em <campanha>/.auto-correcao/rounds/<n>/).
+{
+  defeitos: {  // DEFEITOS.json5
+    defeitos: [{
+      id: "D-<rodada>-<nn>",
+      titulo: "uma linha",
+      classe: "sistema|oraculo|ambiente|executor",
+      prioridade: "P0|P1|P2|P3",  // P0: bloqueia ou faz o veredito mentir
+      evidencia: ["comando + erro literal", "arquivo:linha", "execução: <dir>/notes.md#item"],
+      reproduzido: true,
+      frente: "nome da frente (só classe sistema)",
+    }],
+  },
+  plano: {  // PLANO.json5
+    decisoes: [{id: "DEC-1", produto: true, texto: "..."}],  // esquema v0.3: {id, produto, texto}; produto:true exige `ac.py gate plan:<id>` (nome do portão é sempre plan:<id>; o campo `gate` antigo é ignorado)
+    contrato: {"<nome>": "comando/campo exato que todas as frentes usam"},
+    frentes: [{nome: "frente-x", escreve: ["glob", "..."], defeitos: ["D-1-01"], criterio: "teste falha antes e passa depois"}],
+    parada: "critério numérico (copiado do intake)",
+  },
+  run: {  // registrado por `ac.py run record`
+    round: 0, config: "sistema|baseline|<modo>", alvo: "nome", dir: "abs",
+    quality: {passed: 0, total: 0}, structure: {passed: 0, total: 0},
+    tokens: 0, minutes: 0, decision: "GO|NO-GO|—", simulated: true, notes: "abs/notes.md",
+    // v0.3 (L02): base = 1ª execução com nota (quality.total) da rodada; run record com quality.total ≠ base é RECUSADO (exit ≠0, mensagem cita L02, nada em runs.jsonl),
+    // salvo `oracle change` com timestamp posterior ao da base. Para remedicao.1, `at` deve ser posterior a done["correcao.1"] e `decision` não vazia.
+  },
+  auditoria: {  // v0.3: 1 linha JSON por aprovação bem-sucedida (gate|preauth) em $AC_AUDIT_LOG (só CAMINHO; padrão sugerido ~/.claude/auto-correcao/audit.jsonl)
+    cmd: "gate|preauth", name: "portão", decision: "approve|reject (só gate)", by: "texto livre, NÃO prova ator",
+    work: "realpath da campanha", user: "usuário do SO", tty: "ttyname", ts: "UTC",
+    // se AC_AUDIT_LOG resolver para dentro de --work → recusa (exit ≠0, nada gravado)
+  },
+  notes_md: [  // o que todo executor de rodada escreve em notes.md
+    "onde as instruções do sistema estavam ambíguas ou erradas (citação)",
+    "cada comando que falhou: comando exato + erro literal",
+    "cada contorno manual que precisou fazer (isso é defeito, mesmo que tenha dado certo)",
+    "desvios do executor (o que ele fez fora do roteiro e por quê)",
+  ],
+}

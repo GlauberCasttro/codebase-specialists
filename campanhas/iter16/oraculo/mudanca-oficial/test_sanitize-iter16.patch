@@ -1,0 +1,27 @@
+--- codebase-specialists/scripts/sanitize/tests/test_sanitize.py
++++ codebase-specialists/scripts/sanitize/tests/test_sanitize.py
+@@ -260,13 +260,17 @@
+         # iter6 (cobaia .NET): com painel POR-QUÊ pendente a cópia FICA (os juízes leem o repo nela); só sai no check
+         # que roda depois de o painel registrar os vereditos
+         pend = json5io.load(os.path.join(self.root, D, "probes", "reports", "%s.json5" % AGENT)).get("panel_pending")
+-        if pend:
+-            self.assertTrue(os.path.isdir(os.path.join(out, "repo")), "cópia apagada com painel pendente")
+-            for pid in pend:
+-                code, o, e = cs(self.root, "panel", "why", AGENT, "--probe", pid, "--verdict", "PASS")
+-                self.assertEqual(code, 0, o + e)
+-            code, o, e = cs(self.root, "probes", "check", AGENT)
+-            self.assertIn(code, (0, 1), o + e)
++        # pré-condição EXPLÍCITA (iter16): sem `why` pendente o contrato novo não seria exercido e o teste passaria
++        # em silêncio; o banco do synth tem POR-QUÊ para dev-billing e `perfect` cita a fonte → painel pendente
++        self.assertTrue(pend, "pré-condição: o exame de %s precisa de sonda why pendente de painel" % AGENT)
++        self.assertTrue(os.path.isdir(os.path.join(out, "repo")), "cópia apagada com painel pendente")
++        for pid in pend:
++            code, o, e = cs(self.root, "panel", "why", AGENT, "--probe", pid, "--verdict", "PASS")
++            self.assertEqual(code, 0, o + e)
++        code, o, e = cs(self.root, "probes", "check", AGENT)
++        self.assertIn(code, (0, 1), o + e)
++        self.assertFalse(json5io.load(os.path.join(self.root, D, "probes", "reports", "%s.json5" % AGENT))
++                         .get("panel_pending"), "painel registrado: nada pendente no check seguinte")
+ 
+     def test_copy_inside_tmp_is_removed_after_check(self):
+         out = os.path.join(self.root, D, "tmp", "exam", AGENT)

@@ -72,10 +72,10 @@ class TestM2M3(Base):
 
     def test_verify_detects_write_outside_and_undeclared(self):
         fixture.dispatched(self.root)
-        fixture.write(self.root, "src/members/model.py", "AGE = 21\n")
+        fixture.write(self.root, "src/users/model.py", "AGE = 21\n")
         fixture.submit_ok(self.root)
         _, ev = cmds.verify(self.root, A, "T-1")
-        self.assertTrue(any("FORA de allowed_paths: src/members/model.py" in p for p in ev[-1]["data"]["problems"]))
+        self.assertTrue(any("FORA de allowed_paths: src/users/model.py" in p for p in ev[-1]["data"]["problems"]))
 
     def test_declared_but_not_changed(self):
         fixture.dispatched(self.root, paths=("src/billing/discount.py", "src/billing/tax.py"))
@@ -109,7 +109,7 @@ class TestM2M3(Base):
         with self.assertRaises(Refused):
             cmds.submit(self.root, "dev-billing", "T-1", {"files_changed": []})
         with self.assertRaises(Refused):
-            cmds.submit(self.root, "dev-billing", "T-1", {"files_changed": ["src/members/model.py"], "checks_run": ["x"],
+            cmds.submit(self.root, "dev-billing", "T-1", {"files_changed": ["src/users/model.py"], "checks_run": ["x"],
                                                          "risks": [], "handoff_notes": ""})
         cmds.return_(self.root, A, "T-1")
         self.assertEqual(self.deleg()["state"], "REJECTED")
@@ -122,7 +122,7 @@ class TestM2M3(Base):
         with self.assertRaises(Refused):
             cmds.review(self.root, A, "T-1", "dev-billing", "PASS", "eu mesmo")  # autor
         with self.assertRaises(Refused):
-            cmds.review(self.root, A, "T-1", "dev-members", "PASS", "não é gate")
+            cmds.review(self.root, A, "T-1", "dev-users", "PASS", "não é gate")
         with self.assertRaises(Refused):
             cmds.review(self.root, A, "T-1", "reviewer", "OK", "fora do enum")
         with self.assertRaises(Refused):
@@ -146,9 +146,9 @@ class TestM2M3(Base):
         self.assertEqual(t["attempts"], 3)
         with self.assertRaises(Refused):
             cmds.retry(self.root, A, "T-1", "mais uma")
-        cmds.reroute(self.root, A, "T-1", "dev-members", "outro território", ["src/members/discount.py"])
+        cmds.reroute(self.root, A, "T-1", "dev-users", "outro território", ["src/users/discount.py"])
         t = self.task()
-        self.assertEqual((t["agent"], t["status"], self.deleg()["state"]), ("dev-members", "DRAFT", "PLANNED"))
+        self.assertEqual((t["agent"], t["status"], self.deleg()["state"]), ("dev-users", "DRAFT", "PLANNED"))
 
     def test_abstain_counts_not_as_error(self):
         fixture.dispatched(self.root)
@@ -169,7 +169,7 @@ class TestBrief(Base):
     def test_brief_invalid_not_briefed(self):
         fixture.process(self.root)
         cases = [
-            dict(paths=("src/members/model.py",)),            # fora do território
+            dict(paths=("src/users/model.py",)),            # fora do território
             dict(paths=("**",)),                            # amplo
             dict(paths=()),                                 # vazio
             dict(verification_command="rode os testes e veja se passa direito"),  # prosa
@@ -188,7 +188,7 @@ class TestBrief(Base):
         inv = {i["id"] for i in self.task()["briefing"]["invariants"]}
         self.assertIn("rule.billing.cents", inv)
         self.assertIn("br.billing.max-discount", inv)
-        self.assertNotIn("br.members.age", inv)
+        self.assertNotIn("br.users.age", inv)
 
     def test_amend_is_event(self):
         fixture.dispatched(self.root)
@@ -272,7 +272,7 @@ class TestM1(Base):
         cmds.accept(self.root, A, "T-PO")
 
     def test_parallel_collision_blocked_paths_and_collision_file(self):
-        col = {"do_not_parallelize": [{"a": "dev-billing", "b": "dev-members", "co_change": 0.8, "deps": 12}]}
+        col = {"do_not_parallelize": [{"a": "dev-billing", "b": "dev-users", "co_change": 0.8, "deps": 12}]}
         root = fixture.make_repo(with_collision=col)
         try:
             fixture.process(root, "feature")
@@ -280,8 +280,8 @@ class TestM1(Base):
                                                       briefing={"references": ["docs/stories/README.md"],
                                                                 "scope": {"in": ["us1"], "out": ["código"]}}, wave=0), ready=True)
             cmds.add_task(root, A, fixture.task_spec(id="T-1"), ready=True)
-            cmds.add_task(root, A, fixture.task_spec(id="T-2", agent="dev-members", paths=("src/members/discount.py",),
-                                                      briefing={"references": ["src/members/model.py"],
+            cmds.add_task(root, A, fixture.task_spec(id="T-2", agent="dev-users", paths=("src/users/discount.py",),
+                                                      briefing={"references": ["src/users/model.py"],
                                                                 "scope": {"in": ["x"], "out": ["y"]}}), ready=True)
             with self.assertRaises(Refused) as cm:
                 cmds.session_cmd(root, A, "execute")
@@ -300,8 +300,8 @@ class TestM1(Base):
     def test_overlapping_inflight_blocked(self):
         fixture.dispatched(self.root, paths=("src/billing/discount.py",))
         ctx = self.ctx()
-        cmds.add_task(self.root, A, fixture.task_spec(id="T-2", agent="dev-members", paths=("src/members/discount.py",),
-                                                       briefing={"references": ["src/members/model.py"], "scope": {"in": ["x"], "out": ["y"]}}),
+        cmds.add_task(self.root, A, fixture.task_spec(id="T-2", agent="dev-users", paths=("src/users/discount.py",),
+                                                       briefing={"references": ["src/users/model.py"], "scope": {"in": ["x"], "out": ["y"]}}),
                       ready=True)
         d2 = self.deleg("T-2")
         cmds.dispatch(self.root, A, "T-2", model=d2["route"]["model"])  # disjunto, sem collision.json5: ok

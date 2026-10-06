@@ -1,8 +1,8 @@
 # 07 — Evals e qualidade
 
 Como a skill é medida, e o que as medições disseram até agora. Fontes: `evals/README.md`, `evals/evals.json`,
-`evals/check_run.py`, `evals/summarize.py`, `evals/fixtures/`, e os resultados
-das rodadas de avaliação internas (`rodada-1` … `rodada-4`; não publicadas).
+`evals/check_run.py`, `evals/summarize.py`, `evals/fixtures/`, e os resultados em
+`campanhas/` (`iteration-1` … `iteration-4`, `PROXIMA-RODADA.md`).
 
 ## 1. O oráculo
 
@@ -49,9 +49,9 @@ ainda casa o texto esperado.
 | 7, 8, 9 | ts-shop-setup-7/8/9 | montar o time |
 | 10, 11, 12 | go-polyglot-setup-10/11/12 | montar o time |
 
-As rodadas registradas nas rodadas internas usaram os evals **1, 7 e 10** (prompts vagos: "monta o time de agentes pra
+As rodadas registradas no workspace usaram os evals **1, 7 e 10** (prompts vagos: "monta o time de agentes pra
 esse repo", "create a team of expert agents for this monorepo", "monta o time de agentes especialistas para
-este repo"). Os evals 4–6 (autônomo, escalada, bugfix) **não aparecem** nos resultados das rodadas internas.
+este repo"). Os evals 4–6 (autônomo, escalada, bugfix) **não aparecem** nos resultados do workspace.
 
 ### `check_run.py` — duas famílias de asserção
 
@@ -122,7 +122,7 @@ Evals de setup com prompt vago. [Q] = qualidade (13 asserções); [S] = estrutur
 | 4 | py-billing | `--fast` | — | — | pausada | — | — | parou em validate.3 |
 | 4 | go-polyglot | `--fast` | — | — | pausada | — | — | parou em validate.2 |
 
-Agregado da iteração 2 (`rodada-2/benchmark-q.md`, 3 runs por config):
+Agregado da iteração 2 (`iteration-2/benchmark-q.md`, 3 runs por config):
 
 | Métrica | with_skill | without_skill | Delta |
 |---|---|---|---|
@@ -137,12 +137,12 @@ Agregado da iteração 2 (`rodada-2/benchmark-q.md`, 3 runs por config):
   baseline. As falhas típicas da baseline são cobertura de território, histórico real (hotspots, co-change,
   commits de correção), versões exatas do lockfile e invariantes de ADR entregues a todos os donos.
 - **Modo**: na py-billing (iteração 3), `--fast` e `--full` deram o mesmo [Q] 13/13; mesa redonda e refino mudam
-  a certificação (G2/G4), não a qualidade (`rodada-3/RESULTADOS.json5 → leitura`; premissa PR-26). Daí o
+  a certificação (G2/G4), não a qualidade (`iteration-3/RESULTADOS.json5 → leitura`; premissa PR-26). Daí o
   `--fast` como padrão.
 - **Decisão**: até a iteração 3 as decisões foram dominadas por defeitos da própria skill. Na iteração 4 só a
   ts-shop concluiu (GO simulado) e precisou de 5 contornos manuais; o critério de parada da campanha
   ("≥2/3 GO; zero contornos manuais; [Q] ≥ baseline nos 3; testes verdes") **não foi cumprido**
-  (`rodada-4/RESULTADOS-E-DEFEITOS.json5`).
+  (`iteration-4/RESULTADOS-E-DEFEITOS.json5`).
 - **Custo**: ~3–4× o tempo e o número de tokens da baseline só no orquestrador, mais dezenas de subagentes.
 
 ## 3. Limites conhecidos do corretor
@@ -151,7 +151,7 @@ De `evals/README.md` e das rodadas:
 
 - **Negação**: o corretor erra em frases como "X não existe" lidas como afirmação. Casos medidos: go-polyglot
   iteração 3 (2 falsos positivos) e ts-shop iteração 4 (STALE: "playwright" citado para dizer que **não**
-  existe) — defeito P2 aberto. O plano da rodada seguinte manda conferir à mão ≥2 asserções por configuração antes de
+  existe) — defeito P2 aberto. `PROXIMA-RODADA.md` manda conferir à mão ≥2 asserções por configuração antes de
   confiar.
 - `NEG_RE` casa `no` como palavra inteira: em português "no" (em + o) faz linhas como "TypeScript no front"
   serem descartadas por NEG/FIX/STALE (leniente). Conhecido; não corrigido para não mudar notas publicadas.
@@ -164,5 +164,5 @@ De `evals/README.md` e das rodadas:
   num alvo em que a execução chegou a `validate` fechado.
 - `cs-state`, `cs-route` e `cs-mem stats` não têm saída JSON: os cenários casam texto.
 - G14 não cobre "gate ≥ tier do autor" por cenário (o `cs-route recommend` não expõe o tier do autor).
-- Mudança no corretor numa campanha só com justificativa e evidência (registro do tipo
-  `oracle change --why --evidence`).
+- Mudança no corretor numa campanha só com justificativa e evidência (`PROXIMA-RODADA.md`: `ac.py oracle change
+  --why --evidence`, da skill `auto-correcao`).

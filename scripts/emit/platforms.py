@@ -2,6 +2,7 @@
 
 Formatos e fontes oficiais: references/platforms.md. Camadas: references/ARCHITECTURE.md §8-ter.
 """
+import json
 import re
 from pathlib import Path
 from cslib.paths import STATE_DIR
@@ -108,12 +109,27 @@ ORCH_CLAUDE = ".claude/orchestrator.md"
 ORCH_CURSOR = ".cursor/rules/cs-orchestrator.mdc"
 
 SESSION_SKILLS = (
-    ("salvar-sessao", "session-save.md",
+    ("save-session", "session-save.md",
      "Salva a sessão via `.swarm/bin/cs-session save` (feito/próximo/bloqueio em 1 linha cada).",
      [("argument-hint", yq("[--commit]")), ("allowed-tools", yq("Bash(.swarm/bin/cs-session save *)"))]),
-    ("carregar-sessao", "session-load.md",
+    ("load-session", "session-load.md",
      "Retoma a sessão: injeta o briefing de `.swarm/bin/cs-session load` sem ler arquivos de estado.",
      [("allowed-tools", yq("Bash(.swarm/bin/cs-session load *)"))]),
+)
+
+# Demais skills de comando do Claude Code (todas só humanas): (nome, kind, camada, template, descrição, frontmatter).
+COMMAND_SKILLS = (
+    ("correct", "claude.session", "SESSION", "correct.md",
+     "Registra a correção do usuário como lição do agente que errou (`.swarm/bin/cs-mem correct`).",
+     [("argument-hint", yq("<agente> <o que estava errado> -> <o certo>, porque <porquê>")),
+      ("allowed-tools", yq("Bash(.swarm/bin/cs-mem correct *)"))]),
+    ("plan-sprint", "claude.command", "CMD", "plan-sprint.md",
+     "Planeja a próxima sprint com stories que passam no DoR, via `.swarm/bin/cs-state sprint plan`.",
+     [("argument-hint", yq("[--dry-run]"))]),
+    ("feature-autonoma", "claude.command", "CMD", "feature-autonoma.md",
+     "Inicia o modo autônomo de uma feature: aprovação única de spec, testes de aceite, "
+     "classe e orçamento; depois `.swarm/bin/cs-state next` até o relatório.",
+     [("argument-hint", yq("<feature-id> <arquivo-spec>")), ("arguments", "[feature, spec]")]),
 )
 
 # Skills de estado (árvore de trabalho): finas, tudo mecânico no `cs-state`. Consulta e criação são
@@ -121,7 +137,7 @@ SESSION_SKILLS = (
 STATE_SKILLS = (
     ("board", False, "[--json]", ("board", "tree", "find"),
      "Mostra o quadro de trabalho (épicos, sprints, features, stories, tasks) via `cs-state board`/`tree --json`."),
-    ("new-epico", False, "<título> -- <objetivo> [-- <métrica>]", ("new epico", "board"),
+    ("new-epic", False, "<título> -- <objetivo> [-- <métrica>]", ("new epico", "board"),
      "Cria um épico via `cs-state new epico` (mostra antes com --dry-run). Use quando o usuário pedir um épico novo."),
     ("new-sprint", False, "<meta> [<EPC>]", ("new sprint", "board"),
      "Cria uma sprint via `cs-state new sprint` (mostra antes com --dry-run). Use quando o usuário pedir uma sprint nova."),
@@ -138,7 +154,7 @@ STATE_SKILLS = (
      "Fecha uma feature via `cs-state close` (o motor confere o DoD e arquiva)."),
     ("close-sprint", True, "<SPR> <resumo>", ("close", "board"),
      "Fecha uma sprint via `cs-state close` (o motor confere o DoD e arquiva)."),
-    ("close-epico", True, "<EPC> <resumo>", ("close", "board"),
+    ("close-epic", True, "<EPC> <resumo>", ("close", "board"),
      "Fecha um épico via `cs-state close` (o motor confere o DoD e arquiva)."),
     ("close-story", True, "<US|BUG|FIX id> <resumo>", ("close", "board"),
      "Fecha uma story composta via `cs-state close` (só com todas as tasks fechadas)."),
@@ -174,6 +190,24 @@ AUTO_SKILLS = (
 )
 STATE_SKILL_NAMES = tuple(s[0] for s in STATE_SKILLS) + tuple(s[0] for s in AUTO_SKILLS)
 STATE_SKILLS_HUMAN = tuple(s[0] for s in STATE_SKILLS + AUTO_SKILLS if s[1])
+
+
+def skills_catalog():
+    """Fonte única do guia (`cs.py skills-guide`): toda skill de comando que o emit gera, na ordem do Claude Code.
+    → [{name, desc, human, hint}] (hint = argument-hint cru ou None; human = disable-model-invocation)."""
+    out = []
+    for name, _tpl, desc, extra in SESSION_SKILLS:
+        out.append(_catalog_entry(name, desc, True, extra))
+    for name, _k, _l, _tpl, desc, extra in COMMAND_SKILLS:
+        out.append(_catalog_entry(name, desc, True, extra))
+    for name, human, hint, _cmds, desc in STATE_SKILLS + AUTO_SKILLS:
+        out.append({"name": name, "desc": desc, "human": bool(human), "hint": hint})
+    return out
+
+
+def _catalog_entry(name, desc, human, extra):
+    hint = dict(extra).get("argument-hint")
+    return {"name": name, "desc": desc, "human": human, "hint": json.loads(hint) if hint is not None else None}
 
 
 def state_skills():
@@ -266,27 +300,10 @@ def claude_code(ctx):
                              OWNED, owned_md(sfm, template(tpl))))
     arts.append(Artifact("claude-code", "claude.memory", "S0", "CLAUDE.md", BLOCK,
                          render.s0_fit(team, ".claude/agents/{n}.md", "native", render.orch_pointer(ORCH_CLAUDE))))
-    cfm = [("name", "corrigir"),
-           ("description", yq("Registra a correção do usuário como lição do agente que errou (`.swarm/bin/cs-mem correct`).")),
-           ("disable-model-invocation", "true"),
-           ("argument-hint", yq("<agente> <o que estava errado> -> <o certo>, porque <porquê>")),
-           ("allowed-tools", yq("Bash(.swarm/bin/cs-mem correct *)"))]
-    arts.append(Artifact("claude-code", "claude.session", "SESSION", ".claude/skills/corrigir/SKILL.md",
-                         OWNED, owned_md(cfm, template("corrigir.md"))))
-    pfm = [("name", "planejar-sprint"),
-           ("description", yq("Planeja a próxima sprint com stories que passam no DoR, via `.swarm/bin/cs-state sprint plan`.")),
-           ("disable-model-invocation", "true"),
-           ("argument-hint", yq("[--dry-run]"))]
-    arts.append(Artifact("claude-code", "claude.command", "CMD", ".claude/skills/planejar-sprint/SKILL.md",
-                         OWNED, owned_md(pfm, template("planejar-sprint.md"))))
-    afm = [("name", "feature-autonoma"),
-           ("description", yq("Inicia o modo autônomo de uma feature: aprovação única de spec, testes de aceite, "
-                              "classe e orçamento; depois `.swarm/bin/cs-state next` até o relatório.")),
-           ("disable-model-invocation", "true"),
-           ("argument-hint", yq("<feature-id> <arquivo-spec>")),
-           ("arguments", "[feature, spec]")]
-    arts.append(Artifact("claude-code", "claude.command", "CMD", ".claude/skills/feature-autonoma/SKILL.md",
-                         OWNED, owned_md(afm, template("feature-autonoma.md"))))
+    for cmd, kind, layer, tpl, desc, extra in COMMAND_SKILLS:
+        sfm = [("name", cmd), ("description", yq(desc)), ("disable-model-invocation", "true")] + extra
+        arts.append(Artifact("claude-code", kind, layer, ".claude/skills/%s/SKILL.md" % cmd,
+                             OWNED, owned_md(sfm, template(tpl))))
     arts.extend(state_skills())
     arts.append(Artifact("claude-code", "claude.orchestrator", "ORCH", ORCH_CLAUDE, OWNED,
                          owned_md(None, render.orchestrator_kernel(team))))

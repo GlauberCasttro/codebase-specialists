@@ -233,7 +233,7 @@ def agent_map_lines(team, s1_pointer):
 # Linhas operacionais do S0: versão "native" (Claude Code, com comandos /x) e "terminal" (demais plataformas).
 S0_LINES = {
     "session": {
-        "native": "Sessão: `/salvar-sessao` ao parar e `/carregar-sessao` ao retomar (chamam `.swarm/bin/cs-session`; "
+        "native": "Sessão: `/save-session` ao parar e `/load-session` ao retomar (chamam `.swarm/bin/cs-session`; "
                   "não leia arquivos de estado).",
         "terminal": "Sessão: ao parar, `.swarm/bin/cs-session save --did \"<feito>\" --next \"<próximo>\" "
                     "[--blocked \"<bloqueio>\"]`; ao retomar, `.swarm/bin/cs-session load`. Não leia arquivos de estado."},
@@ -244,7 +244,7 @@ S0_LINES = {
                     "tasks=N,attempts=2,minutes=M`; depois `.swarm/bin/cs-state next` até REPORTING."},
     "process": {
         "native": "Processo: Épico → Feature → Sprint → Story (US|Bug|Fix) via `.swarm/bin/cs-state add ...`; "
-                  "`.swarm/bin/cs-state board` mostra a árvore; `/planejar-sprint` planeja a sprint.",
+                  "`.swarm/bin/cs-state board` mostra a árvore; `/plan-sprint` planeja a sprint.",
         "terminal": "Processo: Épico → Feature → Sprint → Story (US|Bug|Fix) via `.swarm/bin/cs-state add ...`; "
                     "`.swarm/bin/cs-state board` mostra a árvore; `.swarm/bin/cs-state sprint plan --goal \"<meta>\" --budget <n> "
                     "--stories <ids>` planeja a sprint."},
@@ -254,7 +254,7 @@ S0_LINES = {
         "terminal": "Modelo: antes de delegar, `.swarm/bin/cs-route recommend <id>` diz o tier mais barato que resolve; use-o "
                     "no agente/modo escolhido ou registre `.swarm/bin/cs-route override <id> --model X --reason \"...\"`."},
     "correction": {
-        "native": "Usuário corrigiu um agente: `/corrigir` antes de seguir.",
+        "native": "Usuário corrigiu um agente: `/correct` antes de seguir.",
         "terminal": "Usuário corrigiu um agente: `.swarm/bin/cs-mem correct --agent X --wrong \"...\" --right \"...\" "
                     "--why \"...\"` antes de seguir."},
 }
@@ -351,10 +351,16 @@ def s1_fit(team, agent, kn, pointers):
 
 # ------------------------------------------------------------------ S2
 
-def s2_sections(agent, kn, shown_t, shown_r, room):
-    """Seções do território. A parte escrita à mão precisa caber; termos/regras restantes preenchem `room`."""
+def s2_sections(agent, kn, shown_t, shown_r, room, n_inv=None):
+    """Seções do território. A parte escrita à mão precisa caber; termos/regras restantes preenchem `room`.
+    `n_inv` corta os invariantes no top-N por rank; o resto fica no arquivo de invariantes (S5)."""
     card = agent["card"]
-    hand = [section("Invariantes", invariant_lines(agent, kn.facts)),
+    inv = invariant_lines(agent, kn.facts, n_inv)
+    total_inv = invariant_count(agent, kn.facts)
+    if n_inv is not None and total_inv > n_inv:
+        inv.append("- Mais %d invariante(s): lista completa e priorizada em `%s`."
+                   % (total_inv - n_inv, invariants_path(agent["name"])))
+    hand = [section("Invariantes", inv),
             section("Convenções e regras técnicas", rules_lines(card)),
             section("Armadilhas registradas", footgun_lines(card)),
             section("Notas por caminho", path_note_lines(agent))]
@@ -384,6 +390,15 @@ def s2_sections(agent, kn, shown_t, shown_r, room):
     return join_sections(hand + extra), used
 
 
+def s2_fit(agent, kn, shown_t, shown_r, room):
+    """Maior top-N de invariantes que cabe em `room` (como o S1 do gate); devolve a última tentativa se nada cabe."""
+    for n_inv in INV_TOP:
+        secs, used = s2_sections(agent, kn, shown_t, shown_r, room, n_inv)
+        if used <= room:
+            break
+    return secs, used
+
+
 def path_note_lines(agent):
     """camadas.s2_por_caminho do cartão (specialize.3): o que vale para quem toca um diretório."""
     out = []
@@ -410,7 +425,7 @@ def s2_body(team, agent, kn, shown_t, shown_r):
                     delegate="Mudança aqui respeita o que segue; o cartão do dono tem missão e recusas.",
                     sections="")
     room = BUDGET["S2"] - count_lines(head)
-    secs, used = s2_sections(agent, kn, shown_t, shown_r, room)
+    secs, used = s2_fit(agent, kn, shown_t, shown_r, room)
     if used > room:
         raise BudgetError(
             "S2 território de %r: invariantes+regras+armadilhas somam %d linhas > %d. Mova armadilhas antigas "
@@ -428,7 +443,7 @@ def nested_block(team, agents, kn, shown):
     for ag in agents:
         st, sr = shown[ag["name"]]
         title = "### Dono: `%s` (%s)" % (ag["name"], ag["kind"])
-        secs, used = s2_sections(ag, kn, st, sr, per - 1)
+        secs, used = s2_fit(ag, kn, st, sr, per - 1)
         if used > per - 1:
             raise BudgetError("S2 AGENTS.md aninhado de %r: %d linhas > %d" % (ag["name"], used, per - 1))
         parts.append(title + "\n\n" + re.sub(r"(?m)^## ", "#### ", secs))

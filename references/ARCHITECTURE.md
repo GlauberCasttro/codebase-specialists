@@ -241,7 +241,7 @@ modelo fornece só o que o script não tem como saber (3 linhas); todo o resto �
   mudaram de status, gates que mudaram — e o briefing anterior. Nunca despeja o estado inteiro.
 - Sempre termina com "próximo passo" e o comando exato para executá-lo.
 
-Emissão: comandos nativos por plataforma (Claude Code: `/salvar-sessao` e `/carregar-sessao` como
+Emissão: comandos nativos por plataforma (Claude Code: `/save-session` e `/load-session` como
 skills/comandos que só chamam o script; hook `SessionStart` opcional chama `cs-session load --brief`;
 outras plataformas: instrução no núcleo S0 para rodar o script). Gate **G9 sessão**: `load` com carimbo
 batendo imprime ≤2.000 tokens; após um evento novo, `load` detecta o delta; round-trip save→load é
@@ -453,7 +453,7 @@ execução que nunca aconteceu** (TASK-01-138 daquele projeto).
 
 **Entrada — toda correção vira lição do agente que errou** (`state/memory/agents/<agente>.json5`):
 correção humana (`cs-mem correct --agent X --wrong "..." --right "..." --why "..." [--paths ...]` ou
-comando `/corrigir`), achado de review FAIL, causa de REJECT, erro de brief apontado em `submission.risks`.
+comando `/correct`), achado de review FAIL, causa de REJECT, erro de brief apontado em `submission.risks`.
 O orquestrador tem o dever de registrar quando o usuário corrige a saída de um agente; um hook
 `UserPromptSubmit` advisory lembra quando a mensagem parece correção.
 

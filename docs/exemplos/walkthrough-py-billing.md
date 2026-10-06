@@ -5,10 +5,10 @@ faturas, pagamentos, ledger), do `init` à decisão. Todos os trechos são **rea
 no modo `--fast`, sem usuário na sessão (aprovações `--simulated` por `eval-sim`):
 
 - **Execução A** — iteração 4 (versão atual da skill), de `init` até `validate.3`, onde foi pausada:
-  rodada interna `rodada-4/py-billing-setup-vague/with_skill/` (`outputs/stage-log.txt` e
+  `campanhas/iteration-4/py-billing-setup-vague/with_skill/` (`outputs/stage-log.txt` e
   `target/`).
 - **Execução B** — iteração 3, completa até a decisão (NO-GO):
-  rodada interna `rodada-3/py-billing-setup-vague/with_skill_fast/` (`outputs/` e
+  `campanhas/iteration-3/py-billing-setup-vague/with_skill_fast/` (`outputs/` e
   `target/.swarm/`).
 
 Nos logs, `cs` é a função de shell `cs() { python3 ~/.claude/skills/codebase-specialists/scripts/cs.py "$@"; }`

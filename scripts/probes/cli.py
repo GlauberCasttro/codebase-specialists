@@ -75,12 +75,22 @@ def _check(args):
     src = args.answers or canon
     if not os.path.isfile(find_doc(src)) and not os.path.isabs(src):
         src = os.path.join(t, src)
+
+    def _real(p):
+        return os.path.realpath(find_doc(p) if os.path.isfile(find_doc(p)) else p)
+
+    if _real(src) != _real(canon):
+        # caminho ÚNICO das respostas (campanha-iter11, P-1): a cópia silenciosa de outro arquivo para o canônico
+        # (iteração 4) escondia o 3º caminho do prompt; agora é recusa que diz onde gravar.
+        raise CsError("--answers %s não é o caminho único das respostas de %s" % (src, args.agent),
+                      "o examinado grava em %s (o `answer_file` de questions.json5); rode `cs.py probes check %s` "
+                      "sem --answers" % (canon, args.agent))
+    if not os.path.isfile(find_doc(canon)):
+        raise CsError("respostas de %s ausentes no caminho único: %s" % (args.agent, canon),
+                      "o examinado grava o `answer_file` de questions.json5 (`probes exam-pack %s --out ...`)"
+                      % args.agent)
+    src = canon
     guard_stale(t, bank, args.agent, src)
-    if os.path.realpath(find_doc(src)) != os.path.realpath(find_doc(canon)):
-        import shutil  # exame isolado (<out>/answers.json5) → cópia canônica, lida por `check --all`
-        os.makedirs(os.path.dirname(canon), exist_ok=True)
-        shutil.copyfile(find_doc(src), canon)
-        src = canon
     rep = check(t, args.agent, src)
     n = record_cycle(t, bank, args.agent, rep, src)
     print("%s: território=%s cross=%s alucinações=%d delta=%s → G4 %s%s" % (

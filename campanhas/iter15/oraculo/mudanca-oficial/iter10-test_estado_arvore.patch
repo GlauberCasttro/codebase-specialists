@@ -1,0 +1,31 @@
+--- campanhas/iter10/oraculo/test_estado_arvore.py
++++ campanhas/iter10/oraculo/test_estado_arvore.py
+@@ -1462,15 +1462,15 @@
+ 
+ # ====================================================================== skills emitidas (/new-*, /close-*, ...)
+ SKILLS_CLI = {
+-    "new-epico": "cs-state new epico", "new-sprint": "cs-state new sprint", "new-feature": "cs-state new feature",
++    "new-epic": "cs-state new epico", "new-sprint": "cs-state new sprint", "new-feature": "cs-state new feature",
+     "new-task": "cs-state new task", "new-story": "cs-state new story",
+     "close-task": "cs-state close", "close-feature": "cs-state close", "close-sprint": "cs-state close",
+-    "close-epico": "cs-state close", "close-story": "cs-state close",
++    "close-epic": "cs-state close", "close-story": "cs-state close",
+     "reopen": "cs-state reopen", "park": "cs-state park", "move": "cs-state move", "board": "cs-state board",
+ }
+ CONSULTA = ("board",)
+-CRIACAO = ("new-epico", "new-sprint", "new-feature", "new-task", "new-story")
+-MUDANCA = ("close-task", "close-feature", "close-sprint", "close-epico", "close-story", "reopen", "park", "move")
++CRIACAO = ("new-epic", "new-sprint", "new-feature", "new-task", "new-story")
++MUDANCA = ("close-task", "close-feature", "close-sprint", "close-epic", "close-story", "reopen", "park", "move")
+ MAX_SKILL_BODY_LINES = 40
+ # padrões que denunciam lógica que o motor já faz (montar caminho, mover à mão, calcular id)
+ HAND_LOGIC = (
+@@ -1479,7 +1479,7 @@
+     (r"\bnnn?\b|<nn>|próximo número|proximo numero", "calcular id/nn"),
+ )
+ DOR_FLAGS = {
+-    "new-epico": ("--objetivo",), "new-sprint": ("--meta",), "new-feature": ("--aceite",),
++    "new-epic": ("--objetivo",), "new-sprint": ("--meta",), "new-feature": ("--aceite",),
+     "new-task": ("--como", "--quero", "--para", "--criterio", "--reproducao", "--fixes", "--teste"),
+     "new-story": ("--como", "--quero", "--para", "--criterio", "--reproducao", "--fixes", "--teste"),
+ }

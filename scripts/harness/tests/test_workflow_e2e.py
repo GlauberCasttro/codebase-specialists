@@ -1,4 +1,4 @@
-"""ORÁCULO — WORKFLOW-E2E: o workflow inteiro do harness, de ponta a ponta (plano da rodada,
+"""ORÁCULO — WORKFLOW-E2E: o workflow inteiro do harness, de ponta a ponta (ROADMAP-proxima-rodada.md,
 "OBRIGATÓRIO em toda rodada — workflow inteiro do harness testado de ponta a ponta"; máquinas em docs/02-harness.md).
 
 Tudo pelo comportamento OBSERVÁVEL: CLI real (engine/state.py = cs-state, engine/session.py = cs-session e
@@ -12,7 +12,7 @@ Cada teste percorre um caminho e TERMINA num estado coerente (`assert_coerente`)
 
 Escolhas onde o contrato não fixa detalhe:
   * Hierarquia: o modelo ATUAL do motor (épico → feature → story → task; sprint agrupa stories). A árvore
-    épico → sprint → feature(s) → tasks é rodada futura e NÃO é testada aqui.
+    épico → sprint → feature(s) → tasks é rodada futura (ROADMAP-rodada-seguinte.md) e NÃO é testada aqui.
   * "verify falho → reject": no motor a falha do verify já leva a delegação a REJECTED (on_guard_fail); o `reject`
     explícito (`cs-state reject`) é exercitado no caminho review FAIL (VERIFIED/REVIEWED → REJECTED).
   * Despacho em ondas: classe `feature` (2 territórios) exige task do po ACCEPTED antes do dev. "Arquivo comum": o
@@ -24,14 +24,14 @@ Escolhas onde o contrato não fixa detalhe:
   * `failure_kind`: procurado em QUALQUER dict da task (delegação, gate_report, build...) — o contrato fixa o campo
     e o valor `environment`, não onde ele mora. Para falha de asserção, exige-se apenas que NÃO seja `environment`.
   * `waive-verify --task T --by <humano> --reason ... --evidence ...`: "humano" = não é agente de team.json5 nem o
-    orquestrador (`lead`: "lead não pode auto-aprovar", decisão de produto A2); usa-se `founder`. O `--evidence` cita a
+    orquestrador (`lead`: "lead não pode auto-aprovar", PONTOS-DO-FOUNDER A2); usa-se `founder`. O `--evidence` cita a
     saída real do verify (o motor exige que a evidência nomeie a ferramenta ausente, aqui `fake-dep`). Depois do waive a
     revisão continua obrigatória: o aceite sem review de gate é recusado (testado em classe `pequena`, onde a review
     já é exigida, e em `trivial`, onde só o waive a tornaria obrigatória — este último isolado num teste próprio).
   * `reverify --task T`: roda o verify de novo sobre a MESMA submissão (sem novo despacho: `attempts` não muda).
   * Recusa = exit 1 (hcore.Refused). Exit 2 do argparse (subcomando inexistente) NÃO conta como recusa.
 
-DEPENDEM DA FRENTE EM ANDAMENTO (A1/A2 em decisões de produto) — podem falhar hoje:
+DEPENDEM DA FRENTE EM ANDAMENTO (A1/A2 em PONTOS-DO-FOUNDER.md) — podem falhar hoje:
   [A2] `reverify`, `waive-verify`, `failure_kind: environment` → classe TestFalhaDeAmbiente inteira.
   [A1] `retry --decision`, `reroute --decision`, `drop --reason` de ESCALATED/ABSTAINED → classe TestEscaladaSaidas
        e o meio do TestAutonomoE2E (retomada da delegação abstida).
@@ -271,7 +271,7 @@ class TestFluxoCompleto(E2E):
         with open(os.path.join(root, hcore.STATE_DIR, "team.json5"), encoding="utf-8") as f:
             team = j5.loads(f.read())
         for a in team["agents"]:
-            if a["name"] in ("dev-billing", "dev-members"):
+            if a["name"] in ("dev-billing", "dev-users"):
                 a["territory"] = list(a["territory"]) + ["src/shared/**"]
         with open(os.path.join(root, hcore.STATE_DIR, "team.json5"), "w", encoding="utf-8") as f:
             f.write(j5.dumps(team))
@@ -284,9 +284,9 @@ class TestFluxoCompleto(E2E):
         self.process(root, "feature", sprint=True)
         po = self.add_task(root, "po", "docs/stories/US-1.md", "detalhar a story", wave=1, ref="docs/stories/README.md:1")
         t_bil = self.add_task(root, "dev-billing", "src/billing/discount.py", "criar desconto", wave=2)
-        t_usr = self.add_task(root, "dev-members", "src/members/discount.py", "elegibilidade do desconto", wave=2,
-                              ref="src/members/model.py:1")
-        t_sh1 = self.add_task(root, "dev-members", "src/shared/util.py", "util compartilhado (users)", wave=3)
+        t_usr = self.add_task(root, "dev-users", "src/users/discount.py", "elegibilidade do desconto", wave=2,
+                              ref="src/users/model.py:1")
+        t_sh1 = self.add_task(root, "dev-users", "src/shared/util.py", "util compartilhado (users)", wave=3)
         t_sh2 = self.add_task(root, "dev-billing", "src/shared/util.py", "util compartilhado (billing)", wave=4)
         self.ok(root, "session", "execute")
 
@@ -296,10 +296,10 @@ class TestFluxoCompleto(E2E):
 
         # onda 2: dois agentes, arquivos disjuntos → em voo AO MESMO TEMPO
         self.dispatch(root, t_bil, "dev-billing", "tu-bil")
-        self.dispatch(root, t_usr, "dev-members", "tu-usr")
+        self.dispatch(root, t_usr, "dev-users", "tu-usr")
         self.assertEqual((deleg(root, t_bil)["state"], deleg(root, t_usr)["state"]), ("DISPATCHED", "DISPATCHED"))
         self.implement(root, t_bil, "dev-billing", "src/billing/discount.py", "RATE = 30\n")
-        self.implement(root, t_usr, "dev-members", "src/members/discount.py", "ELIGIBLE = True\n")
+        self.implement(root, t_usr, "dev-users", "src/users/discount.py", "ELIGIBLE = True\n")
         self.verify_pass(root, t_bil)
         self.verify_pass(root, t_usr)  # o arquivo da onda-irmã (já VERIFIED) não pode contar como "fora de allowed_paths"
         for t in (t_bil, t_usr):
@@ -307,10 +307,10 @@ class TestFluxoCompleto(E2E):
             self.accept(root, t)
 
         # arquivo comum: a 2ª espera a 1ª
-        self.dispatch(root, t_sh1, "dev-members", "tu-sh1")
+        self.dispatch(root, t_sh1, "dev-users", "tu-sh1")
         err = self.dispatch_blocked(root, t_sh2, "dev-billing", "tu-sh2-cedo")
         self.assertIn("colide", err, err)
-        self.implement(root, t_sh1, "dev-members", "src/shared/util.py", "SHARED = 1\n")
+        self.implement(root, t_sh1, "dev-users", "src/shared/util.py", "SHARED = 1\n")
         self.verify_pass(root, t_sh1)
         self.review(root, t_sh1)
         self.accept(root, t_sh1)
@@ -337,7 +337,7 @@ class TestFluxoCompleto(E2E):
         self._team_with_shared(root)
         self.process(root, "feature")
         po = self.add_task(root, "po", "docs/stories/US-1.md", "detalhar a story", wave=1, ref="docs/stories/README.md:1")
-        a = self.add_task(root, "dev-members", "src/shared/util.py", "util (users)", wave=2)
+        a = self.add_task(root, "dev-users", "src/shared/util.py", "util (users)", wave=2)
         b_ = self.add_task(root, "dev-billing", "src/shared/util.py", "util (billing)", wave=2)
         out = self.refused(root, "session", "execute")
         self.assertIn("wave", out)
@@ -346,7 +346,7 @@ class TestFluxoCompleto(E2E):
             self.ok(root, "ready", "--task", b_)
         self.ok(root, "session", "execute")
         self.full_task(root, po, "po", "docs/stories/US-1.md", "# US-1\n", "tu-po")
-        self.full_task(root, a, "dev-members", "src/shared/util.py", "SHARED = 1\n", "tu-a")
+        self.full_task(root, a, "dev-users", "src/shared/util.py", "SHARED = 1\n", "tu-a")
         self.full_task(root, b_, "dev-billing", "src/shared/util.py", "SHARED = 2\n", "tu-b")
         self.close_session(root, final_review=True)
         self.assert_coerente(root)
@@ -461,12 +461,12 @@ class TestEscaladaSaidas(E2E):
         self.assert_coerente(root)
 
     def _trocar(self, root, t):
-        self.ok(root, "reroute", "--task", t, "--agent", "dev-members", "--allowed-path", "src/members/discount.py",
+        self.ok(root, "reroute", "--task", t, "--agent", "dev-users", "--allowed-path", "src/users/discount.py",
                 "--decision", "é território de users")
         ds = task(root, t)["delegations"]
-        self.assertEqual((ds[-2]["state"], ds[-1]["state"], ds[-1]["agent"]), ("REROUTED", "PLANNED", "dev-members"))
+        self.assertEqual((ds[-2]["state"], ds[-1]["state"], ds[-1]["agent"]), ("REROUTED", "PLANNED", "dev-users"))
         self.ok(root, "ready", "--task", t)
-        self.full_task(root, t, "dev-members", "src/members/discount.py", "ELIGIBLE = True\n", "tu-2")
+        self.full_task(root, t, "dev-users", "src/users/discount.py", "ELIGIBLE = True\n", "tu-2")
         self.close_session(root)
         self.assert_coerente(root)
 
@@ -585,14 +585,14 @@ class TestFalhaDeAmbiente(E2E):
         self.ok(root, "session", "start", "--request", "ajuste de 1 arquivo")
         self.ok(root, "session", "triage", "--class", "trivial", "--why", "1 arquivo")
         before = {x["id"] for x in board(root)["tasks"]}
-        code, out, err = cs(root, "add", "task", "--quick", "--agent", "dev-members", "--title", "ajustar idade",
-                            "--allowed-path", "src/members/model.py", "--verify-cmd", VERIFY_ENV)
+        code, out, err = cs(root, "add", "task", "--quick", "--agent", "dev-users", "--title", "ajustar idade",
+                            "--allowed-path", "src/users/model.py", "--verify-cmd", VERIFY_ENV)
         self.assertEqual(code, 0, out + err)
         t = [x["id"] for x in board(root)["tasks"] if x["id"] not in before][0]
         if board(root)["sessions"][-1]["state"] == "PLANNING":
             self.ok(root, "session", "execute")
-        self.dispatch(root, t, "dev-members", "tu-1")
-        self.implement(root, t, "dev-members", "src/members/model.py", "AGE = 21\n")
+        self.dispatch(root, t, "dev-users", "tu-1")
+        self.implement(root, t, "dev-users", "src/users/model.py", "AGE = 21\n")
         self.verify_fail(root, t)
         self.assertIn("environment", failure_kinds(root, t))
         code, out, err = self._waive(root, t, HUMAN)

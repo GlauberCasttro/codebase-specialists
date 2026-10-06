@@ -177,10 +177,48 @@ Em Claude Code o `emit` cria 14 skills finas (≤ 40 linhas; só chamam o `cs-st
 
 | Skills | Invocação |
 |---|---|
-| `/board`, `/new-epico`, `/new-sprint`, `/new-feature`, `/new-task`, `/new-story` | o **modelo pode chamar sozinho**; as de criação mostram antes com `--dry-run` e checam o DoR com `cs-state check` |
-| `/close-task`, `/close-feature`, `/close-sprint`, `/close-epico`, `/close-story`, `/reopen`, `/park`, `/move` | **só o humano** (`disable-model-invocation: true`): mudam o estado |
+| `/board`, `/new-epic`, `/new-sprint`, `/new-feature`, `/new-task`, `/new-story` | o **modelo pode chamar sozinho**; as de criação mostram antes com `--dry-run` e checam o DoR com `cs-state check` |
+| `/close-task`, `/close-feature`, `/close-sprint`, `/close-epic`, `/close-story`, `/reopen`, `/park`, `/move` | **só o humano** (`disable-model-invocation: true`): mudam o estado |
 
 As 14 skills de estado e as 9 do mandato também saem para Cursor (`.cursor/skills/`), Copilot (`.github/skills/`) e Codex (`.agents/skills/`); no Codex a skill humana diz "Só o humano executa".
+
+### Todas as skills geradas
+
+Tabela gerada do código (`scripts/emit/platforms.py`): `cs.py skills-guide --write` regenera e `cs.py skills-guide --check` reprova divergência. As de sessão, `/correct`, `/plan-sprint` e `/feature-autonoma` saem só no Claude Code; as de estado e do mandato saem nas 4 plataformas.
+
+<!-- skills:begin -->
+<!-- gerado por `cs.py skills-guide --write` a partir de scripts/emit/platforms.py; não edite à mão (`cs.py skills-guide --check` reprova divergência) -->
+| Skill | Para que serve | Quem roda | Argumento |
+|---|---|---|---|
+| `/save-session` | Salva a sessão via `.swarm/bin/cs-session save` (feito/próximo/bloqueio em 1 linha cada). | só o humano | `[--commit]` |
+| `/load-session` | Retoma a sessão: injeta o briefing de `.swarm/bin/cs-session load` sem ler arquivos de estado. | só o humano | — |
+| `/correct` | Registra a correção do usuário como lição do agente que errou (`.swarm/bin/cs-mem correct`). | só o humano | `<agente> <o que estava errado> -> <o certo>, porque <porquê>` |
+| `/plan-sprint` | Planeja a próxima sprint com stories que passam no DoR, via `.swarm/bin/cs-state sprint plan`. | só o humano | `[--dry-run]` |
+| `/feature-autonoma` | Inicia o modo autônomo de uma feature: aprovação única de spec, testes de aceite, classe e orçamento; depois `.swarm/bin/cs-state next` até o relatório. | só o humano | `<feature-id> <arquivo-spec>` |
+| `/board` | Mostra o quadro de trabalho (épicos, sprints, features, stories, tasks) via `cs-state board`/`tree --json`. | o modelo pode chamar sozinho | `[--json]` |
+| `/new-epic` | Cria um épico via `cs-state new epico` (mostra antes com --dry-run). Use quando o usuário pedir um épico novo. | o modelo pode chamar sozinho | `<título> -- <objetivo> [-- <métrica>]` |
+| `/new-sprint` | Cria uma sprint via `cs-state new sprint` (mostra antes com --dry-run). Use quando o usuário pedir uma sprint nova. | o modelo pode chamar sozinho | `<meta> [<EPC>]` |
+| `/new-feature` | Cria uma feature via `cs-state new feature` com teste de aceite (mostra antes com --dry-run; DoR por `cs-state check`). | o modelo pode chamar sozinho | `<título> <SPR\|--backlog> <comando de aceite>` |
+| `/new-task` | Cria uma task US/BUG/FIX/CHORE via `cs-state new task` (mostra antes com --dry-run; DoR por `cs-state check`). Use antes de qualquer alteração de produto sem task em andamento. | o modelo pode chamar sozinho | `<US\|BUG\|FIX\|CHORE> <pai> <título>` |
+| `/new-story` | Cria uma story (1 agente: task tipada; 2+: story composta) via `cs-state new story` (dry-run antes; DoR por `cs-state check`). | o modelo pode chamar sozinho | `<US\|BUG\|FIX> <FEA> <agentes> <título>` |
+| `/close-task` | Fecha uma task via `cs-state close` (o motor confere o DoD e arquiva). | só o humano | `<id da task> <resumo>` |
+| `/close-feature` | Fecha uma feature via `cs-state close` (o motor confere o DoD e arquiva). | só o humano | `<FEA> <resumo>` |
+| `/close-sprint` | Fecha uma sprint via `cs-state close` (o motor confere o DoD e arquiva). | só o humano | `<SPR> <resumo>` |
+| `/close-epic` | Fecha um épico via `cs-state close` (o motor confere o DoD e arquiva). | só o humano | `<EPC> <resumo>` |
+| `/close-story` | Fecha uma story composta via `cs-state close` (só com todas as tasks fechadas). | só o humano | `<US\|BUG\|FIX id> <resumo>` |
+| `/reopen` | Reabre um item fechado via `cs-state reopen` (volta ao mesmo caminho, com motivo). | só o humano | `<id> <motivo>` |
+| `/park` | Estaciona uma feature ativa via `cs-state park` (sai de execução com motivo). | só o humano | `<FEA> <motivo>` |
+| `/move` | Troca o pai de um item via `cs-state move` (o id antigo continua resolvendo em `find`). | só o humano | `<id> <novo pai\|--avulsa>` |
+| `/auto-status` | Mostra o estado do mandato autônomo via `cs-auto status` (objetivo, estado, orçamento, aceite e próximo comando). | o modelo pode chamar sozinho | `[--brief]` |
+| `/auto-plan` | Monta e submete o plano do mandato via `cs-auto plan` (o motor valida; recusa traz a guarda e o que falta). | o modelo pode chamar sozinho | `<add-node\|edit-node\|reset\|submit> ...` |
+| `/auto-tick` | Pede ao motor a próxima ação do mandato via `cs-auto tick` e executa só ela (o motor decide, integra e para). | o modelo pode chamar sozinho | `[--json]` |
+| `/auto-report` | Mostra o relatório do mandato via `cs-auto report` (critérios verdes, verificações com hash, devolvidos). | o modelo pode chamar sozinho | `[--json]` |
+| `/auto-approve` | Humano aprova a proposta do mandato via `cs-auto approve` (mostra a proposta por `cs-auto status`). | só o humano | `[despachos=,tentativas=,replanos=,minutos=]` |
+| `/auto-amend` | Humano emenda o mandato via `cs-auto amend` (volta a PROPOSED para nova aprovação). | só o humano | `<motivo> [orçamento]` |
+| `/auto-resolve` | Humano resolve uma escalada do mandato via `cs-auto resolve` (escolhe uma das opções do pacote). | só o humano | `<retomar\|trocar-agente\|emendar\|descartar-ramo\|encerrar\|abortar> <decisão>` |
+| `/auto-stop` | Humano manda o mandato encerrar com relatório via `cs-auto stop`. | só o humano | `<motivo>` |
+| `/auto-abort` | Humano aborta o mandato via `cs-auto abort` (o relatório traz o comando para restaurar o ponto seguro). | só o humano | `<motivo>` |
+<!-- skills:end -->
 
 ## Migrar para 0.7.0 (estado em árvore) e correções do upgrade
 
@@ -200,16 +238,20 @@ aceita, integra e encerra é o script** (`cs-auto`).
 
 1. `cs-auto propose --feature FEA-nnn --spec <arquivo> --objetivo "…" --nos N --criterio 'AC-1|texto|<teste>'`
    (ou `--sprint SPR-nnn`). Recusa se algum critério já está verde, se a classe é trivial ou se já há mandato aberto.
-2. **Você** lê a proposta (`cs-auto status`) e aprova com `/auto-approve` (com a senha). O orçamento
-   (despachos, tentativas, replanos, minutos) é calculado pelo motor a partir do tamanho do plano; só você o muda,
-   na aprovação ou numa emenda.
+2. **Você** lê a proposta (`cs-auto status`) e aprova com `/auto-approve`: no **seu terminal** (fora do chat),
+   `cs-auto senha definir` só na 1ª vez e depois `cs-auto approve --by <você>`, que pede a senha com o eco desligado
+   (nunca por argumento, variável ou pipe). A aprovação grava um selo HMAC; o piloto não avança sem selo válido
+   para o plano atual, e `cs-auto conferir` (seu, com a senha) recalcula as HMACs — o `tick` não pode verificá-las
+   sem a senha. O orçamento (despachos, tentativas, replanos, minutos) é calculado pelo motor a partir do tamanho
+   do plano; só você o muda, na aprovação ou numa emenda.
 3. O modelo monta o plano com `cs-auto plan add-node … ` e `cs-auto plan submit` (o motor valida DAG, território e
    cobertura dos critérios), e então roda `cs-auto tick` em laço (`/auto-tick`): cada chamada devolve **uma** ação
    (despachar uma task, integrar uma onda, replanejar…); o modelo executa só ela e chama `tick` de novo.
 4. Ao fim, `/auto-report` (`cs-auto report`): critérios verdes, verificações com hash e o que foi devolvido.
 
-**Só do humano** (exigem `--by <humano>`; o guard bloqueia o modelo): `approve`, `amend`, `resolve`, `stop`, `abort`
-(`/auto-approve`, `/auto-amend`, `/auto-resolve`, `/auto-stop`, `/auto-abort`).
+**Só do humano** (exigem `--by <humano>`; o guard bloqueia o modelo): `approve` (com a senha), `amend`, `resolve`,
+`stop`, `abort` (`/auto-approve`, `/auto-amend`, `/auto-resolve`, `/auto-stop`, `/auto-abort`), além de
+`senha definir` e `conferir`. Detalhes e limites: `docs/11-modo-autonomo.md`.
 
 **Regras que você vai ver:**
 - **Corte aos 80% do orçamento**: com 5 despachos, o 4º ainda termina; o 5º nunca sai. Você recebe entrega parcial,
@@ -235,10 +277,10 @@ A classe da triagem (`cs-state session triage --class …`) escolhe a **faixa**;
 | Ver o próximo passo permitido (e a faixa) | `.swarm/bin/cs-state next` |
 | **Perguntar** algo a um especialista (classe `pergunta`) | `.swarm/bin/cs-state ask <agente> "<pergunta>" [--paths "<glob>"]` → despache o Agent com a linha impressa (id `ASK-n`). Só leitura, sem task/story; fecha sozinha |
 | **Mudança pequena** (classe `trivial` ou `pequena`) | `.swarm/bin/cs-state add task --quick --agent <a> --title "…" --allowed-path <arq> --verify-cmd "<cmd>"` → `cs-state session execute` → Agent. Sem épico/feature/story (story implícita `STORY-AVULSA-<sessão>`); `--goal`/`--ref`/`--out` opcionais; `pequena` exige 1 revisão de gate. Tocou 2 territórios, invariante ou área congelada → recusa "suba a classe" |
-| Criar épico/feature/story/bug e tasks (classe `feature`/`risco`) | `.swarm/bin/cs-state add ...` (ou `/planejar-sprint`) |
+| Criar épico/feature/story/bug e tasks (classe `feature`/`risco`) | `.swarm/bin/cs-state add ...` (ou `/plan-sprint`) |
 | Buscar conhecimento do time | `.swarm/bin/cs-mem search "<termo>"` |
-| Corrigir um agente (vira lição dele) | `/corrigir` |
-| Salvar / retomar a sessão de trabalho | `/salvar-sessao` · `/carregar-sessao` |
+| Corrigir um agente (vira lição dele) | `/correct` |
+| Salvar / retomar a sessão de trabalho | `/save-session` · `/load-session` |
 | Entregar uma feature inteira | `/feature-autonoma <id> <spec>` |
 | Delegação parada (ESCALATED/ABSTAINED: `cs-state next` mostra as saídas com comando pronto) | retomar `.swarm/bin/cs-state retry --task <id> --decision "…"` · trocar de agente `cs-state reroute --task <id> --agent <a> --decision "…"` · descartar `cs-state drop --task <id> --reason "…"` |
 | Verify falhou por **ambiente** (ferramenta/módulo ausente, exit 127) | `cs-state reverify --task <id>` depois de instalar; ou `cs-state waive-verify --task <id> --by <você> --reason "…" --evidence "…"` — **só humano** (o guard bloqueia agentes), review de gate obrigatória depois; nunca para teste vermelho |

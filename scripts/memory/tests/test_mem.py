@@ -39,14 +39,14 @@ class TestSearch(unittest.TestCase):
         self.assertEqual(res[0]["id"], "term.x")
         self.assertEqual(res[0]["kind"], "term")
         # fatos .json5 do fixture (business_rules.json5) também indexados
-        self.assertIn("br.members.age", [r["id"] for r in mem.search(self.root, "usuário 18 anos", k=3)])
+        self.assertIn("br.users.age", [r["id"] for r in mem.search(self.root, "usuário 18 anos", k=3)])
 
     def test_path_boost(self):
         write_facts(self.root, "more.json5", [
-            {"id": "f.a", "claim": "cache de sessão expira", "scope": ["src/members/**"]},
+            {"id": "f.a", "claim": "cache de sessão expira", "scope": ["src/users/**"]},
             {"id": "f.b", "claim": "cache de sessão expira", "scope": ["src/billing/**"]}])
         self.assertEqual(mem.search(self.root, "cache sessão", paths=["src/billing/x.py"])[0]["id"], "f.b")
-        self.assertEqual(mem.search(self.root, "cache sessão", paths=["src/members/x.py"])[0]["id"], "f.a")
+        self.assertEqual(mem.search(self.root, "cache sessão", paths=["src/users/x.py"])[0]["id"], "f.a")
 
     def test_stale_fact_not_returned(self):
         fp = mem.fingerprint(self.root, [{"file": "src/billing/total.py"}])
@@ -98,7 +98,7 @@ class TestLessons(unittest.TestCase):
         ctx = engine.Ctx(self.root, hcore.load_board(self.root))
         pkg = brief.package(ctx, ctx.find("task", "T-1"), "implement")
         self.assertIn("centavos inteiros", pkg)
-        self.assertEqual(mem.inject_lessons(self.root, "dev-billing", ["src/members/x.py"], ""), [])
+        self.assertEqual(mem.inject_lessons(self.root, "dev-billing", ["src/users/x.py"], ""), [])
 
     def test_check_lesson_fails_submission(self):
         mem.add_lesson(self.root, "dev-billing", "nunca use float em dinheiro", "centavos", ["src/billing/**"],
@@ -125,8 +125,8 @@ class TestLessons(unittest.TestCase):
         self.assertEqual(pr[0]["promoted_to"], "card-rule")
         self.assertIn("30 por cento", pr[0]["proposal"]["text"])
         # mesma ocorrência repetida não conta duas vezes
-        l3, _ = mem.add_lesson(self.root, "dev-members", "x y z regra única", "w", [], source="review", evidence=[{"task": "T-2", "attempt": 1}])
-        l4, _ = mem.add_lesson(self.root, "dev-members", "x y z regra única", "w", [], source="reject", evidence=[{"task": "T-2", "attempt": 1}])
+        l3, _ = mem.add_lesson(self.root, "dev-users", "x y z regra única", "w", [], source="review", evidence=[{"task": "T-2", "attempt": 1}])
+        l4, _ = mem.add_lesson(self.root, "dev-users", "x y z regra única", "w", [], source="reject", evidence=[{"task": "T-2", "attempt": 1}])
         self.assertEqual((l4["count"], l4["status"]), (1, "active"))
         self.assertEqual(mem.inject_lessons(self.root, "dev-billing", ["src/billing/a.py"], "desconto"), [])
 
@@ -173,17 +173,17 @@ class TestLessons(unittest.TestCase):
 
     def test_cli(self):
         env = dict(os.environ, CLAUDE_PROJECT_DIR=self.root)
-        p = subprocess.run(["python3", MEM, "correct", "--agent", "dev-members", "--wrong", "idade 16", "--right", "idade 18",
-                            "--why", "lei", "--paths", "src/members/**", "--evidence", "src/members/model.py:1"],
+        p = subprocess.run(["python3", MEM, "correct", "--agent", "dev-users", "--wrong", "idade 16", "--right", "idade 18",
+                            "--why", "lei", "--paths", "src/users/**", "--evidence", "src/users/model.py:1"],
                            env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.assertEqual(p.returncode, 0, p.stderr)
-        p = subprocess.run(["python3", MEM, "inject", "--agent", "dev-members", "--paths", "src/members/model.py", "--json"],
+        p = subprocess.run(["python3", MEM, "inject", "--agent", "dev-users", "--paths", "src/users/model.py", "--json"],
                            env=env, stdout=subprocess.PIPE)
         self.assertEqual(len(json.loads(p.stdout)["lessons"]), 1)
-        p = subprocess.run(["python3", MEM, "add", "--agent", "dev-members", "--kind", "lesson", "--rule", "use AGE", "--why", "x",
-                            "--paths", "src/members/**"], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.run(["python3", MEM, "add", "--agent", "dev-users", "--kind", "lesson", "--rule", "use AGE", "--why", "x",
+                            "--paths", "src/users/**"], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.assertEqual(p.returncode, 0, p.stderr)
-        for c in (["archive"], ["stats"], ["search", "idade"], ["check", "--agent", "dev-members", "--files", "src/members/model.py"]):
+        for c in (["archive"], ["stats"], ["search", "idade"], ["check", "--agent", "dev-users", "--files", "src/users/model.py"]):
             p = subprocess.run(["python3", MEM] + c, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             self.assertEqual(p.returncode, 0, (c, p.stderr))
 

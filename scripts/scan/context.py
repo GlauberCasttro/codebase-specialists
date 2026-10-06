@@ -104,7 +104,9 @@ class ScanContext(object):
         data = self.read_bytes(rel)
         if b"\0" in data[:8192]:
             return ""
-        return data.decode("utf-8", "replace")
+        # utf-8-sig: BOM no início colava em `namespace`/`using` da linha 1 e `^\s*` não casa
+        # (cobaia .NET: 71 .cs com BOM → SwiftMapException.cs com in=0 e gabarito de dependência errado)
+        return data.decode("utf-8-sig", "replace")
 
     def lines(self, rel):
         return self.text(rel).splitlines()

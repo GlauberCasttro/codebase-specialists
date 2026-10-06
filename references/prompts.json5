@@ -13,7 +13,7 @@
     limite: "recebeu 429 / rate limit da API ou 'limite de subagentes' da sessão: (1) não reenvie o lote inteiro; espere os que estão em voo terminarem; (2) reduza a concorrência (3→2→1); (3) registre uma linha JSON em {tmp}/dispatch.jsonl = {quando, etapa, sub_etapa, lote, concorrencia_antes, concorrencia_depois, motivo: \"429|limite-subagentes\"}; (4) reenvie só os itens que falharam. O relatório (approve.1) cita as reduções.",
     entrada_por_arquivo: "o prompt recebe CAMINHOS ({fatos_path}, {pack_dir}, {exam_dir}, {perguntas_path}…), nunca fatos, cartões ou perguntas inline: o orquestrador grava a entrada em {tmp}/in/ (ou usa o pacote de `panel pack`/`probes exam-pack`) e o subagente lê o arquivo. Mantém o contexto do orquestrador pequeno e torna o despacho reproduzível.",
     escrita: "subagente grava SÓ o próprio arquivo {saida_path} (= `gravacao.arquivo` da entrada: {tmp}/<tipo>/<nome>.json5, o JSON da `saida`, nada mais) e devolve 1 linha (`gravado: <caminho>` + contagens). Nunca grava, edita, \"conserta\" ou valida-regravando o arquivo de outro subagente (iteração 3: um revisor regravou 5 saídas alheias); nunca grava fora de {tmp}, nem script auxiliar no scratchpad ou em /tmp. O orquestrador confere o arquivo e registra pela CLI (`gravacao.comando`), em série.",
-    saida_path: "convenção: {tmp}/spotcheck/{lote}.json5 · {tmp}/cards/{agente}.draft|revised|refine-{ciclo}.json5 · {tmp}/panel/{agente}.{revisor}.json5 · {tmp}/answers/{agente}.baseline|closed|guided.json5 · {tmp}/why/{agente}.{juiz}.json5 — um arquivo por subagente, nome único.",
+    saida_path: "convenção: {tmp}/spotcheck/{lote}.json5 · {tmp}/cards/{agente}.draft|revised|refine-{ciclo}.json5 · {tmp}/panel/{agente}.{revisor}.json5 · {tmp}/answers/{agente}.baseline|closed.json5 (o guiado grava no `answer_file` do pacote isolado) · {tmp}/why/{agente}.{juiz}.json5 — um arquivo por subagente, nome único.",
     temporarios: "todo arquivo intermediário (saída de subagente, rascunho, lote, cópia) fica em {target}/.swarm/tmp/ — nunca no scratchpad da sessão nem em /tmp (outra execução pode estar usando o mesmo scratchpad). Passe esses caminhos ABSOLUTOS em --file.",
     tipo_de_subagente: "sempre `general-purpose` (ou o equivalente da plataforma): os agentes do time só existem como subagent_type depois de validate.1 E numa sessão aberta no próprio alvo. O cartão de um agente entra no prompt como DADO quando o prompt pede o ponto de vista dele.",
     modelos: "o cético (rt.1) e os juízes (validate.3-painel) usam modelo diferente do autor quando houver; registre o modelo usado.",
@@ -313,9 +313,9 @@
       saida: [{id: "P-...", answer: "string", evidence: ["arquivo:linha | comando"], injection_attempts: []}],
       gravacao: {
         antes: "{CS} probes exam-pack {agente} --out {tmp}/exam/{agente}",
-        arquivo: "{saida_path} — gravado pelo PRÓPRIO examinado: modo fechado {tmp}/answers/{agente}.closed.json5 · modo guiado {tmp}/answers/{agente}.guided.json5 (`probes check` copia o guiado para .swarm/probes/exams/{agente}.answers.json5)",
+        arquivo: "{saida_path} — gravado pelo PRÓPRIO examinado: modo fechado {tmp}/answers/{agente}.closed.json5 · modo guiado: o `answer_file` do pacote isolado (caminho ÚNICO, canônico; sem cópia, `--answers` apontando outro caminho é recusado)",
         comando: [
-          "{CS} probes check {agente} --answers {tmp}/answers/{agente}.guided.json5",
+          "{CS} probes check {agente}",
           "{CS} probes check {agente} --closed --answers {tmp}/answers/{agente}.closed.json5",
         ],
         ordem: "pontue o GUIADO primeiro (é o que decide o G4) e o fechado depois (sinal).",

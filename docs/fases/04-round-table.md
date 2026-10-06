@@ -80,7 +80,7 @@ trocado caminhos citados.
 ## Exemplo real
 
 As rodadas `--full` da iteração 3 rodaram a mesa redonda (py-billing completa: 10/10 agentes provados, NO-GO
-por "1 ref inválida em 504" — `rodada-3/RESULTADOS.json5`). Nas notas do go-polyglot (iteração 3) há o caso
+por "1 ref inválida em 504" — `iteration-3/RESULTADOS.json5`). Nas notas do go-polyglot (iteração 3) há o caso
 que motivou a regra de escrita: "Mesa redonda: um revisor adjacente rodou um script de validação sobre
 `panel/raw/*.json` inteiro e regravou 5 saídas".
 

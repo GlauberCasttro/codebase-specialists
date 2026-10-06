@@ -276,7 +276,8 @@ def decide_bash(root, board, cfg, team, actor, command, cwd):
     act = auto.human_act_in_command(command)
     if act:
         return ("cs-auto %s é ato HUMANO (portão humano do mandato M5): peça ao humano que rode no terminal dele — o "
-                "modelo (principal ou subagente) nunca aprova, emenda, resolve, para nem aborta o mandato" % act)
+                "modelo (principal ou subagente) nunca aprova, emenda, resolve, para nem aborta o mandato, nem define "
+                "ou confere a senha do humano (cs-auto senha definir / cs-auto conferir)" % act)
     s = bashscan.scan(command, cwd or root, root, harness_paths(root))
     if s.unanalyzable:
         return "comando não analisável (%s) — divida em comandos simples, sem $(...), heredoc ou -c" % "; ".join(s.unanalyzable[:3])
@@ -557,6 +558,18 @@ def mode_post_edit(root, payload):
                   "Diagnóstico do check rápido após editar %s (corrija antes de seguir):\n%s" % (rel, "\n".join(msgs))[:9000]}})
 
 
+def _accepted_still_open(board, task):
+    """U5: janela de commit do trabalho aceito. Delegação ACCEPTED libera os allowed_paths SÓ enquanto o item
+    de task da árvore estiver aberto (zona `state/`). No estado em árvore a task fechada CONTINUA em
+    board["tasks"] com a delegação ACCEPTED: o que a distingue é o item ter ido para `archive/` (ou ter
+    `closed`). Fora do modo árvore (sem item) não há fechamento distinguível → não libera (como antes)."""
+    for it in (board.get("tree") or {}).values():
+        if isinstance(it, dict) and it.get("kind") == "task" and it.get("m2") == task.get("id"):
+            path = str(it.get("path") or "")
+            return path.split("/", 1)[0] == "state" and not it.get("closed")
+    return False
+
+
 def check_diff(root, staged=False):
     import subprocess
     import validate
@@ -571,7 +584,8 @@ def check_diff(root, staged=False):
     allowed = list(cfg.get("lead_write_allow") or [])
     for t in board["tasks"]:
         d = (t.get("delegations") or [{}])[-1]
-        if d.get("state") in ("DISPATCHED", "RETURNED", "VERIFIED", "REVIEWED"):
+        if d.get("state") in ("DISPATCHED", "RETURNED", "VERIFIED", "REVIEWED") or \
+                (d.get("state") == "ACCEPTED" and _accepted_still_open(board, t)):
             allowed += t["allowed_paths"]
     ok_state = validate.run(root, strict=False)[0]
     bad = []

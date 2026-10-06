@@ -1,0 +1,30 @@
+# base.txt — oráculo campanha-iter12 rodado contra a skill 0.7.0 (commit 3127bf9), antes de qualquer correção
+# data: 2026-10-05 · CS_SKILL=scratchpad/cs-070/codebase-specialists · árvore da skill (sem __pycache__/.DS_Store) sha256 d30281518c8b00a9
+# PILOTO_SRC=~/Repositorios/repositório-piloto (projeto-legado) (legado .specialists/; copiado para tmp sem node_modules/.venv/.env/logs/.swarm)
+# comando: cd campanha-iter12/oraculo && CS_SKILL=<skill> python3 -m unittest -v test_upgrade_real
+# python3 3.13.3: Ran 16 tests em ~61s → FAILED (failures=14)
+# /usr/bin/python3 3.9.6: Ran 16 tests em ~110s → FAILED (failures=14) (mesmos resultados)
+# ESPERADO: falham os de requisito; passam só test_exit_1_e_restaurou (R3.4) e test_falha_restaurada_nao_deixa_swarm (R4.1, guarda de regressão)
+
+## resultado por teste (3.13)
+ok     TestU3MotivoDaFalha.test_exit_1_e_restaurou
+FAIL   TestU3MotivoDaFalha.test_motivo_nao_truncado
+FAIL   TestU3MotivoDaFalha.test_progresso_nomeia_o_comando_que_falhou
+FAIL   TestU3MotivoDaFalha.test_progresso_traz_a_saida_do_comando
+ok     TestU4RollbackCompleto.test_falha_restaurada_nao_deixa_swarm
+FAIL   TestU4RollbackCompleto.test_residuo_proprio_nao_bloqueia_upgrade
+FAIL   TestU4RollbackCompleto.test_selftest_no_legado_nao_cria_swarm
+FAIL   TestU5UpgradePilotoConclui.test_arvore_tem_todo_item_legado_e_tasks_em_andamento
+FAIL   TestU5UpgradePilotoConclui.test_cadeia_de_eventos_preservada
+FAIL   TestU5UpgradePilotoConclui.test_emit_validate_verde_depois
+FAIL   TestU5UpgradePilotoConclui.test_emitidos_sem_caminho_legado
+FAIL   TestU5UpgradePilotoConclui.test_estado_das_tasks_e_stories_preservado_na_projecao
+FAIL   TestU5UpgradePilotoConclui.test_legado_movido_e_hook_aponta_para_swarm
+FAIL   TestU5UpgradePilotoConclui.test_preservados_byte_a_byte
+FAIL   TestU5UpgradePilotoConclui.test_run_registra_versao
+FAIL   TestU5UpgradePilotoConclui.test_upgrade_exit_0_com_emit_validate_ok
+
+## motivo de cada FAIL (uma linha)
+U-3  stdout termina em 'cs.py harness validate --strict --allow-empty: ok'; motivo só em stderr e cortado por _tail(n=8)
+U-4  harness selftest no legado cria .swarm/state/selftest.json5 (rc=1); com esse resíduo o plano diz BLOQUEIO e --apply sai 3
+U-5  upgrade exit 1: 'cs.py emit validate → exit 1 / G7 FALHOU (2 erro(s))' em .claude/rules/cs-dev-consensus.md e cs-dev-self-improve.md (todos os 9 testes de U-5 caem no _ok())

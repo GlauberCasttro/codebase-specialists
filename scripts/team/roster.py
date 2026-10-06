@@ -522,6 +522,80 @@ def core_from_panel(target):
     return saved, dropped, used_panel, refused
 
 
+def core_pack(target):
+    """Pacote de entrada do núcleo (specialize.4 / rt.3) — iteração 4 (ts-shop): o orquestrador escreveu script para
+    juntar as linhas do core. → {kind: "core-pack", limit, room, current: [textos de core.lines],
+    candidates: [{text, facts, origin, origins, agents?, reviewers?}], apply_cmd}.
+
+    Candidatas = linhas atuais + regras do painel (`panel/core-candidates.json5`) + TODA linha `camadas.s0_core`
+    dos cartões, com o texto literal (o agente escolhe/reescreve; nada é deduplicado aqui) e só fatos do
+    `facts/index.json5` (fato que sumiu num re-scan sai da lista). Não escreve no estado."""
+    from facts import store as fstore
+    team = load_team(target)
+    idx = fstore.index_ids(target)
+    known = idx | _fact_ids(target)
+    out, pos = [], {}
+
+    def add(text, fl, origin, who=None, key="agents"):
+        if not isinstance(text, str) or not text.strip():
+            return
+        good = sorted(set(f for f in fl or [] if f in idx)) or sorted(set(f for f in fl or [] if f in known))
+        if text in pos:
+            c = out[pos[text]]
+            c["facts"] = sorted(set(c["facts"]) | set(good))
+            if origin not in c["origins"]:
+                c["origins"].append(origin)
+        else:
+            pos[text] = len(out)
+            c = {"text": text, "facts": good, "origin": origin, "origins": [origin]}
+            out.append(c)
+        for w in who or []:
+            c.setdefault(key, [])
+            if w not in c[key]:
+                c[key].append(w)
+
+    current = []
+    for ln in (team.get("core") or {}).get("lines") or []:
+        if isinstance(ln, dict) and ln.get("text"):
+            current.append(ln["text"])
+            add(ln["text"], ln.get("facts") or [], "atual")
+    cp = sp_path(target, "panel", "core-candidates.json5")
+    if os.path.isfile(cp):
+        for c in read_json(cp, "panel/core-candidates.json5").get("candidates") or []:
+            for r in (c.get("regras") or [])[:1]:
+                add(r, c.get("facts") or [], "painel", c.get("reviewers") or [], key="reviewers")
+    for a in team.get("agents") or []:
+        for it in (a.get("camadas") or {}).get("s0_core") or []:
+            if isinstance(it, dict):
+                add(it.get("text"), it.get("facts") or [], "s0_core", [a["name"]])
+    for c in out:
+        if not c["facts"]:
+            c["sem_fato"] = True  # não entra no core sem fato: `team core set` recusa
+    return {"schema_version": 1, "kind": "core-pack", "generator": "cs.py team core pack", "limit": CORE_MAX,
+            "room": core_room(team), "current": current, "candidates": out,
+            "apply_cmd": "cs.py team core set --file <arquivo JSON5 {lines: [{text, facts}]}> (≤%d linhas, cada uma "
+                         "com ≥1 fato) — ou cs.py team core from-panel (automático)" % CORE_MAX,
+            "regras": ["só regra que vale para TODO agente (cross-cutting) vai ao core; o resto fica no cartão/S2",
+                       "cada linha: 1 frase, ≥1 fato de `facts`; o texto pode ser reescrito, fatos não se inventam",
+                       "cabem `room` linhas no S0 com o mapa de agentes (o emit corta o excedente)"]}
+
+
+def write_core_pack(target, out):
+    """Grava core_pack em `out` (fora do alvo ou em <alvo>/.swarm/tmp/). → (caminho, pacote)."""
+    from team._shared_tmp.common import dumps
+    root = os.path.realpath(target)
+    full = os.path.realpath(os.path.abspath(out))
+    tmp = os.path.join(root, ".swarm", "tmp")
+    if (full == root or full.startswith(root + os.sep)) and not full.startswith(tmp + os.sep):
+        raise CsError("--out dentro do alvo só em .swarm/tmp/ (senão o pacote polui o produto): %s" % out,
+                      "use %s/in/core.json5 ou um caminho fora do alvo" % tmp)
+    doc = core_pack(target)
+    os.makedirs(os.path.dirname(full), exist_ok=True)
+    with open(full, "w", encoding="utf-8") as fh:
+        fh.write(dumps(doc, "pacote de entrada do núcleo (core) — cs.py team core pack"))
+    return full, doc
+
+
 def core_check(target):
     """Check de rt.3 (efeito): promoção registrada sobre as candidatas ATUAIS e core não vazio — ou recusa
     explícita de tudo, com motivo. `panel consolidate` sem `team core from-panel` não fecha rt.3."""

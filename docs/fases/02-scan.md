@@ -4,7 +4,7 @@
 
 **Por que existe:** nenhum cartão pode afirmar algo que um fato não sustente (princípio 1 do SKILL.md). O scan é
 o único produtor de conhecimento "mecânico"; o modelo só confere (spot-check) e completa o que o código não
-diz (entrevista). Na iteração 1, 7 a 9 de cada 10 fatos conferidos estavam errados (`rodada-1/DEFEITOS.json5`,
+diz (entrevista). Na iteração 1, 7 a 9 de cada 10 fatos conferidos estavam errados (`iteration-1/DEFEITOS.json5`,
 "causa raiz nº 1") — por isso o spot-check é obrigatório.
 
 ```text

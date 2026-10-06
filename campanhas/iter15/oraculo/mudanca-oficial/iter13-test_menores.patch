@@ -1,0 +1,20 @@
+--- campanhas/iter13/oraculo/test_menores.py
++++ campanhas/iter13/oraculo/test_menores.py
+@@ -54,7 +54,7 @@
+ # (nome, só-humano?, binário, subcomando principal que o corpo tem de citar como `.swarm/bin/<bin> <sub>`)
+ SKILLS = (
+     ("board", False, "cs-state", "board"),
+-    ("new-epico", False, "cs-state", "new epico"),
++    ("new-epic", False, "cs-state", "new epico"),
+     ("new-sprint", False, "cs-state", "new sprint"),
+     ("new-feature", False, "cs-state", "new feature"),
+     ("new-task", False, "cs-state", "new task"),
+@@ -62,7 +62,7 @@
+     ("close-task", True, "cs-state", "close"),
+     ("close-feature", True, "cs-state", "close"),
+     ("close-sprint", True, "cs-state", "close"),
+-    ("close-epico", True, "cs-state", "close"),
++    ("close-epic", True, "cs-state", "close"),
+     ("close-story", True, "cs-state", "close"),
+     ("reopen", True, "cs-state", "reopen"),
+     ("park", True, "cs-state", "park"),
