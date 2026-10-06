@@ -1,10 +1,9 @@
 <!-- carimbo:inicio (gerado por tools/carimbo.sh --write; não edite à mão) -->
 ```
-carimbo: 2026-10-06 13:28 -03 · branch master · HEAD 760fa57 state: sessão salva — 0.9.0 publicada como projeto, links locais, como continuar em outra máquina
-skill: codebase-specialists · VERSION viva 0.9.0 (HEAD: 0.9.0) · último commit da skill: 760fa57 2026-10-06 state: sessão salva — 0.9.0 publicada como projeto, links locais, como continuar em outra máquina
-campanhas ativas (1):
-  - iter17: etapa intake (0/9 etapas)
-arquivos sujos da skill: 2
+carimbo: 2026-10-06 16:17 -03 · branch master · HEAD 4dd7cf2 harness: /install instala o pacote dist validado (iter17)
+skill: codebase-specialists · VERSION viva 0.9.0 (HEAD: 0.9.0) · último commit da skill: 4dd7cf2 2026-10-06 harness: /install instala o pacote dist validado (iter17)
+campanhas ativas: nenhuma
+arquivos sujos da skill: 4
   (lista: git status --porcelain)
 ```
 <!-- carimbo:fim -->

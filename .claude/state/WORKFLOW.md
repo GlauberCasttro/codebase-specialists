@@ -6,9 +6,12 @@ Atualizado em 2026-10-06 (criação do projeto completo; iter15 e iter16 entregu
 
 ## Frentes ativas
 
-| frente | o quê | estado (2026-10-06) | escopo | próximo passo |
-|---|---|---|---|---|
-| iter17 | `/install`: a skill INSTALADA passa a ser o pacote `dist/` (gerado e validado), não o projeto; travas do git instaladas sozinhas ao abrir o Claude; carimbo avisa pacote desatualizado; README "máquina nova" sem comando de terminal (decisão do founder) | aberta (`campanhas/iter17`, etapa intake); autor do oráculo escrevendo `campanhas/iter17/oraculo/` | `.claude/tools/{instalar,carimbo,_comum,package}.sh`, `.claude/skills/{install,close-front,load-session}/SKILL.md`, `.claude/settings.json`, `.claude/CLAUDE.md`, `README.md` | congelar o oráculo → `script-aprovacao.sh iter17` → founder aprova com a senha → corretor na cópia → portão → commit → push com autorização → rodar `/install` na máquina de origem (troca o link atual, que aponta para o projeto, pelo `dist/`) |
+Nenhuma.
+
+(iter17 `/install` ENTREGUE em `4dd7cf2`, 2026-10-06: portão VERDE — test_install 34/34, suítes 3.13/3.9 —,
+harness 53/53, conferir-commit 10 idênticos; campanha fechada GO. `/install` rodado na máquina de origem:
+`~/.claude/skills/codebase-specialists` → `dist/codebase-specialists` (0.9.0, origem 4dd7cf2); o link anterior,
+para o projeto, foi para `~/.claude/skills-backup-<data>/`.)
 
 ## Fila
 
