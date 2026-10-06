@@ -14,7 +14,9 @@ Só lê; não altera nada. Ordem:
    `python3 .claude/tools/ac/ac.py --work campanhas/<frente> status`
 4. Se houver portão da frente: `tail -5 local/portao-<frente>/portao.out`.
 5. Máquina nova? Se `local/termos-privados.txt` não existe, `bash .claude/tools/guard-privacidade.sh --termos`
-   avisa: diga ao founder (README, seção "Primeira vez numa máquina nova").
+   avisa: diga ao founder (README, seção "Primeira vez numa máquina nova"). Se o carimbo (SessionStart) sugeriu
+   `/install` (skill não instalada, link antigo ou pacote desatualizado) ou `bash .claude/tools/instalar.sh --check`
+   reprova, proponha `/install` ao founder.
 6. Frescor: se o RESUME diz algo que o carimbo/ac.py contradiz (ex.: commit que já entrou, etapa que andou),
    VALE o script — diga a divergência ao founder e corrija o state no `save-session`.
 

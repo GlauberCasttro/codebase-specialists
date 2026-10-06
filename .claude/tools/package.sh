@@ -10,13 +10,16 @@
 # no pacote (tem de voltar vazio), e VALIDAÇÃO (package_validar.py): instala o pacote num HOME temporário e roda
 # init + harness install + emit + emit validate + harness selftest num repositório git temporário; confere que nada
 # de .claude/, campanhas/, local/, tests/, evals/ vazou. Só então gera o .zip.
+# O pacote novo é montado e validado FORA do lugar (dist/.montagem.*/) e só substitui dist/codebase-specialists
+# se passar: falha ⇒ o pacote anterior (e a skill instalada que aponta para ele) fica intacto.
+# Grava dist/codebase-specialists/.origem com o HEAD completo (40 hex, sem caminho; `+ worktree` com --worktree).
 #   --dry-run     lista o que entraria (e o que fica de fora) e não escreve nada
 #   --worktree    empacota a árvore de trabalho (padrão: `git archive HEAD` — só o commitado)
 #   --sem-validar pula a validação (o .zip NÃO é gerado nesse caso)
 #   --manter      mantém o HOME/alvo temporários da validação (para inspeção)
 # Publicar o pacote (release, outro repositório) fica FORA: decisão do founder.
 set -u
-case "${1:-}" in -h|--help) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;; esac
+case "${1:-}" in -h|--help) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;; esac
 . "$(dirname "$0")/_comum.sh"
 DRY=0; WT=0; VALIDA=1; MANTER=""
 for a in "$@"; do
@@ -28,10 +31,12 @@ done
 INTERNOS='^docs/(PONTOS-DO-FOUNDER\.md|ROADMAP-[^/]*\.md|PENDENTE\.md|AUTONOMIA-DESENHO\.md|defeitos-abertos\.json5|12-rodada-[^/]*)$'
 
 # fonte: HEAD (padrão) ou árvore de trabalho; lista de arquivos candidatos, relativa à raiz da skill
-SRC="$SKILL"; TMPSRC=""
+SRC="$SKILL"; TMPSRC=""; MONT=""
+limpar() { [ -n "$TMPSRC" ] && rm -rf "$TMPSRC"; [ -n "$MONT" ] && rm -rf "$MONT"; return 0; }
+trap limpar EXIT
 if [ "$WT" -eq 0 ]; then
   [ -n "$REPO" ] || die "a skill não está num repositório git (use --worktree)"
-  TMPSRC="$(mktemp -d "${TMPDIR:-/tmp}/cs-package-src.XXXXXX")"; trap 'rm -rf "$TMPSRC"' EXIT
+  TMPSRC="$(mktemp -d "${TMPDIR:-/tmp}/cs-package-src.XXXXXX")"
   archive_head "$TMPSRC" || die "git archive falhou"; SRC="$TMPSRC"
 fi
 [ -f "$SRC/VERSION" ] || die "VERSION ausente em $SRC"
@@ -55,7 +60,8 @@ TODOS="$(cd "$SRC" && find . \( -name .git -o -name local -o -name dist -o -name
   ! -name .DS_Store ! -name '*.pyc' -print | sed 's#^\./##' | LC_ALL=C sort)"
 LISTA="$(printf '%s\n' "$TODOS" | incluir)"
 N="$(printf '%s\n' "$LISTA" | grep -c .)"
-[ -f "$SKILL/.claude/package/README.md" ] || die "README do pacote ausente: .claude/package/README.md"
+README_PK="$SRC/.claude/package/README.md"
+[ -f "$README_PK" ] || die "README do pacote ausente: .claude/package/README.md$([ $WT -eq 0 ] && echo ' (no HEAD)')"
 
 if [ "$DRY" -eq 1 ]; then
   echo "pacote codebase-specialists $VER (fonte: $([ $WT -eq 1 ] && echo 'árvore de trabalho' || echo "HEAD $(git -C "$REPO" rev-parse --short HEAD)"))"
@@ -67,23 +73,38 @@ if [ "$DRY" -eq 1 ]; then
   exit 0
 fi
 
-DIST="$SKILL/dist"; PK="$DIST/codebase-specialists"; ZIP="$DIST/codebase-specialists-$VER.zip"
-rm -rf "$PK" "$ZIP"; mkdir -p "$PK"
+DIST="$SKILL/dist"; DESTINO="$DIST/codebase-specialists"; ZIP="$DIST/codebase-specialists-$VER.zip"
+mkdir -p "$DIST"; MONT="$(mktemp -d "$DIST/.montagem.XXXXXX")" || die "não consegui criar a montagem em dist/"
+PK="$MONT/codebase-specialists"; mkdir -p "$PK"
 printf '%s\n' "$LISTA" | while IFS= read -r f; do
   mkdir -p "$PK/$(dirname "$f")"; cp -p "$SRC/$f" "$PK/$f"
 done
-sed "s/{{VERSION}}/$VER/g" "$SKILL/.claude/package/README.md" > "$PK/README.md"
-echo "== pacote $VER montado em dist/codebase-specialists ($((N + 1)) arquivos)"
+sed "s/{{VERSION}}/$VER/g" "$README_PK" > "$PK/README.md"
+echo "== pacote $VER montado fora do lugar (dist/$(basename "$MONT")/codebase-specialists, $((N + 1)) arquivos)"
 
 echo "== limpeza (privacidade + referências internas)"
 python3 "$TOOLS/publicar_regras.py" aplicar "$PK" --pacote || die "limpeza reprovou (achados acima) — pacote inválido"
 echo "== guard-privacidade no pacote"
 python3 "$TOOLS/guard_privacidade.py" "$PK" || die "guard-privacidade achou termo privado no pacote"
 grep -rIl '{{VERSION}}' "$PK" >/dev/null 2>&1 && die "placeholder {{VERSION}} sobrou no pacote"
+ORIG="$(git -C "$SKILL" rev-parse HEAD 2>/dev/null)"
+if [ -n "$ORIG" ]; then
+  if [ "$WT" -eq 1 ]; then printf '%s + worktree\n' "$ORIG" > "$PK/.origem"; else printf '%s\n' "$ORIG" > "$PK/.origem"; fi
+fi
 
-if [ "$VALIDA" -eq 0 ]; then echo "validação PULADA (--sem-validar): .zip não gerado"; exit 0; fi
+# troca: o pacote montado substitui dist/codebase-specialists (o anterior vai para a montagem e é apagado no fim)
+trocar() {
+  ANT=""
+  if [ -e "$DESTINO" ] || [ -L "$DESTINO" ]; then ANT="$MONT/anterior"; mv "$DESTINO" "$ANT" || die "não consegui mover o pacote anterior"; fi
+  if ! mv "$PK" "$DESTINO"; then [ -n "$ANT" ] && mv "$ANT" "$DESTINO"; die "não consegui pôr o pacote novo no lugar"; fi
+  PK="$DESTINO"
+}
+
+if [ "$VALIDA" -eq 0 ]; then trocar; echo "validação PULADA (--sem-validar): pacote em dist/codebase-specialists, .zip não gerado"; exit 0; fi
 echo "== validação (skill instalada num HOME temporário)"
-python3 "$TOOLS/package_validar.py" "$PK" $MANTER || die "validação do pacote REPROVADA — .zip não gerado"
+python3 "$TOOLS/package_validar.py" "$PK" $MANTER || die "validação do pacote REPROVADA — .zip não gerado; dist/codebase-specialists anterior intacto"
+trocar
+rm -f "$ZIP"
 
 ( cd "$DIST" && python3 - "codebase-specialists" "$(basename "$ZIP")" <<'PY'
 import os, sys, zipfile

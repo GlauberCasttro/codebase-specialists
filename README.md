@@ -11,7 +11,7 @@ Versão: **0.9.0** (ver [`VERSION`](VERSION)).
 
 **Projeto ≠ pacote.** O projeto tem tudo do desenvolvimento (testes, fixtures de avaliação, campanhas, harness de
 desenvolvimento). O **pacote** — só o que roda — é gerado por `bash .claude/tools/package.sh` em `dist/`
-(gitignored) e validado instalando-o num HOME temporário.
+(gitignored) e validado instalando-o num HOME temporário; é ele a skill instalada nesta máquina (`/install`).
 
 ## Estrutura
 
@@ -34,32 +34,34 @@ injeta a âncora (`.claude/tools/carimbo.sh --brief`); as regras estão em [`.cl
 Toda mudança no produto passa pelo fluxo de frente: `/new-front` (campanha em `campanhas/<frente>/`, oráculo
 separado, aprovação humana pelo script gerado em `local/`) → cópia de trabalho → `portao.sh` (suítes nos 2
 Pythons, oráculos, nenhum `def` removido) → `portar.sh` → `conferir-commit.sh` → commit → `/close-front`. Ao
-fechar uma versão: `/package`. Para salvar: `/save-session`.
+fechar uma versão: `/package`; atualizar a skill instalada: `/install`. Para salvar: `/save-session`.
 
 ## Instalar a skill a partir do projeto
 
-O Claude Code descobre a skill pelo `SKILL.md` na raiz da pasta em `~/.claude/skills/`. Para usar o projeto como a
-skill instalada (sem cópia), crie um link:
-
-```bash
-ln -s "$PWD" ~/.claude/skills/codebase-specialists     # rodado na raiz do projeto
-```
-
-Ou instale o pacote: `bash .claude/tools/package.sh` e descompacte `dist/codebase-specialists-<VERSION>.zip` em
-`~/.claude/skills/`.
+A skill **instalada** nesta máquina é o **pacote** (`dist/codebase-specialists`), não o projeto inteiro. No Claude
+Code aberto na raiz do projeto, rode `/install` (`.claude/tools/instalar.sh`): instala as travas do git, gera e
+valida o pacote (só troca o pacote anterior se a validação passar) e liga `~/.claude/skills/codebase-specialists` →
+`dist/codebase-specialists`; o que houver lá antes vai para `~/.claude/skills-backup-<data>/` (nunca é apagado).
+`--dry-run` mostra o plano; `--check` diz se está em dia. O SessionStart avisa quando o pacote instalado ficou
+desatualizado (commit de produto depois do pacote) e sugere `/install`; o `/close-front` manda rodar `/install`
+depois do commit da frente.
 
 ## Primeira vez numa máquina nova
 
-1. Python **3.9+** (só biblioteca padrão) e `git`. Os testes rodam com `python3` e `/usr/bin/python3`.
-2. Senha das aprovações humanas (motor de campanhas): no **seu terminal** (nunca pelo agente, nunca no chat):
-   `python3 .claude/tools/ac/ac.py frase definir` — grava `~/.claude/auto-correcao/frase.json` (só salts e
-   verificador). O hook `.claude/tools/ac/hook_aprovacao.py` impede o agente de aprovar por você.
-3. Privacidade: crie `local/termos-privados.txt` (um termo por linha; `re:` para regex) e, se for empacotar,
-   `local/regras-privadas.json5` (formato em `python3 .claude/tools/publicar_regras.py --help`). Sem eles o
-   `guard-privacidade.sh` avisa e usa só padrões genéricos (caminho de usuário, e-mail pessoal).
-4. Hooks git do harness (pre-commit e commit-msg com o guard de privacidade):
-   `sh .claude/tools/instalar-hooks-git.sh`.
-5. Âncora: `bash .claude/tools/carimbo.sh`.
+Você não digita comando de terminal: pede ao Claude, e as skills do projeto fazem o resto.
+
+1. A máquina precisa de Python 3.9+ (só biblioteca padrão) e git.
+2. Clonar: num Claude Code aberto em qualquer pasta, peça "clone o repositório codebase-specialists em
+   ~/Repositorios".
+3. Abrir: abra o Claude Code na pasta do projeto clonado (os hooks e as regras do harness só valem ali).
+4. Rode `/install`: instala as travas do git (guard de privacidade no commit), gera e valida o pacote e liga a skill
+   instalada ao pacote, com backup do que houver lá.
+5. Rode `/load-session`: o Claude mostra onde o desenvolvimento parou e a próxima ação.
+6. Senha das aprovações humanas (motor de campanhas): é sua e só sua. Quando uma aprovação pedir, defina-a no
+   **seu terminal** (nunca pelo agente, nunca no chat) com `python3 .claude/tools/ac/ac.py frase definir` — grava só salts e verificador em `~/.claude/auto-correcao/frase.json`; o hook de aprovação impede o agente de aprovar por você.
+7. Privacidade: peça ao Claude para criar `local/termos-privados.txt` (um termo por linha; `re:` para regex) e, se
+   for empacotar, `local/regras-privadas.json5`. Sem eles o guard de privacidade avisa e usa só padrões genéricos
+   (caminho de usuário, e-mail pessoal).
 
 ## Testes
 

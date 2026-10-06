@@ -1,0 +1,156 @@
+# base do oráculo iter17 (/install: a skill instalada é o pacote) — 2026-10-06 13:58
+# (1) PROJETO ATUAL = árvore viva no HEAD 4c54bb3 (sem instalar.sh, sem skill install, carimbo/README/close-front antigos).
+#     Esperado: TODOS os 34 testes falham nos 2 Pythons.
+
+## (1) PROJETO — python3 (Python 3.13.3)
+FAIL  test_i1_existe_e_help_nao_escreve
+FAIL  test_i1a_instala_as_travas_do_git
+FAIL  test_i1a_trava_alheia_nao_e_sobrescrita
+FAIL  test_i1b_package_falho_nao_toca_instalacao
+FAIL  test_i1b_package_falho_preserva_instalacao_anterior_funcionando
+FAIL  test_i1c_backup_nunca_apaga_backup_anterior
+FAIL  test_i1c_instalacao_nova_link_para_o_dist_independe_do_cwd
+FAIL  test_i1c_link_errado_vai_para_backup
+FAIL  test_i1c_pasta_existente_vai_para_backup
+FAIL  test_i1d_instalado_roda_e_tem_a_versao_do_projeto
+FAIL  test_i1d_instalado_sem_nada_interno
+FAIL  test_i1d_versao_do_projeto_divergente_do_pacote_reprova
+FAIL  test_i1e_check_commit_de_produto_desatualiza
+FAIL  test_i1e_check_commit_so_de_state_continua_em_dia
+FAIL  test_i1e_check_em_dia
+FAIL  test_i1e_check_link_errado
+FAIL  test_i1e_check_sem_instalacao
+FAIL  test_i1e_check_travas_faltando_nao_reinstala
+FAIL  test_i1e_check_versao_divergente
+FAIL  test_i1e_dry_run_depois_de_instalado_nao_escreve
+FAIL  test_i1e_dry_run_nao_escreve_e_mostra_o_plano
+FAIL  test_i1f_duas_execucoes_sem_backup_novo_e_link_intocado
+FAIL  test_i2_brief_commit_de_produto_avisa_desatualizado
+FAIL  test_i2_brief_commit_so_de_state_nao_avisa
+FAIL  test_i2_brief_em_dia_nao_sugere_nada
+FAIL  test_i2_brief_instala_travas_que_faltam_e_avisa_uma_vez
+FAIL  test_i2_brief_link_para_o_projeto_sugere_install
+FAIL  test_i2_brief_sem_instalacao_sugere_install
+FAIL  test_i2_brief_trava_alheia_preservada
+FAIL  test_i2_origem_no_pacote_instalado_sem_caminho
+FAIL  test_i3_close_front_manda_install_depois_do_commit
+FAIL  test_i3_readme_primeira_vez_ordem
+FAIL  test_i3_readme_primeira_vez_sem_terminal
+FAIL  test_i3_skill_install_fina
+Ran 34 tests in 34.653s
+FAILED (failures=34)
+## (1) PROJETO — /usr/bin/python3 (Python 3.9.6)
+FAIL  test_i1_existe_e_help_nao_escreve
+FAIL  test_i1a_instala_as_travas_do_git
+FAIL  test_i1a_trava_alheia_nao_e_sobrescrita
+FAIL  test_i1b_package_falho_nao_toca_instalacao
+FAIL  test_i1b_package_falho_preserva_instalacao_anterior_funcionando
+FAIL  test_i1c_backup_nunca_apaga_backup_anterior
+FAIL  test_i1c_instalacao_nova_link_para_o_dist_independe_do_cwd
+FAIL  test_i1c_link_errado_vai_para_backup
+FAIL  test_i1c_pasta_existente_vai_para_backup
+FAIL  test_i1d_instalado_roda_e_tem_a_versao_do_projeto
+FAIL  test_i1d_instalado_sem_nada_interno
+FAIL  test_i1d_versao_do_projeto_divergente_do_pacote_reprova
+FAIL  test_i1e_check_commit_de_produto_desatualiza
+FAIL  test_i1e_check_commit_so_de_state_continua_em_dia
+FAIL  test_i1e_check_em_dia
+FAIL  test_i1e_check_link_errado
+FAIL  test_i1e_check_sem_instalacao
+FAIL  test_i1e_check_travas_faltando_nao_reinstala
+FAIL  test_i1e_check_versao_divergente
+FAIL  test_i1e_dry_run_depois_de_instalado_nao_escreve
+FAIL  test_i1e_dry_run_nao_escreve_e_mostra_o_plano
+FAIL  test_i1f_duas_execucoes_sem_backup_novo_e_link_intocado
+FAIL  test_i2_brief_commit_de_produto_avisa_desatualizado
+FAIL  test_i2_brief_commit_so_de_state_nao_avisa
+FAIL  test_i2_brief_em_dia_nao_sugere_nada
+FAIL  test_i2_brief_instala_travas_que_faltam_e_avisa_uma_vez
+FAIL  test_i2_brief_link_para_o_projeto_sugere_install
+FAIL  test_i2_brief_sem_instalacao_sugere_install
+FAIL  test_i2_brief_trava_alheia_preservada
+FAIL  test_i2_origem_no_pacote_instalado_sem_caminho
+FAIL  test_i3_close_front_manda_install_depois_do_commit
+FAIL  test_i3_readme_primeira_vez_ordem
+FAIL  test_i3_readme_primeira_vez_sem_terminal
+FAIL  test_i3_skill_install_fina
+Ran 34 tests in 37.640s
+FAILED (failures=34)
+
+## (2) SANIDADE — implementação de REFERÊNCIA (só no scratch do autor do oráculo, NÃO entregue):
+#  instalar.sh (travas → package fora do lugar com restauração → backup/link → conferência), .origem no package.sh,
+#  carimbo --brief chamando instalar.sh --check, skill install, close-front e README novos.
+python3 (Python 3.13.3):    Ran 34 tests — OK
+/usr/bin/python3 (3.9.6):   Ran 34 tests — OK
+#  ⇒ o oráculo é satisfazível.
+
+## (3) MUTAÇÕES da referência (python3; todas REPROVAM)
+  M1-link-para-o-projeto                   Ran 34 tests in 209.656s FAILED (failures=21)
+      reprova: test_i1a_instala_as_travas_do_git
+      reprova: test_i1b_package_falho_preserva_instalacao_anterior_funcionando
+      reprova: test_i1c_backup_nunca_apaga_backup_anterior
+      reprova: test_i1c_instalacao_nova_link_para_o_dist_independe_do_cwd
+      reprova: test_i1c_link_errado_vai_para_backup
+      reprova: test_i1c_pasta_existente_vai_para_backup
+      reprova: test_i1d_instalado_roda_e_tem_a_versao_do_projeto
+      reprova: test_i1d_instalado_sem_nada_interno
+      reprova: test_i1d_versao_do_projeto_divergente_do_pacote_reprova
+      reprova: test_i1e_check_commit_de_produto_desatualiza
+      reprova: test_i1e_check_commit_so_de_state_continua_em_dia
+      reprova: test_i1e_check_em_dia
+      reprova: test_i1e_check_link_errado
+      reprova: test_i1e_check_travas_faltando_nao_reinstala
+      reprova: test_i1e_check_versao_divergente
+      reprova: test_i1e_dry_run_depois_de_instalado_nao_escreve
+      reprova: test_i1f_duas_execucoes_sem_backup_novo_e_link_intocado
+      reprova: test_i2_brief_commit_de_produto_avisa_desatualizado
+      reprova: test_i2_brief_commit_so_de_state_nao_avisa
+      reprova: test_i2_brief_em_dia_nao_sugere_nada
+      reprova: test_i2_origem_no_pacote_instalado_sem_caminho
+  M2-package-falho-ainda-instala           Ran 34 tests in 263.513s FAILED (failures=2)
+      reprova: test_i1b_package_falho_nao_toca_instalacao
+      reprova: test_i1b_package_falho_preserva_instalacao_anterior_funcionando
+  M3-segunda-execucao-faz-backup           Ran 34 tests in 263.509s FAILED (failures=1)
+      reprova: test_i1f_duas_execucoes_sem_backup_novo_e_link_intocado
+  M4-package-sem-staging                   Ran 34 tests in 259.296s FAILED (failures=1)
+      reprova: test_i1b_package_falho_preserva_instalacao_anterior_funcionando
+  M5-desatualizado-por-qualquer-commit     Ran 34 tests in 304.570s FAILED (failures=2)
+      reprova: test_i1e_check_commit_so_de_state_continua_em_dia
+      reprova: test_i2_brief_commit_so_de_state_nao_avisa
+  M6-check-instala-travas                  Ran 34 tests in 298.215s FAILED (failures=6)
+      reprova: test_i1e_check_commit_de_produto_desatualiza
+      reprova: test_i1e_check_em_dia
+      reprova: test_i1e_check_sem_instalacao
+      reprova: test_i1e_check_travas_faltando_nao_reinstala
+      reprova: test_i2_brief_commit_de_produto_avisa_desatualizado
+      reprova: test_i2_brief_instala_travas_que_faltam_e_avisa_uma_vez
+  M7-brief-nao-instala-travas              Ran 34 tests in 295.160s FAILED (failures=2)
+      reprova: test_i2_brief_instala_travas_que_faltam_e_avisa_uma_vez
+      reprova: test_i2_brief_trava_alheia_preservada
+  M8-origem-com-caminho                    Ran 34 tests in 267.505s FAILED (failures=20)
+      reprova: test_i1a_instala_as_travas_do_git
+      reprova: test_i1b_package_falho_preserva_instalacao_anterior_funcionando
+      reprova: test_i1c_backup_nunca_apaga_backup_anterior
+      reprova: test_i1c_instalacao_nova_link_para_o_dist_independe_do_cwd
+      reprova: test_i1c_link_errado_vai_para_backup
+      reprova: test_i1c_pasta_existente_vai_para_backup
+      reprova: test_i1d_instalado_roda_e_tem_a_versao_do_projeto
+      reprova: test_i1d_instalado_sem_nada_interno
+      reprova: test_i1e_check_commit_de_produto_desatualiza
+      reprova: test_i1e_check_commit_so_de_state_continua_em_dia
+      reprova: test_i1e_check_em_dia
+      reprova: test_i1e_check_link_errado
+      reprova: test_i1e_check_travas_faltando_nao_reinstala
+      reprova: test_i1e_check_versao_divergente
+      reprova: test_i1e_dry_run_depois_de_instalado_nao_escreve
+      reprova: test_i1f_duas_execucoes_sem_backup_novo_e_link_intocado
+      reprova: test_i2_brief_commit_de_produto_avisa_desatualizado
+      reprova: test_i2_brief_commit_so_de_state_nao_avisa
+      reprova: test_i2_brief_em_dia_nao_sugere_nada
+      reprova: test_i2_origem_no_pacote_instalado_sem_caminho
+
+# legenda das mutações (cada uma = 1 troca de texto na referência):
+#  M1 link aponta para o PROJETO, não para dist/   M2 falha do package ignorada (instala mesmo assim)
+#  M3 toda execução faz backup (2ª execução cria backup)   M4 package sem montagem fora do lugar (falha destrói o instalado)
+#  M5 "desatualizado" = qualquer commit (inclusive só state)   M6 --check instala travas (escreve)
+#  M7 carimbo --brief não instala as travas que faltam   M8 .origem leva o caminho do projeto

@@ -1,8 +1,9 @@
 #!/bin/bash
-# carimbo.sh — âncora da sessão de desenvolvimento da codebase-specialists. Só LÊ estado real (git, VERSION,
+# carimbo.sh — âncora da sessão de desenvolvimento da codebase-specialists. LÊ estado real (git, VERSION,
 # status das campanhas pelo motor embutido .claude/tools/ac/ac.py); nunca inventa data, contagem ou commit.
 # uso: carimbo.sh            imprime a âncora completa
-#      carimbo.sh --brief    versão curta (hook SessionStart: vai para o contexto)
+#      carimbo.sh --brief    versão curta (hook SessionStart: vai para o contexto); instala as travas do git que
+#                            faltarem e avisa se a skill instalada não é o pacote em dia (sugere /install)
 #      carimbo.sh --write    imprime e regrava o bloco de carimbo no topo de .claude/state/RESUME.md
 #      carimbo.sh --json     a âncora em JSON
 #      carimbo.sh --help
@@ -10,6 +11,11 @@ set -u
 case "${1:-}" in -h|--help) sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;; esac
 MODO="${1:-full}"
 . "$(dirname "$0")/_comum.sh"
+TRAVAS_NOVAS=""; INST_MOT=""
+if [ "$MODO" = "--brief" ] && [ -n "$REPO" ]; then
+  TRAVAS_NOVAS="$(instalar_travas 2>/dev/null)"   # só as que faltam; trava alheia nunca é tocada
+  INST_MOT="$(instalado_estado --rapido 2>/dev/null)"
+fi
 [ -n "$REPO" ] || REPO="?"
 
 DATA="$(date '+%Y-%m-%d %H:%M %Z')"
@@ -67,6 +73,11 @@ if [ "$MODO" = "--brief" ]; then
   echo "[harness de desenvolvimento: $NOME] regras em .claude/CLAUDE.md; retomar com a skill load-session."
   bloco
   echo "estado: .claude/state/RESUME.md, WORKFLOW.md, BACKLOG.md, DECISIONS.md"
+  [ -n "$TRAVAS_NOVAS" ] && echo "travas do git faltavam ($(echo $TRAVAS_NOVAS)) — instaladas agora"
+  if [ -n "$INST_MOT" ]; then
+    printf '%s\n' "$INST_MOT" | sed 's/^/skill instalada: /'
+    echo "sugestão: rode /install (atualiza a skill instalada a partir deste projeto)"
+  fi
   exit 0
 fi
 

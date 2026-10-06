@@ -574,7 +574,7 @@ class AjudaETools(unittest.TestCase):
 
     def test_skills_do_harness(self):
         nomes = sorted(os.listdir(os.path.join(SKILL, ".claude", "skills")))
-        self.assertEqual(nomes, ["close-front", "load-session", "new-front", "package", "save-session"])
+        self.assertEqual(nomes, ["close-front", "install", "load-session", "new-front", "package", "save-session"])
         for n in nomes:
             s = open(os.path.join(SKILL, ".claude", "skills", n, "SKILL.md"), encoding="utf-8").read()
             self.assertTrue(s.startswith("---\nname: %s\n" % n), n)

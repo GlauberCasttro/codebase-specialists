@@ -10,7 +10,11 @@ gitignored). Markdown explica; script decide. Nunca fabrique aprovação, execu�
 - Estado: `.claude/state/` — RESUME, WORKFLOW (frentes, fila, entregas), BACKLOG (P0..P2), DECISIONS (do founder),
   `logs/sessoes.jsonl` (append-only).
 - Editável direto (guard-entrega): `.claude/state/**`, `campanhas/**`, `local/**`, `dist/**`. O resto é produto.
-- Rituais (`.claude/skills/`): `load-session`, `save-session`, `new-front`, `close-front`, `package`.
+- Rituais (`.claude/skills/`): `load-session`, `save-session`, `new-front`, `close-front`, `package`, `install`.
+- Skill instalada nesta máquina = o PACOTE: `install` (`tools/instalar.sh`; `--dry-run`, `--check`) liga
+  `~/.claude/skills/codebase-specialists` → `dist/codebase-specialists` (backup do que houver lá) e instala as
+  travas do git. O SessionStart instala travas que faltam e avisa pacote desatualizado (commit de produto depois
+  da `.origem`).
 
 ## Método (campanhas) e fluxo de entrega
 Motor de campanhas EMBUTIDO: `.claude/tools/ac/ac.py` (cópia da auto-correcao, origem em `ac/ORIGEM.txt`). Sempre
@@ -30,7 +34,8 @@ variável + palavra de aprovação. Toda mudança no produto é uma FRENTE = cam
    `tools/conferir-commit.sh` (vivo × cópia testada) → commit SÓ dos arquivos da frente.
 7. Fechar a campanha (`close-front`): front report, done, run record --decision, decisão; o founder confere a
    aprovação (`frase conferir`) no terminal dele.
-8. `package` quando a versão fechar: gera e VALIDA `dist/` (publicar o pacote é decisão do founder).
+8. `package` quando a versão fechar: gera e VALIDA `dist/` (publicar o pacote é decisão do founder). Depois do
+   commit de cada frente, `/install` atualiza a skill instalada nesta máquina.
 Achados de uso real vindos de outras sessões chegam por mensagem e viram item do BACKLOG ou frente.
 
 ## Git e privacidade
@@ -59,7 +64,7 @@ Achados de uso real vindos de outras sessões chegam por mensagem e viram item d
 - `guard-entrega.py` só vê Edit/Write/MultiEdit/NotebookEdit. Escrita por Bash no produto NÃO é bloqueada — a regra
   vale por escrito (e é por Bash que `portar.sh` trabalha, de propósito).
 - `guard-git.sh` e `hook_aprovacao.py` são filtros sintáticos, não sandbox. O pre-commit só existe depois de
-  `tools/instalar-hooks-git.sh` (o `.git/hooks/` não é versionado).
+  `tools/instalar-hooks-git.sh`, `/install` ou do SessionStart (o `.git/hooks/` não é versionado).
 - Os hooks só valem com o Claude aberto NESTA pasta. Os ledgers das campanhas (`campanhas/*/.auto-correcao/`) são
   locais: numa máquina nova o histórico das campanhas é só o que está em `campanhas/` (oráculos + README).
 - O portão não mede qualidade de uso real; mede suítes, oráculos e remoção de `def`.

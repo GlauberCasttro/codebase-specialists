@@ -25,4 +25,7 @@ SEMPRE explícita (ou `--lista`).
    - o FOUNDER roda no terminal dele a conferência da aprovação (`frase conferir`); você só avisa;
    - `... done decisao`. Confira com `... status` (etapa `concluida`).
 7. WORKFLOW: tire das ativas, ponha em "Últimas entregas" (commit + data do `git log`); em `campanhas/README.md`
-   preencha commit de entrega e decisão (GO/PARCIAL). Depois, `save-session`.
+   preencha commit de entrega e decisão (GO/PARCIAL).
+8. Skill instalada: depois do commit da frente, `/install` (`bash .claude/tools/instalar.sh`) — regera e valida o
+   pacote a partir do HEAD novo e mantém `~/.claude/skills/codebase-specialists` → `dist/codebase-specialists`.
+   Falhou ⇒ a instalação anterior fica intacta; relate. Depois, `save-session`.
