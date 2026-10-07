@@ -22,12 +22,13 @@ for _p in (ENGINE, MEMORY):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
+import attest  # noqa: E402
 import hcore  # noqa: E402
 import j5  # noqa: E402
 
 ENGINE_FILES = ["hcore.py", "j5.py", "engine.py", "cmds.py", "views.py", "brief.py", "router.py", "autonomy.py",
                 "session.py", "state.py", "validate.py", "guard.py", "bashscan.py", "selftest.py",
-                "envfail.py", "tree.py", "auto.py", "senha.py"]
+                "envfail.py", "tree.py", "auto.py", "senha.py", "attest.py"]
 DATA_FILES = [(os.path.join(HERE, "machines.json5"), "machines.json5"), (os.path.join(HERE, "routing.json5"), "routing.json5"),
               (os.path.join(MEMORY, "mem.py"), "mem.py")]
 BINS = ["cs-state", "cs-mem", "cs-session", "cs-route", "cs-precommit", "cs-auto"]
@@ -75,6 +76,10 @@ MK_END = "# <<< codebase-specialists <<<"
 
 
 _PLAN = None  # dry-run: {"root", "steps": [{path, action, reason}]} em vez de escrever
+# B-13: {rel: bytes} do que este install deixou no alvo (escrito ou já igual) → atestado lido pelo pre-commit
+_WRITTEN = None
+# pycache do motor (o pre-commit e os wrappers importam .swarm/harness/*.py) não entra no commit
+HARNESS_GITIGNORE = b"# gerado por codebase-specialists (harness install): bytecode do motor fica fora do git\n__pycache__/\n"
 
 
 class OutsideRefused(hcore.StateError):
@@ -100,11 +105,23 @@ def _plan(path, action, reason=""):
     _PLAN["steps"].append({"path": os.path.relpath(path, _PLAN["root"]), "action": action, "reason": reason})
 
 
-def _write(path, data, mode=None, reason=""):
+def _note(path, data, old=None, merged=False):
+    """Registra para o atestado. Mesclado (conteúdo humano junto): só se o de antes era o do HEAD (attest.pristine)."""
+    if _WRITTEN is None or _PLAN is not None:
+        return
+    root = _WRITTEN["root"]
+    rel = os.path.relpath(path, root).replace(os.sep, "/")
+    if merged and not attest.pristine(root, rel, old):
+        return
+    _WRITTEN["files"][rel] = data
+
+
+def _write(path, data, mode=None, reason="", merged=False):
     old = None
     if os.path.isfile(path):
         with open(path, "rb") as f:
             old = f.read()
+    _note(path, data, old, merged)
     if old == data:
         return False
     if _PLAN is not None:
@@ -136,6 +153,8 @@ def copy_engine(root, changes):
         manifest[name] = hcore.sha256_bytes(data)
     _write(os.path.join(dst, "MANIFEST.json5"), j5.dumps({"files": manifest},
            header="sha256 dos arquivos do motor instalado (drift/selftest)").encode("utf-8"))
+    if _write(os.path.join(dst, ".gitignore"), HARNESS_GITIGNORE, 0o644):
+        changes.append(hcore.STATE_DIR + "/harness/.gitignore")
     return manifest
 
 
@@ -186,7 +205,9 @@ def write_config(root, changes):
         _plan(p, "update" if os.path.isfile(p) else "create")
         changes.append(hcore.STATE_DIR + "/harness/config.json5")
     elif added or not os.path.isfile(p):
+        old = _read(p) if os.path.isfile(p) else None
         hcore.write_json5(p, cfg, "config.json5 do harness (protegido: só reinstalação ou edição humana fora do agente)")
+        _note(p, _read(p), old, merged=True)
         changes.append(hcore.STATE_DIR + "/harness/config.json5")
 
 
@@ -240,7 +261,7 @@ def merge_settings(root, changes, path_env=False):
         _write(p, (json.dumps(new, indent=2, ensure_ascii=False) + "\n").encode("utf-8"),
                reason="merge dos hooks cs-guard%s (evite: --no-settings)" % (
                    " + backup em %s/backups/settings/settings.json.bak-*" % hcore.STATE_DIR if os.path.isfile(p)
-                   else ""))
+                   else ""), merged=True)
         changes.append(".claude/settings.json")
 
 
@@ -285,7 +306,8 @@ def write_makefile(root, changes):
         content = existing[:a] + block.rstrip("\n") + (existing[b + len(MK_END):] if b >= 0 else "\n")
     else:
         content = existing + ("" if existing.endswith("\n") else "\n") + "\n" + block
-    if _write(mk, content.encode("utf-8"), reason="bloco gerenciado `include specialists.mk` (evite: --no-makefile)"):
+    if _write(mk, content.encode("utf-8"), reason="bloco gerenciado `include specialists.mk` (evite: --no-makefile)",
+              merged=True):
         changes.append("Makefile (bloco gerenciado)")
     return dict(names)
 
@@ -407,5 +429,22 @@ def install(root, platforms=None, settings=True, makefile=True, git_hook=False, 
                 "make_targets": []}
     if out and not allow_outside:
         raise OutsideRefused(out)
-    changes, targets = _apply(root, platforms, settings, makefile, git_hook, path_env)
-    return {"root": root, "changes": changes, "outside": out, "make_targets": sorted(targets)}
+    global _WRITTEN
+    fresh = not attest.harness_state(root)  # o estado nasce agora: adota o atestado do emit anterior (sem âncora)
+    _WRITTEN = {"root": root, "files": {}}
+    try:
+        changes, targets = _apply(root, platforms, settings, makefile, git_hook, path_env)
+        written = dict(_WRITTEN["files"])
+    finally:
+        _WRITTEN = None
+    n, prob = attest.record(root, written, "harness install", skill_version(), adopt_unanchored=fresh)
+    return {"root": root, "changes": changes, "outside": out, "make_targets": sorted(targets),
+            "attested": n, "attest_problem": prob}
+
+
+def skill_version():
+    try:
+        with open(os.path.join(os.path.dirname(os.path.dirname(HERE)), "VERSION"), encoding="utf-8") as f:
+            return f.read().strip() or None
+    except OSError:
+        return None

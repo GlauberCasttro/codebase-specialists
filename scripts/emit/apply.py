@@ -139,7 +139,56 @@ def apply(root, steps, artifacts, platforms):
             continue
         atomic_write(dest, s.new)
     _write_manifest(root, artifacts, platforms)
+    attest_written(root, steps)
     return backups
+
+
+ATTEST_PROBLEM = []  # B-13: aviso do último atestado (o cli mostra)
+MERGED_ACTIONS = ("append-block", "remove-block")
+
+
+def _engine_dir():
+    return str(Path(__file__).resolve().parent.parent / "harness" / "engine")
+
+
+def attest_written(root, steps):
+    """B-13: atesta (sha256) o que esta emissão deixou no alvo — escrito, removido ou já igual — para o pre-commit
+    liberar o commit do resultado do emit. Arquivo de bloco gerenciado (conteúdo humano junto) só entra se o de
+    antes era o do HEAD (attest.pristine). Sem git na raiz: nada a atestar."""
+    import sys
+    eng = _engine_dir()
+    if eng not in sys.path:
+        sys.path.insert(0, eng)
+    import attest
+    del ATTEST_PROBLEM[:]
+    root = str(root)
+    written = {}
+    for s in steps:
+        if s.action == "conflict":
+            continue
+        merged = s.action in MERGED_ACTIONS or (s.art is not None and s.art.mode != OWNED)
+        old = s.old.encode("utf-8") if s.old is not None else None
+        if merged and not attest.pristine(root, s.path, old):
+            continue
+        if s.action == "delete":
+            written[s.path] = None
+        else:
+            dest = Path(root) / s.path
+            written[s.path] = dest.read_bytes() if dest.is_file() else None
+    try:
+        _, prob = attest.record(root, written, "emit", _skill_version())
+    except Exception as exc:  # sem atestado o pre-commit barra (fail-closed); o emit em si deu certo
+        prob = "atestado não gravado (%s: %s)" % (type(exc).__name__, exc)
+    if prob:
+        ATTEST_PROBLEM.append(prob)
+
+
+def _skill_version():
+    p = Path(__file__).resolve().parent.parent.parent / "VERSION"
+    try:
+        return p.read_text(encoding="utf-8").strip() or None
+    except OSError:
+        return None
 
 
 def _rmdir_if_empty(root, d):

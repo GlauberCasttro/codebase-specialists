@@ -164,3 +164,42 @@ refazer entrevista, roster, cartões, memória nem board. O que muda no reposit�
 
 O pre-commit novo muda o ritmo: commite os `allowed_paths` depois do `cs-state accept` e antes do `close` (o
 passo 6 do orquestrador já pedia isso).
+
+## Migração 0.10.1: o pre-commit aceita o resultado da própria ferramenta
+
+A entrada `to: "0.10.1"` do catálogo declara `harness` e `emit`. Um alvo em 0.9.0 vai direto: o plano lista as
+migrações 0.10.0 e 0.10.1, e o `--apply` aplica as duas em sequência (cada ação roda uma vez) e registra
+`migrations: ["0.10.0", "0.10.1"]` no `upgrade_history`.
+
+Antes, o pre-commit do alvo (`.swarm/bin/cs-precommit` → `guard.py check-diff --staged`) barrava o resultado do
+próprio `upgrade --apply`, do `emit` avulso e do `harness install` avulso: o motor fica em `.swarm/harness/` (área
+protegida) e os emitidos (`.claude/agents/`, `.claude/orchestrator.md`, `CLAUDE.md`…) ficam fora de qualquer
+`allowed_paths`. O commit do upgrade só passava com `--no-verify`. **Agora o commit do upgrade não precisa mais de
+`--no-verify`**: `git add` do que mudou e `git commit`.
+
+| Onde | 0.10.0 | 0.10.1 |
+|---|---|---|
+| `harness install` / `emit` | escreviam sem registro | gravam um **atestado**: sha256 de cada arquivo que deixaram no alvo (remoção = `null`) |
+| pre-commit (`check-diff`) | barrava motor e emitidos | libera o arquivo atestado enquanto o conteúdo staged tiver o sha atestado; edição à mão depois disso barra |
+| remoção à mão de arquivo do motor | o git via "renomeação" para dentro de `.swarm/backups/upgrade-*` e só o nome novo era conferido: passava | `--no-renames`: a remoção aparece com o próprio nome e barra |
+| `emit` num alvo com motor anterior ao atestado | — | reinstala o harness antes de emitir (o pre-commit antigo não lê o atestado) |
+| `__pycache__` do motor | entrava no `git add -A` e o pre-commit barrava | `.swarm/harness/.gitignore` (gerado pelo install) |
+
+O atestado:
+
+- mora em `<git-dir>/codebase-specialists/atestado.json`, fora da árvore versionada: nunca entra num commit nem vai
+  para outro clone. `.git/` é área protegida do guard (Write/Edit/Bash do modelo bloqueados, como o motor);
+- é ancorado no harness-ledger (cadeia de hashes): cada gravação anexa `{kind: "attest", sha256}`. O check-diff só
+  confia no atestado cujo sha256 é o do último `attest` de um ledger íntegro. Atestado editado à mão fica ignorado e
+  o commit barra, citando o motivo;
+- guarda só a última escrita da ferramenta por caminho, e cada gravação descarta o que o HEAD já tem (consumido no
+  commit). Um 2º commit com o arquivo mudado à mão barra; `upgrade --apply` sem migração pendente não escreve nada e
+  não abençoa a edição;
+- só libera caminhos que a ferramenta gera (`.swarm/`, `.claude/`, `.cursor/`, `.codex/`, `.agents/`,
+  `.github/agents|instructions|skills/`, `CLAUDE.md`, `AGENTS.md`, `Makefile`, `specialists.mk`), nunca estado do
+  motor. Estado (`.swarm/state/`, zonas, eventos, ledgers, memória) continua passando pelo `validate`;
+- arquivo mesclado (bloco gerenciado, `settings.json`, `Makefile`) só é atestado se, antes da escrita, era igual ao
+  HEAD: edição humana ainda não commitada nesse arquivo não é abençoada pela ferramenta.
+
+Arquivo que a ferramenta não escreveu (fonte, skill do usuário em `.claude/skills/`, arquivo novo em
+`.swarm/harness/`) continua barrado, junto ou não do resultado do upgrade.

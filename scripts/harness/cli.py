@@ -43,6 +43,8 @@ def cmd_install(args):
     print("harness instalado em %s" % res["root"])
     for c in res["changes"] or ["(nada mudou — idempotente)"]:
         print("  " + c)
+    if res.get("attest_problem"):  # B-13: sem atestado o pre-commit barra o commit deste resultado
+        sys.stderr.write("AVISO: %s\n" % res["attest_problem"])
     print("próximo: cs.py harness selftest (gate G6)")
     return 0
 

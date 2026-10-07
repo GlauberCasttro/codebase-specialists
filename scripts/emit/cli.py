@@ -91,10 +91,13 @@ def run_emit(args):
     steps = A.plan(root, arts, governed, force=args.force)
     out = sys.stdout
     outside = A.outside(steps)
+    stale = engine_without_attest(root)
     if args.dry_run:
         out.write("plano (dry-run; nada escrito) em %s para %s\n" % (root, ",".join(plats)))
         out.write(A.render_plan(steps, args.diff) + "\n")
         out.write(A.render_outside(outside) + "\n")
+        if stale:
+            out.write("motor: %s\n" % STALE_NOTE)
         return 3 if A.has_conflict(steps) else 0
     if A.has_conflict(steps):
         written = A.write_conflicts(root, steps)
@@ -108,15 +111,55 @@ def run_emit(args):
         sys.stderr.write("nada foi emitido: %d escrita(s) FORA de .swarm/ exigem --allow-outside "
                          "(mostre a lista ao usuário antes)\n" % len(outside))
         return 3
+    if stale:
+        rc = refresh_engine(root, args.allow_outside, out)
+        if rc:
+            return rc
     backups = A.apply(root, steps, arts, governed)
     out.write(A.render_plan(steps, args.diff) + "\n")
     for b in backups:
         out.write("backup: %s (+ .diff)\n" % b)
+    for prob in A.ATTEST_PROBLEM:
+        sys.stderr.write("AVISO: %s\n" % prob)
     rep = V.validate(root, plats)
     if not rep.ok:
         sys.stderr.write("emitido, mas a validação falhou:\n  - %s\n" % "\n  - ".join(rep.errors))
         return 1
     out.write("validação G7: ok (%d artefatos)\n" % rep.checked)
+    return 0
+
+
+STALE_NOTE = ("o motor instalado (%s/harness) é anterior ao atestado do pre-commit (0.10.1): o emit reinstala o "
+              "harness (`cs.py harness install`) para o pre-commit aceitar o commit do que ele escreve" % STATE_DIR)
+
+
+def engine_without_attest(root):
+    """B-13: harness instalado sem attest.py ⇒ o pre-commit dele barra o resultado do emit (não lê o atestado)."""
+    h = os.path.join(root, STATE_DIR, "harness")
+    return os.path.isfile(os.path.join(h, "guard.py")) and not os.path.isfile(os.path.join(h, "attest.py"))
+
+
+def refresh_engine(root, allow_outside, out):
+    """Reinstala o harness (plataformas advisory do run) antes de emitir. → exit code (0 = ok)."""
+    hdir = os.path.join(_SCRIPTS, "harness")
+    for p in (os.path.join(hdir, "engine"), os.path.join(_SCRIPTS, "memory"), hdir):
+        if p not in sys.path:
+            sys.path.insert(0, p)
+    import install
+    import hcore
+    adv = [p for p in _run_platforms(root) or [] if p in install.ADVISORY]
+    try:
+        res = install.install(root, platforms=adv, allow_outside=allow_outside)
+    except install.OutsideRefused as e:
+        sys.stderr.write(install.render_outside(e.steps) + "\n")
+        sys.stderr.write("nada foi emitido: %s; isso exige --allow-outside\n" % STALE_NOTE)
+        return 3
+    except hcore.StateError as e:
+        sys.stderr.write("nada foi emitido: %s; o install falhou: %s\n" % (STALE_NOTE, e))
+        return 2
+    out.write("motor: %s — %d arquivo(s) atualizado(s)\n" % (STALE_NOTE, len(res.get("changes") or [])))
+    if res.get("attest_problem"):
+        sys.stderr.write("AVISO: %s\n" % res["attest_problem"])
     return 0
 
 

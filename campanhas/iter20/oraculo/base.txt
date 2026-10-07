@@ -1,0 +1,57 @@
+## python3 (Python 3.13.3) · CS_SKILL_DIR=local/work/iter18/codebase-specialists (0.10.0, cópia de trabalho da iter18)
+U1  D FAIL  TestU1CommitDoResultadoDaFerramenta.test_u1_emit_avulso_commita
+U1  D FAIL  TestU1CommitDoResultadoDaFerramenta.test_u1_harness_install_avulso_commita
+U1  D FAIL  TestU1CommitDoResultadoDaFerramenta.test_u1_upgrade_com_estado_do_cs_state_na_mesma_leva
+U1  D FAIL  TestU1CommitDoResultadoDaFerramenta.test_u1_upgrade_commita_sem_no_verify
+U1  D FAIL  TestU1InstalacaoInicial.test_u1_instalacao_inicial_commita
+U2  R ok    TestU2EdicaoManualNaMesmaLeva.test_u2_emitido_mudado_pelo_upgrade_editado_a_mao_continua_barrado
+U2  R ok    TestU2EdicaoManualNaMesmaLeva.test_u2_estado_editado_fora_do_cs_state_continua_barrado
+U2  R ok    TestU2EdicaoManualNaMesmaLeva.test_u2_motor_editado_a_mao_continua_barrado
+U2  D FAIL  TestU2EdicaoManualNaMesmaLeva.test_u2_motor_removido_a_mao_barra
+U2  R ok    TestU2EdicaoManualNaMesmaLeva.test_u2_skill_emitida_editada_a_mao_continua_barrada
+U3  R ok    TestU3ForaDoConjuntoEscrito.test_u3_arquivo_novo_no_motor_continua_barrado
+U3  R ok    TestU3ForaDoConjuntoEscrito.test_u3_fonte_fora_de_allowed_continua_barrada
+U3  R ok    TestU3ForaDoConjuntoEscrito.test_u3_skill_do_usuario_continua_barrada
+U4  D FAIL  TestU4AtestadoNaoReutilizavel.test_u4_atestado_nao_libera_intruso
+U4  R ok    TestU4AtestadoNaoReutilizavel.test_u4_emit_avulso_nao_libera_motor_editado_continua
+U4  D FAIL  TestU4AtestadoNaoReutilizavel.test_u4_reupgrade_sem_migracao_nao_abencoa_edicao
+U4  D FAIL  TestU4AtestadoNaoReutilizavel.test_u4_segundo_commit_emitido_a_mao_barra
+U4  D FAIL  TestU4AtestadoNaoReutilizavel.test_u4_segundo_commit_motor_a_mao_barra
+U5  D FAIL  TestU5DeZeroNoveDireto.test_u5_apply_de_090_registra_as_duas_migracoes
+U5  D FAIL  TestU5DeZeroNoveDireto.test_u5_plano_de_090_lista_0100_e_0101
+U5  D FAIL  TestU5Versao.test_u5_docs_upgrade
+U5  D FAIL  TestU5Versao.test_u5_migrations
+U5  D FAIL  TestU5Versao.test_u5_readme
+U5  D FAIL  TestU5Versao.test_u5_version
+placar: U1 0/5  U2 4/5  U3 3/3  U4 1/5  U5 0/6
+por tipo (passam/total): U1 D 0/5 R 0/0  U2 D 0/1 R 4/4  U3 D 0/0 R 3/3  U4 D 0/4 R 1/1  U5 D 0/6 R 0/0
+total: 8/24 passam
+
+## /usr/bin/python3 (Python 3.9.6) · mesma base
+U1  D FAIL  TestU1CommitDoResultadoDaFerramenta.test_u1_emit_avulso_commita
+U1  D FAIL  TestU1CommitDoResultadoDaFerramenta.test_u1_harness_install_avulso_commita
+U1  D FAIL  TestU1CommitDoResultadoDaFerramenta.test_u1_upgrade_com_estado_do_cs_state_na_mesma_leva
+U1  D FAIL  TestU1CommitDoResultadoDaFerramenta.test_u1_upgrade_commita_sem_no_verify
+U1  D FAIL  TestU1InstalacaoInicial.test_u1_instalacao_inicial_commita
+U2  R ok    TestU2EdicaoManualNaMesmaLeva.test_u2_emitido_mudado_pelo_upgrade_editado_a_mao_continua_barrado
+U2  R ok    TestU2EdicaoManualNaMesmaLeva.test_u2_estado_editado_fora_do_cs_state_continua_barrado
+U2  R ok    TestU2EdicaoManualNaMesmaLeva.test_u2_motor_editado_a_mao_continua_barrado
+U2  D FAIL  TestU2EdicaoManualNaMesmaLeva.test_u2_motor_removido_a_mao_barra
+U2  R ok    TestU2EdicaoManualNaMesmaLeva.test_u2_skill_emitida_editada_a_mao_continua_barrada
+U3  R ok    TestU3ForaDoConjuntoEscrito.test_u3_arquivo_novo_no_motor_continua_barrado
+U3  R ok    TestU3ForaDoConjuntoEscrito.test_u3_fonte_fora_de_allowed_continua_barrada
+U3  R ok    TestU3ForaDoConjuntoEscrito.test_u3_skill_do_usuario_continua_barrada
+U4  D FAIL  TestU4AtestadoNaoReutilizavel.test_u4_atestado_nao_libera_intruso
+U4  R ok    TestU4AtestadoNaoReutilizavel.test_u4_emit_avulso_nao_libera_motor_editado_continua
+U4  D FAIL  TestU4AtestadoNaoReutilizavel.test_u4_reupgrade_sem_migracao_nao_abencoa_edicao
+U4  D FAIL  TestU4AtestadoNaoReutilizavel.test_u4_segundo_commit_emitido_a_mao_barra
+U4  D FAIL  TestU4AtestadoNaoReutilizavel.test_u4_segundo_commit_motor_a_mao_barra
+U5  D FAIL  TestU5DeZeroNoveDireto.test_u5_apply_de_090_registra_as_duas_migracoes
+U5  D FAIL  TestU5DeZeroNoveDireto.test_u5_plano_de_090_lista_0100_e_0101
+U5  D FAIL  TestU5Versao.test_u5_docs_upgrade
+U5  D FAIL  TestU5Versao.test_u5_migrations
+U5  D FAIL  TestU5Versao.test_u5_readme
+U5  D FAIL  TestU5Versao.test_u5_version
+placar: U1 0/5  U2 4/5  U3 3/3  U4 1/5  U5 0/6
+por tipo (passam/total): U1 D 0/5 R 0/0  U2 D 0/1 R 4/4  U3 D 0/0 R 3/3  U4 D 0/4 R 1/1  U5 D 0/6 R 0/0
+total: 8/24 passam

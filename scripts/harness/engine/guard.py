@@ -578,17 +578,21 @@ def check_diff(root, staged=False):
     """Diff × allowed_paths. Árvore de trabalho (sem --staged, CI): delegação em voo (IN_FLIGHT_STATES) e ACCEPTED
     com a task aberta (U5) liberam os allowed_paths. Pre-commit (--staged, iter18 R5): só ACCEPTED com a task aberta
     libera; allowed_paths de delegação em voo são barrados (commit antes do aceite fura verify/review/accept).
-    Estado do harness (`.swarm/**`) segue as regras próprias (engine_owned/lead_write_allow); task fechada barra."""
+    Estado do harness (`.swarm/**`) segue as regras próprias (engine_owned/lead_write_allow); task fechada barra.
+    B-13 (0.10.1): o que `harness install`/`emit` (e o upgrade, por eles) escreveram e está atestado com o MESMO
+    sha256 do conteúdo staged é liberado (attest.py); edição/remoção à mão depois disso barra. Sem detecção de
+    renomeação (--no-renames): remoção à mão aparece com o próprio nome, nunca como "rename" para o backup."""
     import subprocess
     import validate
+    import attest
     cfg = hcore.load_config(root)
     board = hcore.load_board(root)
-    args = ["git", "diff", "--name-only"] + (["--cached"] if staged else ["HEAD"])
+    args = ["git", "diff", "--name-only", "--no-renames", "-z"] + (["--cached"] if staged else ["HEAD"])
     p = subprocess.run(args, cwd=root, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    files = [x for x in p.stdout.decode().splitlines() if x]
+    files = [x for x in p.stdout.decode("utf-8", "replace").split("\0") if x]
     if not staged:
-        u = subprocess.run(["git", "ls-files", "--others", "--exclude-standard"], cwd=root, stdout=subprocess.PIPE)
-        files += [x for x in u.stdout.decode().splitlines() if x]
+        u = subprocess.run(["git", "ls-files", "-z", "--others", "--exclude-standard"], cwd=root, stdout=subprocess.PIPE)
+        files += [x for x in u.stdout.decode("utf-8", "replace").split("\0") if x]
     allowed = list(cfg.get("lead_write_allow") or [])
     in_flight = []  # iter18 R5: (task, estado, allowed_paths) com delegação em voo — o commit (--staged) espera o accept
     for t in board["tasks"]:
@@ -601,23 +605,30 @@ def check_diff(root, staged=False):
         elif d.get("state") == "ACCEPTED" and _accepted_still_open(board, t):
             allowed += t["allowed_paths"]
     ok_state = validate.run(root, strict=False)[0]
-    bad = []
+    verdicts = []  # (arquivo, motivo | None, liberável pelo atestado), na ordem do diff
     for f in files:
         engine_owned = (hcore.STATE_DIR + "/state/", hcore.STATE_DIR + "/memory/")
         if hcore.tree_mode(root):
             engine_owned += tuple(hcore.TREE_PROTECTED)
         if f.startswith(engine_owned):
             if not ok_state:
-                bad.append("%s (estado não valida)" % f)
+                verdicts.append((f, "estado não valida", False))
             continue
         flying = [(tid, st) for tid, st, paths in in_flight
                   if not f.startswith(hcore.STATE_DIR + "/") and hcore.matches_any(f, paths)]
         if flying:
-            bad.append("%s (task %s em %s: commite só depois do `cs-state accept`)" % (f, flying[0][0], flying[0][1]))
+            verdicts.append((f, "task %s em %s: commite só depois do `cs-state accept`" % flying[0], False))
         elif hcore.matches_any(f, cfg.get("protected") or []):
-            bad.append("%s (área protegida)" % f)
+            verdicts.append((f, "área protegida", True))
         elif not hcore.matches_any(f, allowed):
-            bad.append("%s (fora de qualquer allowed_paths em voo)" % f)
+            verdicts.append((f, "fora de qualquer allowed_paths em voo", True))
+    cand = [f for f, _, can in verdicts if can]
+    ok, prob = attest.released(root, cand, staged) if cand else (set(), None)
+    bad = []
+    for f, why, can in verdicts:
+        if can and f in ok:
+            continue  # escrito pela ferramenta, intacto desde então
+        bad.append("%s (%s%s)" % (f, why, ("; " + prob) if can and prob and attest.attestable(f) else ""))
     return bad
 
 
