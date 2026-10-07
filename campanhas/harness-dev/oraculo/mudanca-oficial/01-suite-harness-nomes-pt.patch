@@ -1,0 +1,69 @@
+diff --git a/.claude/tools/tests/test_harness_dev.py b/.claude/tools/tests/test_harness_dev.py
+index cc429b1..19f197a 100644
+--- a/.claude/tools/tests/test_harness_dev.py
++++ b/.claude/tools/tests/test_harness_dev.py
+@@ -473,13 +473,20 @@ class ScriptAprovacao(unittest.TestCase):
+     def test_sem_campanha_recusa(self):
+         code, out, err = self.sa("f1")
+         self.assertNotEqual(code, 0)
+-        self.assertIn("new-front", err)
++        self.assertIn("criar-frente", err)
+ 
+     def test_gera_em_local_com_motor_embutido(self):
+         code, out, err = run([PY, AC, "--work", "campanhas/f1", "init", "--target", ".", "--scope", "a/*",
+                               "--problem", "p", "--stop", "s"], cwd=self.tmp)
+         self.assertEqual(code, 0, out + err)
+         code, out, err = self.sa("f1", "--por", "Ana", "--dry-run")
++        self.assertNotEqual(code, 0, "oráculo não congelado: recusa")
++        self.assertIn("congel", out + err)
++        escrever(self.tmp, "campanhas/f1/oraculo/t.py", "x = 1\n")
++        code, out, err = run([PY, AC, "--work", "campanhas/f1", "oracle", "freeze", "--file",
++                              "campanhas/f1/oraculo/t.py"], cwd=self.tmp)
++        self.assertEqual(code, 0, out + err)
++        code, out, err = self.sa("f1", "--por", "Ana", "--dry-run")
+         self.assertEqual(code, 0, err)
+         for trecho in ("gate stop", "gate oracle:requisito", "preauth commit", "--requires integracao.1 integracao.2",
+                        "'Ana'", AC, os.path.join(self.tmp, "campanhas", "f1")):
+@@ -574,22 +581,27 @@ class AjudaETools(unittest.TestCase):
+ 
+     def test_skills_do_harness(self):
+         nomes = sorted(os.listdir(os.path.join(SKILL, ".claude", "skills")))
+-        self.assertEqual(nomes, ["close-front", "install", "load-session", "new-front", "package", "save-session"])
++        self.assertEqual(nomes, ["auto-correcao", "carregar-sessao", "criar-frente", "e2e-loop", "fechar-frente",
++                                 "install", "package", "revisor", "rh", "salvar-sessao", "tech-lead"])
+         for n in nomes:
+             s = open(os.path.join(SKILL, ".claude", "skills", n, "SKILL.md"), encoding="utf-8").read()
+             self.assertTrue(s.startswith("---\nname: %s\n" % n), n)
+-        for n in ("new-front", "close-front", "load-session"):
++        for n in ("criar-frente", "fechar-frente"):
++            s = open(os.path.join(SKILL, ".claude", "skills", n, "SKILL.md"), encoding="utf-8").read()
++            self.assertIn("python3 .claude/tools/frente.py", s, n)
++        for n in ("auto-correcao",):
+             s = open(os.path.join(SKILL, ".claude", "skills", n, "SKILL.md"), encoding="utf-8").read()
+             self.assertIn("python3 .claude/tools/ac/ac.py", s, n)
+             self.assertNotIn("skills/auto-correcao", s, n)
+ 
+     def test_nomes_antigos_de_skill_ausentes(self):
+-        # nomes antigos em português, montados por partes para este próprio teste não os conter
+-        proibidos = ["salvar" + "-sessao", "carregar" + "-sessao", "planejar" + "-sprint", "new" + "-epico",
+-                     "close" + "-epico", "/corri" + "gir"]
++        # D-07 vale para o PRODUTO (as skills que ele gera nos alvos) — quem guarda as fontes do produto é o oráculo
++        # da iter15 (TestR1FontesDaSkill), que o portão roda. O harness de dev (.claude/) usa comandos em português
++        # por decisão do founder (mudança oficial harness-dev); aqui não pode sobrar nome inglês SUBSTITUÍDO.
++        proibidos = ["new" + "-front", "close" + "-front"]
+         base = os.path.join(SKILL, ".claude")
+         for d, dirs, files in os.walk(base):
+-            dirs[:] = [x for x in dirs if x != "__pycache__"]
++            dirs[:] = [x for x in dirs if x not in ("__pycache__", "state", "tests")]
+             for f in files:
+                 p = os.path.join(d, f)
+                 try:
+@@ -597,7 +609,7 @@ class AjudaETools(unittest.TestCase):
+                 except (UnicodeDecodeError, OSError):
+                     continue
+                 for n in proibidos:
+-                    self.assertNotIn(n, s, "%s cita nome antigo de skill" % p)
++                    self.assertNotIn(n, s, "%s cita nome substituído de skill do harness" % p)
+ 
+ 
+ if __name__ == "__main__":

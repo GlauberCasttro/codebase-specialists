@@ -1,0 +1,5 @@
+{
+ "_doc": "Elenco BASE de tipos de subagente (subagent_type) que existem em toda sessão do Claude Code. O elenco real da sessão é a descrição da ferramenta Agent: copie os tipos para um arquivo e passe `rh.py elenco --tipos-arq ARQ`; os agentes do projeto (.claude/agents/*.md) entram sozinhos. Tipo que não existe NÃO dá erro no despacho — vira genérico em silêncio; por isso o rh recusa (exit 2) ou declara a substituição.",
+ "tipos": ["general-purpose", "Explore", "Plan"],
+ "preferido_generico": "general-purpose"
+}

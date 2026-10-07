@@ -44,7 +44,7 @@ def dentro(p, base):
 
 
 FLUXO = ("Mudança no produto da skill só pelo fluxo de entrega (.claude/CLAUDE.md): abra/retome a frente "
-         "(skill new-front), trabalhe na cópia de trabalho (`bash .claude/tools/copia.sh <frente>`), rode "
+         "(skill criar-frente; execução pela skill tech-lead), trabalhe na cópia de trabalho (`bash .claude/tools/copia.sh <frente>`), rode "
          "`.claude/tools/portao.sh`, depois `.claude/tools/portar.sh` e `.claude/tools/conferir-commit.sh`. "
          "Editável direto: `.claude/state/**`, `campanhas/**`, `local/**`, `dist/**`.")
 

@@ -1,0 +1,231 @@
+# base.txt — oráculo harness-dev contra o projeto ATUAL (antes da correção)
+# medido em 2026-10-06 20:30 -03 · HEAD d61527e · CS_PROJETO = raiz do projeto
+
+## Python 3.13.3
+test_dados_json_validos [Ajuda] ... ERROR
+test_motor_embutido_intacto [Ajuda] ... ok
+test_scripts_existem_com_help [Ajuda] ... FAIL
+test_etapa_pelo_motor_embutido [AutoCorrecao] ... FAIL
+test_fechar_segue_o_ciclo_e_deixa_o_humano_para_o_founder [AutoCorrecao] ... FAIL
+test_mudanca_oficial_passa_todos_os_arquivos [AutoCorrecao] ... FAIL
+test_arquivo_com_glob_reprova [Contrato] ... FAIL
+test_arquivo_fora_do_escopo_reprova [Contrato] ... FAIL
+test_ca_orfao_reprova [Contrato] ... FAIL
+test_ca_sem_prova_e_sem_dado_quando_entao_reprovam [Contrato] ... FAIL
+test_campos_do_bloco_a_e_id [Contrato] ... FAIL
+test_complexidade_baixa [Contrato] ... FAIL
+test_correcao_escreve_no_oraculo_reprova [Contrato] ... FAIL
+test_correcao_sem_depender_do_oraculo_reprova [Contrato] ... FAIL
+test_depends_sem_porque_e_inexistente_reprovam [Contrato] ... FAIL
+test_etapas_e1_e2_e5 [Contrato] ... FAIL
+test_frente_e_tasks_validas_passam [Contrato] ... FAIL
+test_grupos_colidem_reprova [Contrato] ... FAIL
+test_mesmo_arquivo_sem_ordem_reprova [Contrato] ... FAIL
+test_nome_de_task_invalido_reprova [Contrato] ... FAIL
+test_sem_oraculo_ou_oraculo_fora_da_pasta_reprova [Contrato] ... FAIL
+test_sem_qa_e_sem_review_reprova [Contrato] ... FAIL
+test_sonda_negativa [Contrato] ... FAIL
+test_task_sem_ac_reprova [Contrato] ... FAIL
+test_task_sem_goal_reprova [Contrato] ... FAIL
+test_verificacao_trivial_reprova [Contrato] ... FAIL
+test_abertura_cria_campanha_e_estado_sem_commit [CriarFrente] ... FAIL
+test_abrir_dry_run_nao_escreve [CriarFrente] ... FAIL
+test_adotar_frente_legada [CriarFrente] ... FAIL
+test_alteracao_depois_da_aprovacao_bloqueia_abertura [CriarFrente] ... FAIL
+test_aprovacao_exige_sha_atual_e_palavra_literal [CriarFrente] ... FAIL
+test_checklist_adulterado_detectado [CriarFrente] ... FAIL
+test_checklist_marcado_a_cada_handoff_e_append_only [CriarFrente] ... FAIL
+test_colisao_com_frente_ativa_recusa_abertura [CriarFrente] ... FAIL
+test_e0_aborta_sem_state [CriarFrente] ... FAIL
+test_e0_cria_so_o_checklist [CriarFrente] ... FAIL
+test_e0_dry_run_nao_escreve [CriarFrente] ... FAIL
+test_e0_id_invalido_e_segunda_criacao [CriarFrente] ... FAIL
+test_e2_sem_evidencia_e_bloco_a_pobre_recusados [CriarFrente] ... FAIL
+test_e3_aceita_ca_orfao_e4_exige_contrato_completo [CriarFrente] ... FAIL
+test_limite_de_frentes_ativas [CriarFrente] ... ERROR
+test_nao_avanca_sem_aprovacao [CriarFrente] ... FAIL
+test_rejeicao_registrada_sem_marcar [CriarFrente] ... FAIL
+test_retomada [CriarFrente] ... FAIL
+test_script_de_aprovacao_exige_oraculo_congelado [CriarFrente] ... FAIL
+test_status_e_workflow_em_dia [CriarFrente] ... FAIL
+test_medir_so_le_usage [Custo] ... FAIL
+test_registrar_e_resumo_por_modelo [Custo] ... FAIL
+test_desconhecido_ou_fechamento_roda_tudo (test_harness_dev.E2E.test_desconhecido_ou_fechamento_roda_tudo) ... FAIL
+test_regua_lista_suites_e_pythons (test_harness_dev.E2E.test_regua_lista_suites_e_pythons) ... FAIL
+test_rodar_dry_run (test_harness_dev.E2E.test_rodar_dry_run) ... FAIL
+test_seleciona_pelo_arquivo_tocado (test_harness_dev.E2E.test_seleciona_pelo_arquivo_tocado) ... FAIL
+test_archive_recusa_com_gate_reprovado [FecharFrente] ... FAIL
+test_archive_unico_completo_e_idempotente [FecharFrente] ... FAIL
+test_commit_exige_preautorizacao [FecharFrente] ... FAIL
+test_commit_so_da_frente [FecharFrente] ... FAIL
+test_fechamento_completo_ate_idle_e_retomavel [FecharFrente] ... FAIL
+test_gate_passa_e_reprova_cada_falta_sem_escrever [FecharFrente] ... FAIL
+test_idle_recusa_archive_com_intruso [FecharFrente] ... FAIL
+test_limpar_sem_archive_recusa [FecharFrente] ... FAIL
+test_pacote_sem_nada_do_harness [Fronteira] ... ok
+test_produto_identico_ao_head [Fronteira] ... ok
+test_validador_acusa_skill_de_dev_no_pacote [Fronteira] ... ok
+test_archive_so_o_documento_unico [Guards] ... FAIL
+test_arquivos_do_script_nunca_a_mao [Guards] ... FAIL
+test_artefato_so_depois_da_aprovacao [Guards] ... FAIL
+test_task_done_sem_gate_ou_handoff [Guards] ... FAIL
+test_carimbo_brief_aponta_carregar_sessao [Ligacoes] ... FAIL
+test_guard_entrega_e_script_de_aprovacao_citam_criar_frente [Ligacoes] ... FAIL
+test_portao_roda_a_suite_do_harness [Ligacoes] ... FAIL
+test_fazer_direto_no_limite_e_executor_com_paths [RH] ... FAIL
+test_ficha_valida_e_conferida [RH] ... FAIL
+test_tipo_inexistente_recusado_ou_substituido_declarado [RH] ... FAIL
+test_briefing [Sessao] ... FAIL
+test_carimbo_e_frescor [Sessao] ... FAIL
+test_head_por_regra [Sessao] ... FAIL
+test_salvar [Sessao] ... FAIL
+test_salvar_commit_so_estado_e_privacidade [Sessao] ... FAIL
+test_auto_correcao_usa_motor_embutido [Skills] ... FAIL
+test_claude_md_cita_os_comandos [Skills] ... FAIL
+test_conjunto_exato_de_skills [Skills] ... FAIL
+test_criar_frente_rica [Skills] ... FAIL
+test_disable_model_invocation_onde_muda_estado [Skills] ... FAIL
+test_fechar_frente_rica [Skills] ... FAIL
+test_frontmatter_nome_e_descricao [Skills] ... FAIL
+test_nomes_substituidos_nao_aparecem_no_harness [Skills] ... FAIL
+test_revisor_sem_escrita [Skills] ... FAIL
+test_rh_revisor_e2e [Skills] ... FAIL
+test_scripts_citados_existem_e_subcomandos_existem [Skills] ... FAIL
+test_sessao_ricas [Skills] ... FAIL
+test_settings_liga_os_guards [Skills] ... FAIL
+test_skills_finas_sem_logica_embutida [Skills] ... FAIL
+test_substituidas_nao_existem [Skills] ... FAIL
+test_tech_lead_rica [Skills] ... FAIL
+test_corretor_bloqueado_ate_aprovacao_do_founder [TechLead] ... FAIL
+test_exige_modelo_no_despacho [TechLead] ... FAIL
+test_marcar_task_exige_gate_e_handoff [TechLead] ... FAIL
+test_plano_exige_o_modo [TechLead] ... FAIL
+test_plano_monta_caminho_critico_e_despacho [TechLead] ... FAIL
+test_roteamento_por_papel [TechLead] ... FAIL
+test_snap_detecta_escrita_de_quem_so_le [TechLead] ... FAIL
+Ran 101 tests in 16.872s
+FAILED (failures=95, errors=2)
+
+## Python 3.9.6
+test_dados_json_validos [Ajuda] ... ERROR
+test_motor_embutido_intacto [Ajuda] ... ok
+test_scripts_existem_com_help [Ajuda] ... FAIL
+test_etapa_pelo_motor_embutido [AutoCorrecao] ... FAIL
+test_fechar_segue_o_ciclo_e_deixa_o_humano_para_o_founder [AutoCorrecao] ... FAIL
+test_mudanca_oficial_passa_todos_os_arquivos [AutoCorrecao] ... FAIL
+test_arquivo_com_glob_reprova [Contrato] ... FAIL
+test_arquivo_fora_do_escopo_reprova [Contrato] ... FAIL
+test_ca_orfao_reprova [Contrato] ... FAIL
+test_ca_sem_prova_e_sem_dado_quando_entao_reprovam [Contrato] ... FAIL
+test_campos_do_bloco_a_e_id [Contrato] ... FAIL
+test_complexidade_baixa [Contrato] ... FAIL
+test_correcao_escreve_no_oraculo_reprova [Contrato] ... FAIL
+test_correcao_sem_depender_do_oraculo_reprova [Contrato] ... FAIL
+test_depends_sem_porque_e_inexistente_reprovam [Contrato] ... FAIL
+test_etapas_e1_e2_e5 [Contrato] ... FAIL
+test_frente_e_tasks_validas_passam [Contrato] ... FAIL
+test_grupos_colidem_reprova [Contrato] ... FAIL
+test_mesmo_arquivo_sem_ordem_reprova [Contrato] ... FAIL
+test_nome_de_task_invalido_reprova [Contrato] ... FAIL
+test_sem_oraculo_ou_oraculo_fora_da_pasta_reprova [Contrato] ... FAIL
+test_sem_qa_e_sem_review_reprova [Contrato] ... FAIL
+test_sonda_negativa [Contrato] ... FAIL
+test_task_sem_ac_reprova [Contrato] ... FAIL
+test_task_sem_goal_reprova [Contrato] ... FAIL
+test_verificacao_trivial_reprova [Contrato] ... FAIL
+test_abertura_cria_campanha_e_estado_sem_commit [CriarFrente] ... FAIL
+test_abrir_dry_run_nao_escreve [CriarFrente] ... FAIL
+test_adotar_frente_legada [CriarFrente] ... FAIL
+test_alteracao_depois_da_aprovacao_bloqueia_abertura [CriarFrente] ... FAIL
+test_aprovacao_exige_sha_atual_e_palavra_literal [CriarFrente] ... FAIL
+test_checklist_adulterado_detectado [CriarFrente] ... FAIL
+test_checklist_marcado_a_cada_handoff_e_append_only [CriarFrente] ... FAIL
+test_colisao_com_frente_ativa_recusa_abertura [CriarFrente] ... FAIL
+test_e0_aborta_sem_state [CriarFrente] ... FAIL
+test_e0_cria_so_o_checklist [CriarFrente] ... FAIL
+test_e0_dry_run_nao_escreve [CriarFrente] ... FAIL
+test_e0_id_invalido_e_segunda_criacao [CriarFrente] ... FAIL
+test_e2_sem_evidencia_e_bloco_a_pobre_recusados [CriarFrente] ... FAIL
+test_e3_aceita_ca_orfao_e4_exige_contrato_completo [CriarFrente] ... FAIL
+test_limite_de_frentes_ativas [CriarFrente] ... ERROR
+test_nao_avanca_sem_aprovacao [CriarFrente] ... FAIL
+test_rejeicao_registrada_sem_marcar [CriarFrente] ... FAIL
+test_retomada [CriarFrente] ... FAIL
+test_script_de_aprovacao_exige_oraculo_congelado [CriarFrente] ... FAIL
+test_status_e_workflow_em_dia [CriarFrente] ... FAIL
+test_medir_so_le_usage [Custo] ... FAIL
+test_registrar_e_resumo_por_modelo [Custo] ... FAIL
+test_desconhecido_ou_fechamento_roda_tudo (test_harness_dev.E2E) ... FAIL
+test_regua_lista_suites_e_pythons (test_harness_dev.E2E) ... FAIL
+test_rodar_dry_run (test_harness_dev.E2E) ... FAIL
+test_seleciona_pelo_arquivo_tocado (test_harness_dev.E2E) ... FAIL
+test_archive_recusa_com_gate_reprovado [FecharFrente] ... FAIL
+test_archive_unico_completo_e_idempotente [FecharFrente] ... FAIL
+test_commit_exige_preautorizacao [FecharFrente] ... FAIL
+test_commit_so_da_frente [FecharFrente] ... FAIL
+test_fechamento_completo_ate_idle_e_retomavel [FecharFrente] ... FAIL
+test_gate_passa_e_reprova_cada_falta_sem_escrever [FecharFrente] ... FAIL
+test_idle_recusa_archive_com_intruso [FecharFrente] ... FAIL
+test_limpar_sem_archive_recusa [FecharFrente] ... FAIL
+test_pacote_sem_nada_do_harness [Fronteira] ... ok
+test_produto_identico_ao_head [Fronteira] ... ok
+test_validador_acusa_skill_de_dev_no_pacote [Fronteira] ... ok
+test_archive_so_o_documento_unico [Guards] ... FAIL
+test_arquivos_do_script_nunca_a_mao [Guards] ... FAIL
+test_artefato_so_depois_da_aprovacao [Guards] ... FAIL
+test_task_done_sem_gate_ou_handoff [Guards] ... FAIL
+test_carimbo_brief_aponta_carregar_sessao [Ligacoes] ... FAIL
+test_guard_entrega_e_script_de_aprovacao_citam_criar_frente [Ligacoes] ... FAIL
+test_portao_roda_a_suite_do_harness [Ligacoes] ... FAIL
+test_fazer_direto_no_limite_e_executor_com_paths [RH] ... FAIL
+test_ficha_valida_e_conferida [RH] ... FAIL
+test_tipo_inexistente_recusado_ou_substituido_declarado [RH] ... FAIL
+test_briefing [Sessao] ... FAIL
+test_carimbo_e_frescor [Sessao] ... FAIL
+test_head_por_regra [Sessao] ... FAIL
+test_salvar [Sessao] ... FAIL
+test_salvar_commit_so_estado_e_privacidade [Sessao] ... FAIL
+test_auto_correcao_usa_motor_embutido [Skills] ... FAIL
+test_claude_md_cita_os_comandos [Skills] ... FAIL
+test_conjunto_exato_de_skills [Skills] ... FAIL
+test_criar_frente_rica [Skills] ... FAIL
+test_disable_model_invocation_onde_muda_estado [Skills] ... FAIL
+test_fechar_frente_rica [Skills] ... FAIL
+test_frontmatter_nome_e_descricao [Skills] ... FAIL
+test_nomes_substituidos_nao_aparecem_no_harness [Skills] ... FAIL
+test_revisor_sem_escrita [Skills] ... FAIL
+test_rh_revisor_e2e [Skills] ... FAIL
+test_scripts_citados_existem_e_subcomandos_existem [Skills] ... FAIL
+test_sessao_ricas [Skills] ... FAIL
+test_settings_liga_os_guards [Skills] ... FAIL
+test_skills_finas_sem_logica_embutida [Skills] ... FAIL
+test_substituidas_nao_existem [Skills] ... FAIL
+test_tech_lead_rica [Skills] ... FAIL
+test_corretor_bloqueado_ate_aprovacao_do_founder [TechLead] ... FAIL
+test_exige_modelo_no_despacho [TechLead] ... FAIL
+test_marcar_task_exige_gate_e_handoff [TechLead] ... FAIL
+test_plano_exige_o_modo [TechLead] ... FAIL
+test_plano_monta_caminho_critico_e_despacho [TechLead] ... FAIL
+test_roteamento_por_papel [TechLead] ... FAIL
+test_snap_detecta_escrita_de_quem_so_le [TechLead] ... FAIL
+Ran 101 tests in 20.399s
+FAILED (failures=95, errors=2)
+
+## Calibração (L15, requisito novo)
+- vazio: 4/101 em cada Python (acima) — só Fronteira (3) e o motor embutido intacto (1), que já valem hoje.
+- bom: protótipo de calibração do autor do oráculo (pasta descartável, NÃO entregue ao corretor) = 101/101 em Python 3.13.3 e 3.9.6.
+- falta: conferência humana do founder (testes × ESPEC) antes do oracle freeze.
+
+## Prova de força — 12 mutações do protótipo (cada uma numa cópia; classes do oráculo rodadas)
+- M1-criar-frente-pula-aprovacao: PEGA (de 20 testes em CriarFrente) -> test_nao_avanca_sem_aprovacao
+- M2-schema-aceita-task-sem-goal-e-ac: PEGA (de 40 testes em Contrato CriarFrente) -> test_sonda_negativa, test_task_sem_ac_reprova, test_task_sem_goal_reprova, test_abertura_cria_campanha_e_estado_sem_commit, test_abrir_dry_run_nao_escreve, test_alteracao_depois_da_aprovacao_bloqueia_abertura, test_colisao_com_frente_ativa_recusa_abertura, test_e3_aceita_ca_orfao_e4_exige_contrato_completo, test_nao_avanca_sem_aprovacao, test_script_de_aprovacao_exige_oraculo_congelado, test_status_e_workflow_em_dia
+- M3-fechar-limpa-sem-archive: PEGA (de 8 testes em FecharFrente) -> test_limpar_sem_archive_recusa
+- M4-tech-lead-nao-pergunta-modo: PEGA (de 7 testes em TechLead) -> test_plano_exige_o_modo
+- M5-e2e-roda-tudo-sempre: PEGA (de 4 testes em E2E) -> test_seleciona_pelo_arquivo_tocado
+- M6-auto-correcao-ausente: PEGA (de 16 testes em Skills) -> test_auto_correcao_usa_motor_embutido, test_conjunto_exato_de_skills, test_disable_model_invocation_onde_muda_estado, test_frontmatter_nome_e_descricao, test_scripts_citados_existem_e_subcomandos_existem, test_skills_finas_sem_logica_embutida
+- M7-aprovacao-sem-conferir-sha: PEGA (de 20 testes em CriarFrente) -> test_aprovacao_exige_sha_atual_e_palavra_literal
+- M8-roteamento-ignora-ciclo: PEGA (de 7 testes em TechLead) -> test_roteamento_por_papel
+- M9-rh-aceita-tipo-inexistente: PEGA (de 3 testes em RH) -> test_tipo_inexistente_recusado_ou_substituido_declarado
+- M10-frescor-sempre-bate: PEGA (de 5 testes em Sessao) -> test_carimbo_e_frescor, test_head_por_regra
+- M11-checklist-editavel-a-mao: PEGA (de 4 testes em Guards) -> test_arquivos_do_script_nunca_a_mao
+- M12-commit-sem-preautorizacao: PEGA (de 8 testes em FecharFrente) -> test_commit_exige_preautorizacao

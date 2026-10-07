@@ -1,0 +1,13 @@
+{
+ "_doc": "Régua do e2e-loop (e2e.py). Suítes: `harness-dev` (.claude/tools/tests), cada scripts/<x> que tem tests/ e `evals` (evals/tests), descobertas no disco. Seleção por arquivo tocado (mapa abaixo, primeira regra que casa vence); arquivo que nenhuma regra cobre, ou --fechamento, ⇒ régua COMPLETA (por segurança). É um mapa por caminho, não um grafo de import: arquivo de scripts/<x> usado por outra suíte só é pego na completa (fechamento e portão).",
+ "pythons": ["python3", "/usr/bin/python3"],
+ "suite_harness": {"nome": "harness-dev", "dir": ".claude/tools/tests"},
+ "mapa": [
+  {"glob": ".claude/tools/ac/**", "suites": ["harness-dev"], "porque": "motor embutido: a suíte do harness confere ORIGEM e o motor"},
+  {"glob": ".claude/package/**", "completa": true, "porque": ".claude/package É produto (entra no pacote)"},
+  {"glob": ".claude/**", "suites": ["harness-dev"], "porque": "harness de desenvolvimento"},
+  {"glob": "scripts/{x}/**", "suites": ["{x}"], "porque": "a suíte do próprio pacote"},
+  {"glob": "evals/**", "suites": ["evals"], "porque": "fixtures e suíte de evals"}
+ ],
+ "verificacoes": ["def-removido (portao.sh: nenhum def some vs HEAD nos arquivos da frente)", "privacidade (guard-privacidade.sh nos tocados)", "oraculo-intacto (ac.py oracle verify)", "pacote-sem-vazamento (package.sh --worktree no fechamento)"]
+}

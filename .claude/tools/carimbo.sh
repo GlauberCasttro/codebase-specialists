@@ -4,12 +4,15 @@
 # uso: carimbo.sh            imprime a âncora completa
 #      carimbo.sh --brief    versão curta (hook SessionStart: vai para o contexto); instala as travas do git que
 #                            faltarem e avisa se a skill instalada não é o pacote em dia (sugere /install)
-#      carimbo.sh --write    imprime e regrava o bloco de carimbo no topo de .claude/state/RESUME.md
+#      carimbo.sh --write    regrava o carimbo comparável (resume-stamp) do RESUME.md — fórmula em sessao.py
 #      carimbo.sh --json     a âncora em JSON
 #      carimbo.sh --help
+# Âncora INFORMATIVA (SessionStart). O carimbo COMPARÁVEL e o frescor têm um dono só: .claude/tools/sessao.py
+# (skill carregar-sessao: `python3 .claude/tools/sessao.py briefing`).
 set -u
-case "${1:-}" in -h|--help) sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;; esac
+case "${1:-}" in -h|--help) sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;; esac
 MODO="${1:-full}"
+[ "$MODO" = "--write" ] && exec python3 "$(dirname "$0")/sessao.py" carimbo --write
 . "$(dirname "$0")/_comum.sh"
 TRAVAS_NOVAS=""; INST_MOT=""
 if [ "$MODO" = "--brief" ] && [ -n "$REPO" ]; then
@@ -70,8 +73,10 @@ bloco() {
 }
 
 if [ "$MODO" = "--brief" ]; then
-  echo "[harness de desenvolvimento: $NOME] regras em .claude/CLAUDE.md; retomar com a skill load-session."
+  echo "[harness de desenvolvimento: $NOME] regras em .claude/CLAUDE.md; retomar com a skill carregar-sessao."
   bloco
+  FR="$(python3 "$TOOLS/sessao.py" frescor 2>/dev/null | head -1)"
+  [ -n "$FR" ] && echo "$FR (carregar-sessao: python3 .claude/tools/sessao.py briefing)"
   echo "estado: .claude/state/RESUME.md, WORKFLOW.md, BACKLOG.md, DECISIONS.md"
   [ -n "$TRAVAS_NOVAS" ] && echo "travas do git faltavam ($(echo $TRAVAS_NOVAS)) — instaladas agora"
   if [ -n "$INST_MOT" ]; then
@@ -82,20 +87,4 @@ if [ "$MODO" = "--brief" ]; then
 fi
 
 bloco
-if [ "$MODO" = "--write" ]; then
-  R="$SKILL/.claude/state/RESUME.md"
-  [ -f "$R" ] || { echo "carimbo: $R ausente" >&2; exit 1; }
-  CS_BLOCO="$(SEM_LISTA=1 bloco; echo "  (lista: git status --porcelain)")" python3 - "$R" <<'PY'
-import os, re, sys
-p = sys.argv[1]
-s = open(p, encoding="utf-8").read()
-ini, fim = "<!-- carimbo:inicio (gerado por tools/carimbo.sh --write; não edite à mão) -->", "<!-- carimbo:fim -->"
-novo = ini + "\n```\n" + os.environ["CS_BLOCO"].rstrip() + "\n```\n" + fim
-if ini in s and fim in s:
-    s = s[:s.index(ini)] + novo + s[s.index(fim) + len(fim):]
-else:
-    s = novo + "\n\n" + s
-open(p, "w", encoding="utf-8").write(s)
-print("RESUME.md: bloco de carimbo regravado")
-PY
-fi
+exit 0

@@ -1,6 +1,7 @@
 ---
 name: install
-description: Instala (ou atualiza) a skill codebase-specialists NESTA máquina a partir deste projeto — travas do git, pacote gerado e validado, link $HOME/.claude/skills/codebase-specialists → dist/codebase-specialists (backup do que houver lá) e conferência do instalado, via .claude/tools/instalar.sh. Use numa máquina nova, depois de fechar uma frente (close-front), quando o SessionStart disser que o pacote instalado está desatualizado ou que as travas faltavam, ou quando o founder pedir "instala a skill", "atualiza a skill instalada".
+description: Instala (ou atualiza) a skill codebase-specialists NESTA máquina a partir deste projeto — travas do git, pacote gerado e validado, link $HOME/.claude/skills/codebase-specialists → dist/codebase-specialists (backup do que houver lá) e conferência do instalado, via .claude/tools/instalar.sh. Use numa máquina nova, depois de fechar uma frente (`/fechar-frente`), quando o SessionStart disser que o pacote instalado está desatualizado ou que as travas faltavam, ou quando o founder pedir "instala a skill", "atualiza a skill instalada".
+disable-model-invocation: true
 ---
 
 # install
