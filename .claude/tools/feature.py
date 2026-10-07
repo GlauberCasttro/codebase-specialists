@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""frente.py — o controlador da FRENTE do harness de desenvolvimento (skills criar-frente, fechar-frente, tech-lead).
+"""feature.py — o controlador da FEATURE do harness de desenvolvimento (skills criar-feature, fechar-feature, tech-lead).
 
-Uma frente = uma mudança na skill = uma campanha no motor embutido (`campanhas/<id>/`). O estado vive em
-`.claude/state/` (frentes.json, frentes/<id>/, logs/<id>/, archive/<id>/) e SÓ este script o transita; o hook
+Uma feature = uma mudança na skill = uma campanha no motor embutido (`campanhas/<id>/`). O estado vive em
+`.claude/state/` (features.json, features/<id>/, logs/<id>/, archive/<id>/) e SÓ este script o transita; o hook
 `guard-estado.py` nega a escrita direta do que é do script. JSON decide; Markdown explica.
 
 Subcomandos:
-  status [--json|--brief]                         frentes ativas (k/t), criação em curso, entregues, WORKFLOW em dia
+  status [--json|--brief]                         features ativas (k/t), criação em curso, entregues, WORKFLOW em dia
   criar iniciar <id> --demanda TXT [--dry-run]    E0: pré-condição mecânica; cria eventos.jsonl + CHECKLIST.md
                                                    (mesma id + mesma demanda = retomada; imprime a próxima etapa)
   criar propor <id> --etapa EN [--arquivo ARQ] [--json]
@@ -16,7 +16,7 @@ Subcomandos:
   criar rejeitar <id> --etapa EN [--sha SHA] --motivo TXT
                                                    registra a rejeição (append-only); a caixa continua vazia
   criar abrir <id> [--dry-run] [--json]           E1–E5 aprovadas + sha + contrato + overlap ⇒ ac.py init, INDEX,
-                                                   HISTORICO, log, frentes.json, WORKFLOW, README de campanhas
+                                                   HISTORICO, log, features.json, WORKFLOW, README de campanhas
                                                    (nunca commita; não gera o script de aprovação)
   checklist <id> [--json]                         0 = CHECKLIST.md é a projeção exata dos eventos; 2 = adulterado
   adotar <id> [--dry-run]                         campanha existente e não concluída entra como ativa `legado`
@@ -25,9 +25,9 @@ Subcomandos:
   fechar plano <id> --json                        etapas archive|entrega|limpar|idle feitas (pós-condição no disco)
   fechar check <id> [--json]                      gate de aceite e completude cruzada; NUNCA escreve
   fechar archive <id> --notas ARQ                 documento único archive/<id>/<id>.md (+ marcador em escrita própria)
-  fechar entrega|limpar|idle <id>                 LAST_DELIVERY · remove frentes/<id> e logs/<id> · IDLE em frentes.json
+  fechar entrega|limpar|idle <id>                 LAST_DELIVERY · remove features/<id> e logs/<id> · IDLE em features.json
   fechar commit <id> --mensagem ARQ [--decisions ARQ] [--dry-run] [--json]
-                                                   commit SÓ da frente num índice temporário; nunca push
+                                                   commit SÓ da feature num índice temporário; nunca push
 Saída: texto, --json ou --brief (≤ 40 linhas). Exit: 0 ok · 1 recusa (pré-condição/ordem/aprovação/gate) ·
 2 lacunas do contrato · 3 uso. Nunca roda gate/preauth/frase do motor (são do founder, no terminal dele).
 Variáveis de teste: CS_DEV_SKILL_DIR (raiz do projeto), CS_DEV_AC (motor; o --json de status/abrir mostra qual).
@@ -62,9 +62,9 @@ class Recusa(Exception):
 def projetar_checklist(fid, ev):
     ini = next((e for e in ev if e.get("tipo") == "inicio"), {})
     ap = L.aprovadas(ev)
-    linhas = ["# CHECKLIST — criação da frente %s" % fid, "",
-              "<!-- gerado por .claude/tools/frente.py a partir de eventos.jsonl; não edite à mão (o hook nega; "
-              "`frente.py checklist` detecta adulteração) -->", "",
+    linhas = ["# CHECKLIST — criação da feature %s" % fid, "",
+              "<!-- gerado por .claude/tools/feature.py a partir de eventos.jsonl; não edite à mão (o hook nega; "
+              "`feature.py checklist` detecta adulteração) -->", "",
               'Demanda: "%s"' % ini.get("demanda", ""), ""]
     linhas.append("- [x] **E0 — %s** · OK %s" % (L.NOMES_ETAPA["E0"], ini.get("ts", "?")))
     for e in L.ETAPAS:
@@ -108,15 +108,15 @@ def registrar_evento(fid, ev_novo, r):
     ev = L.eventos(fid, r)
     ev_novo["seq"] = len(ev) + 1
     ev_novo.setdefault("ts", L.agora())
-    L.apensar(os.path.join(L.frente_dir(fid, r), "eventos.jsonl"), json.dumps(ev_novo, ensure_ascii=False) + "\n")
+    L.apensar(os.path.join(L.feature_dir(fid, r), "eventos.jsonl"), json.dumps(ev_novo, ensure_ascii=False) + "\n")
     ev.append(ev_novo)
-    L.gravar(os.path.join(L.frente_dir(fid, r), "CHECKLIST.md"), projetar_checklist(fid, ev))
+    L.gravar(os.path.join(L.feature_dir(fid, r), "CHECKLIST.md"), projetar_checklist(fid, ev))
     return ev
 
 
 def checklist_integro(fid, r):
     ev = L.eventos(fid, r)
-    atual = L.ler(os.path.join(L.frente_dir(fid, r), "CHECKLIST.md"))
+    atual = L.ler(os.path.join(L.feature_dir(fid, r), "CHECKLIST.md"))
     esperado = projetar_checklist(fid, ev)
     return bool(ev) and atual == esperado and not any(e.get("tipo") == "invalido" for e in ev)
 
@@ -124,26 +124,26 @@ def checklist_integro(fid, r):
 # ------------------------------------------------------------------ artefatos por etapa
 
 def artefatos(fid, etapa, r):
-    fd = L.frente_dir(fid, r)
+    fd = L.feature_dir(fid, r)
     if etapa in ("E1", "E2", "E5"):
         return [os.path.join(fd, "propostas", etapa + ".md")]
     if etapa == "E3":
-        return [os.path.join(fd, "FRENTE.md")]
+        return [L.feature_md(fd)]
     td = os.path.join(fd, "TASKS")
     ts = [os.path.join(td, n) for n in sorted(os.listdir(td))] if os.path.isdir(td) else []
-    return [os.path.join(fd, "FRENTE.md")] + ts
+    return [L.feature_md(fd)] + ts
 
 
 def sha_etapa(fid, etapa, r):
-    return L.sha_arquivos(artefatos(fid, etapa, r), L.frente_dir(fid, r))
+    return L.sha_arquivos(artefatos(fid, etapa, r), L.feature_dir(fid, r))
 
 
 def exige_criacao(fid, r):
     ev = L.eventos(fid, r)
     if not ev:
-        raise Recusa("frente %s não está em criação (rode `frente.py criar iniciar %s --demanda …`)" % (fid, fid))
+        raise Recusa("feature %s não está em criação (rode `feature.py criar iniciar %s --demanda …`)" % (fid, fid))
     if any(e.get("tipo") == "abertura" for e in ev):
-        raise Recusa("frente %s já foi aberta — a criação acabou" % fid)
+        raise Recusa("feature %s já foi aberta — a criação acabou" % fid)
     return ev
 
 
@@ -153,7 +153,7 @@ def cmd_iniciar(a, r):
     st = L.state(r)
     if not os.path.isdir(st):
         raise Recusa("ABORTADO: .claude/state/ não existe — inicialize o estado com a skill salvar-sessao antes de "
-                     "criar uma frente (nada foi escrito)")
+                     "criar uma feature (nada foi escrito)")
     fid = a.id
     if not L.ID_RE.match(fid):
         raise Recusa("id inválido: %r (gramática ^[a-z][a-z0-9]*(-[a-z0-9]+){0,5}$ — é o nome da campanha)" % fid)
@@ -165,33 +165,33 @@ def cmd_iniciar(a, r):
                          % (fid, ini.get("demanda")))
         prox = L.etapa_corrente(ev) or "abrir"
         print("RETOMADA: criação de %s em curso · próxima etapa: %s (%s)" % (
-            fid, prox, L.NOMES_ETAPA.get(prox, "frente.py criar abrir")))
+            fid, prox, L.NOMES_ETAPA.get(prox, "feature.py criar abrir")))
         pend = L.proposta_pendente(ev, prox) if prox in L.ETAPAS else None
         if pend:
             print("  proposta %s pendente: apresente ao founder e registre aprovar/rejeitar" % pend["sha"][:12])
         return 0
-    d = L.frentes(r)
+    d = L.features(r)
     if fid in L.ids_ativas(r) or any(x["id"] == fid for x in d["entregues"]) or ev:
-        raise Recusa("ABORTADO: a frente %s já existe (ativa, entregue ou aberta)" % fid)
+        raise Recusa("ABORTADO: a feature %s já existe (ativa, entregue ou aberta)" % fid)
     if os.path.exists(L.campanha_dir(fid, r)):
-        raise Recusa("ABORTADO: a campanha campanhas/%s já existe — escolha outro id ou `frente.py adotar %s`"
+        raise Recusa("ABORTADO: a campanha campanhas/%s já existe — escolha outro id ou `feature.py adotar %s`"
                      % (fid, fid))
     if os.path.exists(os.path.join(st, "archive", fid)):
-        raise Recusa("ABORTADO: archive/%s já existe (frente entregue com esse id)" % fid)
+        raise Recusa("ABORTADO: archive/%s já existe (feature entregue com esse id)" % fid)
     outras = [x for x in L.em_criacao(r) if x != fid]
     if outras:
         raise Recusa("ABORTADO: a criação de %s está em curso — uma criação por vez (termine ou rejeite antes)"
                      % outras[0])
-    mx = L.regras(r)["max_frentes_ativas"]
+    mx = L.regras(r)["max_features_ativas"]
     if len(d["ativas"]) >= mx:
-        raise Recusa("ABORTADO: limite de frentes ativas atingido (%d/%d: %s) — feche uma com fechar-frente antes"
+        raise Recusa("ABORTADO: limite de features ativas atingido (%d/%d: %s) — feche uma com fechar-feature antes"
                      % (len(d["ativas"]), mx, ", ".join(L.ids_ativas(r))))
     if a.dry_run:
-        print("dry-run: criaria .claude/state/frentes/%s/{eventos.jsonl,CHECKLIST.md} (E0 OK; E1..E5 vazias)" % fid)
+        print("dry-run: criaria .claude/state/features/%s/{eventos.jsonl,CHECKLIST.md} (E0 OK; E1..E5 vazias)" % fid)
         return 0
     registrar_evento(fid, {"tipo": "inicio", "etapa": "E0", "demanda": a.demanda}, r)
-    print("E0 OK — criação de %s iniciada. CHECKLIST: .claude/state/frentes/%s/CHECKLIST.md" % (fid, fid))
-    print("próxima: E1 — escreva a análise e rode `frente.py criar propor %s --etapa E1 --arquivo <E1.md>`" % fid)
+    print("E0 OK — criação de %s iniciada. CHECKLIST: .claude/state/features/%s/CHECKLIST.md" % (fid, fid))
+    print("próxima: E1 — escreva a análise e rode `feature.py criar propor %s --etapa E1 --arquivo <E1.md>`" % fid)
     return 0
 
 
@@ -205,7 +205,7 @@ def cmd_propor(a, r):
     if pend:
         raise Recusa("a proposta %s de %s ainda não tem decisão — registre aprovar ou rejeitar antes de propor de novo"
                      % (pend["sha"][:12], etapa))
-    fd = L.frente_dir(fid, r)
+    fd = L.feature_dir(fid, r)
     lac = C.Lacunas()
     if etapa in ("E1", "E2", "E5"):
         src = a.arquivo or os.path.join(fd, "propostas", etapa + ".md")
@@ -214,27 +214,27 @@ def cmd_propor(a, r):
             raise Recusa("proposta %s não encontrada: %s (passe --arquivo)" % (etapa, src), 3)
         C.checar_etapa(etapa, src, lac)
         if etapa == "E1":
-            m = re.search(r"(?m)FRENTE-ID[^:\n]*:\s*`?([^\s`]+)", txt)
+            m = re.search(r"(?m)FEATURE-ID[^:\n]*:\s*`?([^\s`]+)", txt)
             if m and m.group(1) != fid:
-                lac.add("id_difere:%s" % m.group(1), "FRENTE-ID proposto %s difere da criação %s" % (m.group(1), fid))
+                lac.add("id_difere:%s" % m.group(1), "FEATURE-ID proposto %s difere da criação %s" % (m.group(1), fid))
     elif etapa == "E3":
-        C.checar_frente(os.path.join(fd, "FRENTE.md"), lac, fid)
+        C.checar_feature(L.feature_md(fd), lac, fid)
     else:
         ok, bom, _ = C.sonda()
         if not ok:
             raise Recusa("NOT_RUN: a sonda do contrato não discrimina (%s) — a E4 não pode ser validada"
                          % "; ".join(x["codigo"] for x in bom), 2)
         C.checar_completo(fd, lac)
-        fr = L.ler_frente(os.path.join(fd, "FRENTE.md"))
+        fr = L.ler_feature(L.feature_md(fd))
         if fr and fr["id"] != fid:
-            lac.add("id_invalido:%s" % fr["id"], "FRENTE-ID difere da frente")
+            lac.add("id_invalido:%s" % fr["id"], "FEATURE-ID difere da feature")
         for t in L.ler_tasks(fd):
             ok, motivos = C.complexidade_ok(t)
             if not ok:
                 lac.add("complexidade_invalida:%s" % t["stem"], "; ".join(motivos))
     if lac.itens:
         if a.json:
-            print(json.dumps({"frente": fid, "etapa": etapa, "ok": False, "lacunas": lac.itens}, ensure_ascii=False))
+            print(json.dumps({"feature": fid, "etapa": etapa, "ok": False, "lacunas": lac.itens}, ensure_ascii=False))
         else:
             print("%s recusada: %d lacuna(s)" % (etapa, len(lac.itens)))
             for x in lac.itens:
@@ -246,7 +246,7 @@ def cmd_propor(a, r):
             L.gravar(dst, txt)
     sha = sha_etapa(fid, etapa, r)
     registrar_evento(fid, {"tipo": "proposta", "etapa": etapa, "sha": sha}, r)
-    obj = {"frente": fid, "etapa": etapa, "sha": sha, "ok": True}
+    obj = {"feature": fid, "etapa": etapa, "sha": sha, "ok": True}
     L.saida(obj, a, "%s proposta (sha %s). Apresente ao founder e PARE: ok / ajustar / pausar." % (etapa, sha[:12]))
     return 0
 
@@ -274,7 +274,7 @@ def cmd_aprovar(a, r):
     if a.itens:
         e["itens"] = a.itens
     registrar_evento(fid, e, r)
-    L.saida({"frente": fid, "etapa": etapa, "sha": pend["sha"], "aprovada": True}, a,
+    L.saida({"feature": fid, "etapa": etapa, "sha": pend["sha"], "aprovada": True}, a,
             "%s aprovada (\"%s\"). Próxima: %s" % (etapa, a.palavra.strip(), a.proxima))
     return 0
 
@@ -295,9 +295,9 @@ def cmd_rejeitar(a, r):
 def cmd_checklist(a, r):
     ev = L.eventos(a.id, r)
     if not ev:
-        raise Recusa("frente %s sem eventos (não está em criação nem foi criada por criar-frente)" % a.id)
+        raise Recusa("feature %s sem eventos (não está em criação nem foi criada por criar-feature)" % a.id)
     ok = checklist_integro(a.id, r)
-    L.saida({"frente": a.id, "ok": ok, "eventos": len(ev)}, a,
+    L.saida({"feature": a.id, "ok": ok, "eventos": len(ev)}, a,
             "CHECKLIST de %s: %s" % (a.id, "íntegro (= projeção dos eventos)" if ok else
                                      "ADULTERADO — difere da projeção de eventos.jsonl"))
     return 0 if ok else 2
@@ -310,7 +310,7 @@ def overlap(fid, escopo, r):
     outras = [x for x in L.ids_ativas(r) if os.path.isdir(os.path.join(L.campanha_dir(x, r), ".auto-correcao"))]
     if not outras:
         return []
-    tmp = tempfile.mkdtemp(prefix="frente-overlap-")
+    tmp = tempfile.mkdtemp(prefix="feature-overlap-")
     try:
         args = ["init", "--target", r]
         for g in escopo:
@@ -322,7 +322,7 @@ def overlap(fid, escopo, r):
         for o in outras:
             args += ["--other", L.campanha_dir(o, r)]
         rc, out, err = L.ac(tmp, *args, r=r)
-        return [] if rc == 0 else [(err or out).strip().replace(tmp, "<esta frente>")]
+        return [] if rc == 0 else [(err or out).strip().replace(tmp, "<esta feature>")]
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -330,7 +330,7 @@ def overlap(fid, escopo, r):
 def cmd_abrir(a, r):
     fid = a.id
     if fid in L.ids_ativas(r):
-        raise Recusa("frente %s já está aberta" % fid)
+        raise Recusa("feature %s já está aberta" % fid)
     ev = exige_criacao(fid, r)
     ap = L.aprovadas(ev)
     falta = [e for e in L.ETAPAS if e not in ap]
@@ -342,31 +342,31 @@ def cmd_abrir(a, r):
         if sha_etapa(fid, e, r) != ap[e]["sha"]:
             raise Recusa("o artefato de %s mudou depois do ok do founder (sha %s ≠ aprovado %s) — proponha de novo"
                          % (e, sha_etapa(fid, e, r)[:12], ap[e]["sha"][:12]))
-    fd = L.frente_dir(fid, r)
+    fd = L.feature_dir(fid, r)
     lac = C.Lacunas()
     fr, tasks = C.checar_completo(fd, lac)
     if lac.itens:
         raise Recusa("contrato completo com lacunas: %s" % ", ".join(x["codigo"] for x in lac.itens), 2)
-    d = L.frentes(r)
-    mx = L.regras(r)["max_frentes_ativas"]
+    d = L.features(r)
+    mx = L.regras(r)["max_features_ativas"]
     if len(d["ativas"]) >= mx:
-        raise Recusa("limite de frentes ativas atingido (%d/%d)" % (len(d["ativas"]), mx))
+        raise Recusa("limite de features ativas atingido (%d/%d)" % (len(d["ativas"]), mx))
     w = L.campanha_dir(fid, r)
     if os.path.isdir(os.path.join(w, ".auto-correcao")):
         raise Recusa("a campanha campanhas/%s já existe" % fid)
     col = overlap(fid, fr["escopo"], r)
     if col:
-        raise Recusa("COLISÃO de escopo com frente ativa (ac.py overlap) — serialize ou estreite o escopo:\n  "
+        raise Recusa("COLISÃO de escopo com feature ativa (ac.py overlap) — serialize ou estreite o escopo:\n  "
                      + "\n  ".join(col))
     el = L.elegiveis(tasks)
     primeira = el[0]["stem"] if el else None
     problema = " ".join(fr["historia"].split())
     parada = " ".join(fr["parada"].split())
-    escreve = ["campanhas/%s/.auto-correcao/ (ac.py init)" % fid, ".claude/state/frentes/%s/INDEX.md" % fid,
-               ".claude/state/frentes/%s/HISTORICO.md" % fid, ".claude/state/logs/%s/%s.md" % (fid, fid),
-               ".claude/state/frentes.json", ".claude/state/WORKFLOW.md (bloco gerado)", "campanhas/README.md (linha)",
-               ".claude/state/frentes/%s/CHECKLIST.md (handoff Abertura)" % fid]
-    obj = {"frente": fid, "campanha": "campanhas/%s" % fid, "aberta": False, "tasks": len(tasks),
+    escreve = ["campanhas/%s/.auto-correcao/ (ac.py init)" % fid, ".claude/state/features/%s/INDEX.md" % fid,
+               ".claude/state/features/%s/HISTORICO.md" % fid, ".claude/state/logs/%s/%s.md" % (fid, fid),
+               ".claude/state/features.json", ".claude/state/WORKFLOW.md (bloco gerado)", "campanhas/README.md (linha)",
+               ".claude/state/features/%s/CHECKLIST.md (handoff Abertura)" % fid]
+    obj = {"feature": fid, "campanha": "campanhas/%s" % fid, "aberta": False, "tasks": len(tasks),
            "primeira": primeira, "motor": L.motor(), "escopo": fr["escopo"], "problem": problema, "stop": parada}
     if a.dry_run:
         obj["dry_run"] = True
@@ -384,18 +384,18 @@ def cmd_abrir(a, r):
     ts = L.agora()
     L.gravar(os.path.join(fd, "INDEX.md"), L.render_index(fid, tasks))
     e2 = L.ler(os.path.join(fd, "propostas", "E2.md"), "").strip()
-    hist = ["# HISTORICO — frente %s" % fid, "", "<!-- APPEND-ONLY: [NOTA] | [PASS] | [REJECT]; escrito pelo frente.py "
+    hist = ["# HISTORICO — feature %s" % fid, "", "<!-- APPEND-ONLY: [NOTA] | [PASS] | [REJECT]; escrito pelo feature.py "
             "e pelo tech-lead, em série -->", "",
-            "## [NOTA] %s — Abertura da frente %s" % (ts, fid),
+            "## [NOTA] %s — Abertura da feature %s" % (ts, fid),
             "- campanha: campanhas/%s (ac.py init; escopo: %s)" % (fid, ", ".join(fr["escopo"])),
             "- tasks: %d · primeira: %s" % (len(tasks), primeira), "- investigação aprovada (E2):", ""]
     hist += ["    " + x for x in e2.splitlines()]
     L.gravar(os.path.join(fd, "HISTORICO.md"), "\n".join(hist) + "\n")
     L.gravar(os.path.join(L.state(r), "logs", fid, fid + ".md"),
-             "# log da frente %s\n\n## %s — abertura\n- %s\n- campanha campanhas/%s · %d tasks · primeira %s\n"
+             "# log da feature %s\n\n## %s — abertura\n- %s\n- campanha campanhas/%s · %d tasks · primeira %s\n"
              % (fid, ts, fr["nome"] or fid, fid, len(tasks), primeira))
-    d["ativas"].append({"id": fid, "origem": "criar-frente", "aberta_em": ts, "campanha": "campanhas/%s" % fid})
-    L.salvar_frentes(d, r)
+    d["ativas"].append({"id": fid, "origem": "criar-feature", "aberta_em": ts, "campanha": "campanhas/%s" % fid})
+    L.salvar_features(d, r)
     L.regravar_workflow(d, r)
     readme = os.path.join(r, "campanhas", "README.md")
     txt = L.ler(readme, "# campanhas\n\n| campanha | o quê | commit de entrega | decisão |\n|---|---|---|---|\n")
@@ -404,7 +404,7 @@ def cmd_abrir(a, r):
     registrar_evento(fid, {"tipo": "abertura", "etapa": "abertura", "campanha": "campanhas/%s" % fid,
                            "tasks": len(tasks), "primeira": primeira}, r)
     obj["aberta"] = True
-    L.saida(obj, a, "Frente %s aberta (nada commitado). Tasks: %d · primeira: %s · campanha campanhas/%s\n"
+    L.saida(obj, a, "Feature %s aberta (nada commitado). Tasks: %d · primeira: %s · campanha campanhas/%s\n"
                     "Próximo: oráculo por agente separado → `ac.py oracle freeze` → script-aprovacao.sh %s (o "
                     "founder roda no terminal dele)." % (fid, len(tasks), primeira, fid, fid))
     return 0
@@ -413,10 +413,10 @@ def cmd_abrir(a, r):
 # ------------------------------------------------------------------ status, adotar, task
 
 def status_obj(r):
-    d = L.frentes(r)
+    d = L.features(r)
     at = []
     for x in d["ativas"]:
-        tasks = L.ler_tasks(L.frente_dir(x["id"], r))
+        tasks = L.ler_tasks(L.feature_dir(x["id"], r))
         at.append({"id": x["id"], "origem": x.get("origem"), "progresso": L.progresso(tasks)})
     cri = L.em_criacao(r)
     criacao = None
@@ -424,12 +424,12 @@ def status_obj(r):
         criacao = {"id": cri[0], "proxima": L.etapa_corrente(L.eventos(cri[0], r)) or "abrir"}
     return {"estado": "IN_PROGRESS" if d["ativas"] else "IDLE", "ativas": at, "criacao": criacao,
             "entregues": [x["id"] for x in d["entregues"]], "workflow_em_dia": L.workflow_em_dia(d, r),
-            "motor": L.motor(), "max_frentes_ativas": L.regras(r)["max_frentes_ativas"]}
+            "motor": L.motor(), "max_features_ativas": L.regras(r)["max_features_ativas"]}
 
 
 def cmd_status(a, r):
     j = status_obj(r)
-    linhas = ["Estado: %s · ativas %d/%d" % (j["estado"], len(j["ativas"]), j["max_frentes_ativas"])]
+    linhas = ["Estado: %s · ativas %d/%d" % (j["estado"], len(j["ativas"]), j["max_features_ativas"])]
     for x in j["ativas"]:
         linhas.append("  - %s (%s) · %s tasks" % (x["id"], x["origem"], x["progresso"]))
     if j["criacao"]:
@@ -449,21 +449,21 @@ def cmd_adotar(a, r):
     if not st:
         raise Recusa("não há campanha campanhas/%s/.auto-correcao — nada a adotar" % fid)
     if st.get("stage") == "concluida":
-        raise Recusa("a campanha %s está concluída — não é frente ativa" % fid)
-    d = L.frentes(r)
+        raise Recusa("a campanha %s está concluída — não é feature ativa" % fid)
+    d = L.features(r)
     if fid in L.ids_ativas(r):
         print("%s já é ativa (%s) — nada a fazer" % (fid, next(x["origem"] for x in d["ativas"] if x["id"] == fid)))
         return 0
-    mx = L.regras(r)["max_frentes_ativas"]
+    mx = L.regras(r)["max_features_ativas"]
     if len(d["ativas"]) >= mx:
-        raise Recusa("limite de frentes ativas atingido (%d/%d)" % (len(d["ativas"]), mx))
+        raise Recusa("limite de features ativas atingido (%d/%d)" % (len(d["ativas"]), mx))
     if a.dry_run:
         print("dry-run: %s entraria em ativas como legado" % fid)
         return 0
     d["ativas"].append({"id": fid, "origem": "legado", "aberta_em": L.agora(), "campanha": "campanhas/%s" % fid})
-    L.salvar_frentes(d, r)
+    L.salvar_features(d, r)
     L.regravar_workflow(d, r)
-    print("%s adotada como frente ativa (legado, sem checklist de criação)" % fid)
+    print("%s adotada como feature ativa (legado, sem checklist de criação)" % fid)
     return 0
 
 
@@ -475,12 +475,12 @@ def set_cab(txt, campo, valor):
 def cmd_task_marcar(a, r):
     fid, tid = a.id, a.task
     if fid not in L.ids_ativas(r):
-        raise Recusa("frente %s não está ativa" % fid)
-    fd = L.frente_dir(fid, r)
+        raise Recusa("feature %s não está ativa" % fid)
+    fd = L.feature_dir(fid, r)
     p = os.path.join(fd, "TASKS", tid + ".md")
     t = L.ler_task(p)
     if not t:
-        raise Recusa("task %s não existe em frentes/%s/TASKS/" % (tid, fid))
+        raise Recusa("task %s não existe em features/%s/TASKS/" % (tid, fid))
     if a.status not in ("PENDENTE", "IN_PROGRESS", "DONE") or a.gate not in ("PENDENTE", "PASS", "FAIL"):
         raise Recusa("status ∈ PENDENTE|IN_PROGRESS|DONE e gate ∈ PENDENTE|PASS|FAIL", 3)
     if a.status == "DONE" and a.gate != "PASS":
@@ -509,9 +509,10 @@ def archive_completo(fid, r):
     t = L.ler(caminho_archive(fid, r))
     if not t:
         return False
-    obrig = ("## Resumo", "## Critérios de aceite", "## Arquivos da frente", "Aceite QA — ACCEPT",
+    obrig = ("## Resumo", "## Critérios de aceite", "## Arquivos da feature", "Aceite QA — ACCEPT",
              "Aceite Review — APPROVED")
-    return all(x in t for x in obrig) and t.rstrip().splitlines()[-1] == L.MARCADOR_ARCHIVE
+    t = t.replace("## Arquivos da frente", "## Arquivos da feature")  # COMPAT: archive antigo
+    return all(x in t for x in obrig) and t.rstrip().splitlines()[-1] in (L.MARCADOR_ARCHIVE, L.LEGADO_MARCADOR)  # COMPAT
 
 
 def intrusos_archive(fid, r):
@@ -519,9 +520,9 @@ def intrusos_archive(fid, r):
     return sorted(x for x in os.listdir(d) if x != fid + ".md") if os.path.isdir(d) else []
 
 
-def arquivos_da_frente(fid, r):
+def arquivos_da_feature(fid, r):
     """união dos Arquivos permitidos das tasks CORRECAO (enquanto existem); depois da limpeza, do archive."""
-    tasks = L.ler_tasks(L.frente_dir(fid, r))
+    tasks = L.ler_tasks(L.feature_dir(fid, r))
     if tasks:
         out = []
         for t in tasks:
@@ -529,7 +530,7 @@ def arquivos_da_frente(fid, r):
                 out += [x for x in L.arquivos_reais(t) if x not in out]
         return out
     t = L.ler(caminho_archive(fid, r), "")
-    return L.itens_codigo(L.secoes(t).get("Arquivos da frente", ""))
+    return L.itens_codigo(L.secoes(t).get("Arquivos da feature", ""))
 
 
 def portao_verde(fid, r):
@@ -542,7 +543,7 @@ def portao_verde(fid, r):
 
 def conferir_commit(fid, arqs, r):
     if not arqs:
-        return False, "sem Arquivos da frente"
+        return False, "sem Arquivos da feature"
     env = dict(os.environ, CS_DEV_SKILL_DIR=r)
     p = subprocess.run(["bash", os.path.join(TOOLS, "conferir-commit.sh"), fid, "--"] + arqs, cwd=r, env=env,
                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
@@ -555,7 +556,7 @@ def gate_fechamento(fid, r):
     def f(c, m):
         falhas.append({"codigo": c, "msg": m})
 
-    fd = L.frente_dir(fid, r)
+    fd = L.feature_dir(fid, r)
     tasks = L.ler_tasks(fd)
     idx = L.linhas_index(fid, r)
     disco = sorted(t["stem"] for t in tasks)
@@ -569,14 +570,14 @@ def gate_fechamento(fid, r):
             f("task_aberta:%s" % t["stem"], "%s está %s" % (t["stem"], t["status"] or "sem status"))
         if t["gate"] != "PASS" or not re.search(r"(?m)^## \[PASS\] %s\b" % re.escape(t["stem"]), hist):
             f("gate_ausente:%s" % t["stem"], "%s sem gate PASS no cabeçalho e `## [PASS]` no HISTORICO" % t["stem"])
-    fr = L.ler_frente(os.path.join(fd, "FRENTE.md")) or {}
+    fr = L.ler_feature(L.feature_md(fd)) or {}
     if fr.get("aceite_qa") != "ACCEPT":
-        f("aceite_ausente:qa", "FRENTE.md sem `### Aceite QA — ACCEPT`")
+        f("aceite_ausente:qa", "FEATURE.md sem `### Aceite QA — ACCEPT`")
     if fr.get("aceite_review") != "APPROVED":
-        f("aceite_ausente:review", "FRENTE.md sem `### Aceite Review — APPROVED`")
+        f("aceite_ausente:review", "FEATURE.md sem `### Aceite Review — APPROVED`")
     if not portao_verde(fid, r):
         f("portao_nao_verde", "local/portao-%s/portao.out não termina em RESULTADO: VERDE + FIM" % fid)
-    ok, out = conferir_commit(fid, arquivos_da_frente(fid, r), r)
+    ok, out = conferir_commit(fid, arquivos_da_feature(fid, r), r)
     if not ok:
         f("conferir_commit", "conferir-commit.sh: " + " | ".join(out.splitlines()[-5:]))
     w = L.campanha_dir(fid, r)
@@ -593,13 +594,13 @@ def cmd_fechar_check(a, r):
     ok = not falhas
     t = "gate de fechamento de %s: %s" % (a.id, "PASS" if ok else "REPROVADO (%d)" % len(falhas))
     t += "".join("\n  - %s — %s" % (x["codigo"], x["msg"]) for x in falhas)
-    L.saida({"frente": a.id, "ok": ok, "falhas": falhas}, a, t, t)
+    L.saida({"feature": a.id, "ok": ok, "falhas": falhas}, a, t, t)
     return 0 if ok else 1
 
 
 def montar_archive(fid, notas, r):
-    fd = L.frente_dir(fid, r)
-    fr = L.ler_frente(os.path.join(fd, "FRENTE.md"))
+    fd = L.feature_dir(fid, r)
+    fr = L.ler_feature(L.feature_md(fd))
     tasks = L.ler_tasks(fd)
     sn = L.secoes(notas)
     ck = L.ler(os.path.join(fd, "CHECKLIST.md"), "")
@@ -628,7 +629,7 @@ def montar_archive(fid, notas, r):
                                                       t["gate"]))
     for t in tasks:
         out += ["", "### Handoff %s" % t["stem"], t["handoff"] or "(vazio)"]
-    out += ["", "## Como a frente nasceu", handoffs, "",
+    out += ["", "## Como a feature nasceu", handoffs, "",
             "## Campanha", "- campanha: campanhas/%s · etapa do motor: %s · rodada: %s" % (
                 fid, st.get("stage", "?"), st.get("round", "?")),
             "- critério de parada: %s" % (st.get("stop") or fr["parada"]),
@@ -636,9 +637,9 @@ def montar_archive(fid, notas, r):
             "## Oráculo"]
     out += ["- `%s`" % x for x in oraculo] or ["- (sem arquivo declarado)"]
     out += ["", "## Decisões técnicas", sn.get("Decisões técnicas", "").strip(), "",
-            "## Aprendizados", sn.get("Aprendizados", "").strip(), "", "## Arquivos da frente"]
-    out += ["- `%s`" % x for x in arquivos_da_frente(fid, r)]
-    out += ["", "## Aceite da Frente", "### Aceite QA — %s" % fr["aceite_qa"],
+            "## Aprendizados", sn.get("Aprendizados", "").strip(), "", "## Arquivos da feature"]
+    out += ["- `%s`" % x for x in arquivos_da_feature(fid, r)]
+    out += ["", "## Aceite da Feature", "### Aceite QA — %s" % fr["aceite_qa"],
             "### Aceite Review — %s" % fr["aceite_review"], ""]
     return "\n".join(out)
 
@@ -675,7 +676,7 @@ def cmd_fechar_archive(a, r):
 
 def exige_archive(fid, r):
     if not archive_completo(fid, r):
-        raise Recusa("archive/%s/%s.md não está completo — rode `frente.py fechar archive %s --notas ARQ` antes"
+        raise Recusa("archive/%s/%s.md não está completo — rode `feature.py fechar archive %s --notas ARQ` antes"
                      % (fid, fid, fid))
 
 
@@ -687,7 +688,7 @@ def cmd_fechar_entrega(a, r):
         print("LAST_DELIVERY já aponta %s — nada a fazer" % fid)
         return 0
     head = L.git(r, "rev-parse", "--short", "HEAD")[1] or "?"
-    L.gravar(p, "# LAST_DELIVERY\n\n**Frente-ID:** %s\n- Fechada em: %s\n- Archive: .claude/state/archive/%s/%s.md\n"
+    L.gravar(p, "# LAST_DELIVERY\n\n**Feature-ID:** %s\n- Fechada em: %s\n- Archive: .claude/state/archive/%s/%s.md\n"
                 "- HEAD no fechamento: %s\n" % (fid, L.agora(), fid, fid, head))
     print("LAST_DELIVERY → %s" % fid)
     return 0
@@ -696,11 +697,11 @@ def cmd_fechar_entrega(a, r):
 def entrega_feita(fid, r):
     t = L.ler(os.path.join(L.state(r), "LAST_DELIVERY.md"), "")
     corpo = [x for x in t.splitlines()[1:] if x.strip()]
-    return bool(corpo) and corpo[0] == "**Frente-ID:** %s" % fid
+    return bool(corpo) and corpo[0] == "**Feature-ID:** %s" % fid
 
 
 def limpeza_feita(fid, r):
-    return not os.path.exists(L.frente_dir(fid, r)) and not os.path.exists(os.path.join(L.state(r), "logs", fid))
+    return not os.path.exists(L.feature_dir(fid, r)) and not os.path.exists(os.path.join(L.state(r), "logs", fid))
 
 
 def cmd_fechar_limpar(a, r):
@@ -709,14 +710,14 @@ def cmd_fechar_limpar(a, r):
     if limpeza_feita(fid, r):
         print("limpeza de %s já feita — nada a fazer" % fid)
         return 0
-    for d in (L.frente_dir(fid, r), os.path.join(L.state(r), "logs", fid)):
+    for d in (L.feature_dir(fid, r), os.path.join(L.state(r), "logs", fid)):
         shutil.rmtree(d, ignore_errors=True)
-    print("removidos frentes/%s/ e logs/%s/ (o archive é a memória)" % (fid, fid))
+    print("removidos features/%s/ e logs/%s/ (o archive é a memória)" % (fid, fid))
     return 0
 
 
 def idle_feito(fid, r):
-    d = L.frentes(r)
+    d = L.features(r)
     return fid not in L.ids_ativas(r) and any(x["id"] == fid for x in d["entregues"])
 
 
@@ -731,14 +732,14 @@ def cmd_fechar_idle(a, r):
         raise Recusa("archive/%s/ não é único: intruso(s) %s — remova à mão depois de conferir (não apago)"
                      % (fid, ", ".join(intr)))
     if not limpeza_feita(fid, r):
-        raise Recusa("limpeza não feita (frentes/%s ou logs/%s ainda existem) — `frente.py fechar limpar %s`"
+        raise Recusa("limpeza não feita (features/%s ou logs/%s ainda existem) — `feature.py fechar limpar %s`"
                      % (fid, fid, fid))
     if not entrega_feita(fid, r):
-        raise Recusa("LAST_DELIVERY não aponta %s — `frente.py fechar entrega %s`" % (fid, fid))
-    d = L.frentes(r)
+        raise Recusa("LAST_DELIVERY não aponta %s — `feature.py fechar entrega %s`" % (fid, fid))
+    d = L.features(r)
     d["ativas"] = [x for x in d["ativas"] if x["id"] != fid]
     d["entregues"].append({"id": fid, "fechada_em": L.agora(), "archive": ".claude/state/archive/%s/%s.md" % (fid, fid)})
-    L.salvar_frentes(d, r)
+    L.salvar_features(d, r)
     L.regravar_workflow(d, r)
     print("%s entregue; estado: %s" % (fid, "IN_PROGRESS" if d["ativas"] else "IDLE"))
     return 0
@@ -752,15 +753,15 @@ def cmd_fechar_plano(a, r):
     prox = next((e["id"] for e in et if not e["feita"]), "commit")
     t = "fechamento de %s: %s · próximo: %s" % (fid, " ".join("%s=%s" % (e["id"], "ok" if e["feita"] else "—")
                                                                for e in et), prox)
-    L.saida({"frente": fid, "etapas": et, "proxima": prox}, a, t, t)
+    L.saida({"feature": fid, "etapas": et, "proxima": prox}, a, t, t)
     return 0
 
 
 def paths_commit(fid, r, arqs):
     cands = list(arqs) + ["campanhas/%s/oraculo" % fid, "campanhas/README.md",
-                          ".claude/state/archive/%s" % fid, ".claude/state/frentes/%s" % fid,
+                          ".claude/state/archive/%s" % fid, ".claude/state/features/%s" % fid,
                           ".claude/state/logs/%s" % fid, ".claude/state/LAST_DELIVERY.md",
-                          ".claude/state/WORKFLOW.md", ".claude/state/frentes.json", ".claude/state/RESUME.md",
+                          ".claude/state/WORKFLOW.md", ".claude/state/features.json", ".claude/state/RESUME.md",
                           ".claude/state/BACKLOG.md"]
     out = []
     for p in cands:
@@ -793,7 +794,7 @@ def commit_indice_temporario(r, paths, msg, extra_blobs=None):
     rc, head, err = L.git(r, "rev-parse", "HEAD")
     if rc != 0:
         raise Recusa("sem HEAD: %s" % err)
-    fd, idx = tempfile.mkstemp(prefix="indice-frente-")
+    fd, idx = tempfile.mkstemp(prefix="indice-feature-")
     os.close(fd)
     os.remove(idx)
     env = {"GIT_INDEX_FILE": idx}
@@ -831,11 +832,11 @@ def commit_indice_temporario(r, paths, msg, extra_blobs=None):
 def cmd_fechar_commit(a, r):
     fid = a.id
     if not idle_feito(fid, r):
-        raise Recusa("commit só depois do fechamento até IDLE (`frente.py fechar plano %s --json`)" % fid)
+        raise Recusa("commit só depois do fechamento até IDLE (`feature.py fechar plano %s --json`)" % fid)
     if L.ac(L.campanha_dir(fid, r), "check", "integracao.3", r=r)[0] != 0:
         raise Recusa("sem a pré-autorização de commit do founder (ac.py check integracao.3 — preauth commit, que o "
                      "founder roda no terminal dele com local/aprovar-%s.sh)" % fid)
-    arqs = arquivos_da_frente(fid, r)
+    arqs = arquivos_da_feature(fid, r)
     ok, out = conferir_commit(fid, arqs, r)
     if not ok:
         raise Recusa("conferir-commit reprovou (só entra o que o portão testou):\n" + out)
@@ -851,16 +852,16 @@ def cmd_fechar_commit(a, r):
     priv = privacidade(r, paths, a.mensagem)
     if priv:
         raise Recusa("guard de privacidade achou termo privado — limpe e repita:\n" + "\n".join(priv))
-    obj = {"frente": fid, "paths": paths + list(extra.keys()), "commit": None, "dry_run": bool(a.dry_run)}
+    obj = {"feature": fid, "paths": paths + list(extra.keys()), "commit": None, "dry_run": bool(a.dry_run)}
     if a.dry_run:
-        L.saida(obj, a, "dry-run: commitaria só a frente %s:\n  %s" % (fid, "\n  ".join(obj["paths"])))
+        L.saida(obj, a, "dry-run: commitaria só a feature %s:\n  %s" % (fid, "\n  ".join(obj["paths"])))
         return 0
     if not paths and not extra:
-        print("nada a commitar da frente %s (já commitada?)" % fid)
+        print("nada a commitar da feature %s (já commitada?)" % fid)
         return 0
     novo = commit_indice_temporario(r, paths, os.path.realpath(a.mensagem), extra)
     obj["commit"] = novo
-    L.saida(obj, a, "commit %s — só a frente %s (%d caminho(s)); push: nunca (é do founder)"
+    L.saida(obj, a, "commit %s — só a feature %s (%d caminho(s)); push: nunca (é do founder)"
             % (novo[:12], fid, len(obj["paths"])))
     return 0
 
@@ -868,7 +869,7 @@ def cmd_fechar_commit(a, r):
 # ------------------------------------------------------------------ CLI
 
 def parser():
-    ap = argparse.ArgumentParser(prog="frente.py", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(prog="feature.py", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd")
     s = sub.add_parser("status")
     s.add_argument("--json", action="store_true")

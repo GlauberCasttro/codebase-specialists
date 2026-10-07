@@ -38,9 +38,9 @@
    "retorno": ["MAPA: path:linha — papel", "PONTOS DE MUDANÇA PROVÁVEIS: lista", "DEPENDÊNCIAS QUE QUEBRAM SE MUDAR: lista"]
   },
   "oraculista": {
-   "quando": "frente aberta sem oráculo congelado: o oráculo é escrito por um agente SEPARADO de quem constrói",
+   "quando": "feature aberta sem oráculo congelado: o oráculo é escrito por um agente SEPARADO de quem constrói",
    "tipos": ["general-purpose"], "modelo": "opus", "permissao": "escrita-oraculo",
-   "missao": "Escreva o oráculo (ESPEC.md + testes que falham hoje e passam com a entrega) a partir dos CAs da frente.",
+   "missao": "Escreva o oráculo (ESPEC.md + testes que falham hoje e passam com a entrega) a partir dos CAs da feature.",
    "nao_faz": "não vê a cópia de trabalho do corretor, não implementa produto, não congela o oráculo (quem congela é o tech-lead: oracle freeze)",
    "retorno": ["ARQUIVOS: path — o que prova", "CA→TESTE: CA-NN → módulo:teste", "FALHA HOJE: comando → RC · n falhas (prova de que mede algo)", "CALIBRAÇÃO: saída vazia reprova; saída boa conhecida passa"]
   },

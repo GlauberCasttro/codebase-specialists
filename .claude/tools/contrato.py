@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""contrato.py — a LEI da frente: valida o Bloco A (FRENTE.md), o Bloco B (tasks), a cobertura, os grupos, os
+"""contrato.py — a LEI da feature: valida o Bloco A (FEATURE.md), o Bloco B (tasks), a cobertura, os grupos, os
 depends, as propostas das etapas E1/E2/E5 e a complexidade declarada. Um script único (sem cópia que derive),
-Python 3.9+ stdlib, nos 2 Pythons. É o que o `frente.py criar propor` roda; o agente roda antes para ver as lacunas.
+Python 3.9+ stdlib, nos 2 Pythons. É o que o `feature.py criar propor` roda; o agente roda antes para ver as lacunas.
 
 Uso:
-  contrato.py frente <FRENTE.md> [--json]            Bloco A (FRENTE-ID, seções, CAs DADO/QUANDO/ENTÃO + Prova,
+  contrato.py feature <FEATURE.md> [--json]            Bloco A (FEATURE-ID, seções, CAs DADO/QUANDO/ENTÃO + Prova,
                                                       escopo de escrita estreito, parada com número, aceites)
-  contrato.py completo <pasta-da-frente> [--json]    Bloco A + todas as TASKS/ + cobertura de CA, oráculo, QA,
+  contrato.py completo <pasta-da-feature> [--json]    Bloco A + todas as TASKS/ + cobertura de CA, oráculo, QA,
                                                       REVIEW, depends (com porquê, existentes, sem ciclo), grupos
                                                       (≤3, disjuntos), escopo, mesmo arquivo serializado
   contrato.py task <task.md> [--json]                só o schema de UMA task (cabeçalho, seções, arquivos exatos,
@@ -15,7 +15,7 @@ Uso:
                                                       arquivo:linha
   contrato.py complexidade <task.md>                 `complexidade: baixa` só vale com ≤2 arquivos, sem área
                                                       sensível, sem texto de protocolo e verificação concreta
-  contrato.py --sonda                                sonda negativa: frente válida tem de passar e a mesma frente
+  contrato.py --sonda                                sonda negativa: feature válida tem de passar e a mesma feature
                                                       sem o Goal de uma task tem de reprovar (0 = sonda ok,
                                                       3 = NOT_RUN: o contrato não discrimina — não confie nele)
 Exit: 0 ok · 2 lacunas (listadas; em --json {"ok","lacunas":[{"codigo","msg"}]}) · 3 uso/NOT_RUN.
@@ -34,10 +34,10 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import estado_lib as L  # noqa: E402
 
-SECOES_FRENTE = ("História", "Problema / Contexto", "Valor de negócio", "Personas / Stakeholders",
+SECOES_FEATURE = ("História", "Problema / Contexto", "Valor de negócio", "Personas / Stakeholders",
                  "Critérios de Aceitação", "RNFs", "Edge cases", "Dependências", "Escopo IN", "Escopo OUT",
-                 "Escopo de escrita", "Critério de parada", "Métrica de sucesso", "Aceite da Frente")
-ROTULOS = {"E1": ("Demanda", "Problema por trás", "O que NÃO é", "Perguntas abertas", "FRENTE-ID"),
+                 "Escopo de escrita", "Critério de parada", "Métrica de sucesso", "Aceite da Feature")
+ROTULOS = {"E1": ("Demanda", "Problema por trás", "O que NÃO é", "Perguntas abertas", "FEATURE-ID"),
            "E2": ("Inventário", "Classificação", "Exclusões", "Achados", "Enforcement existente"),
            "E5": ("Ordem", "Primeira task", "Escopo da campanha", "Critério de parada", "Git")}
 AMPLOS = ("*", "**", "**/*", ".", "./", "/")
@@ -54,19 +54,19 @@ class Lacunas:
 
 # ------------------------------------------------------------------ Bloco A
 
-def checar_frente(p, lac, fid=None):
-    fr = L.ler_frente(p)
+def checar_feature(p, lac, fid=None):
+    fr = L.ler_feature(p)
     if fr is None:
-        lac.add("campo_ausente:FRENTE.md", "FRENTE.md não existe: %s" % p)
+        lac.add("campo_ausente:FEATURE.md", "FEATURE.md não existe: %s" % p)
         return None
     if not fr["id"] or not L.ID_RE.match(fr["id"]):
         lac.add("id_invalido:%s" % (fr["id"] or "—"),
-                "FRENTE-ID ausente ou fora da gramática ^[a-z][a-z0-9]*(-[a-z0-9]+){0,5}$ (é o nome da campanha)")
+                "FEATURE-ID ausente ou fora da gramática ^[a-z][a-z0-9]*(-[a-z0-9]+){0,5}$ (é o nome da campanha)")
     elif fid and fr["id"] != fid:
-        lac.add("id_invalido:%s" % fr["id"], "FRENTE-ID %s difere da frente %s" % (fr["id"], fid))
+        lac.add("id_invalido:%s" % fr["id"], "FEATURE-ID %s difere da feature %s" % (fr["id"], fid))
     if not fr["nome"]:
         lac.add("campo_ausente:Nome", "falta a linha `Nome:`")
-    for s in SECOES_FRENTE:
+    for s in SECOES_FEATURE:
         if not fr["secoes"].get(s, "").strip():
             lac.add("campo_ausente:%s" % s, "seção `## %s` ausente ou vazia" % s)
     h = fr["historia"].lower()
@@ -90,10 +90,10 @@ def checar_frente(p, lac, fid=None):
                 lac.add("escopo_amplo:%s" % g, "glob amplo demais ou fora do projeto: %s" % g)
     if fr["parada"] and not re.search(r"\d", fr["parada"]):
         lac.add("parada_sem_numero", "o Critério de parada precisa de número (vira o --stop)")
-    if "Aceite da Frente" in fr["secoes"]:
+    if "Aceite da Feature" in fr["secoes"]:
         if fr["aceite_qa"] not in ("PENDENTE", "ACCEPT") or fr["aceite_review"] not in ("PENDENTE", "APPROVED"):
             lac.add("aceite_sem_qa_review",
-                    "Aceite da Frente precisa de `### Aceite QA — PENDENTE|ACCEPT` e `### Aceite Review — PENDENTE|APPROVED`")
+                    "Aceite da Feature precisa de `### Aceite QA — PENDENTE|ACCEPT` e `### Aceite Review — PENDENTE|APPROVED`")
     return fr
 
 
@@ -129,7 +129,7 @@ def checar_task(t, lac, fid=None):
 
 
 def checar_completo(fd, lac):
-    fr = checar_frente(os.path.join(fd, "FRENTE.md"), lac)
+    fr = checar_feature(L.feature_md(fd), lac)
     fid = (fr or {}).get("id") or os.path.basename(os.path.normpath(fd))
     escopo = (fr or {}).get("escopo") or []
     tasks = L.ler_tasks(fd)
@@ -228,10 +228,10 @@ def complexidade_ok(t):
 
 # ------------------------------------------------------------------ sonda
 
-SONDA_FRENTE = """# sonda — frente de sonda
+SONDA_FEATURE = """# sonda — feature de sonda
 
-FRENTE-ID: sonda
-Nome: frente de sonda do contrato
+FEATURE-ID: sonda
+Nome: feature de sonda do contrato
 
 ## História
 Como mantenedor, quero que `x()` devolva 2, para provar que o contrato discrimina.
@@ -273,7 +273,7 @@ oráculo 1/1 verde
 ## Métrica de sucesso
 1 de 1 CA
 
-## Aceite da Frente
+## Aceite da Feature
 ### Aceite QA — PENDENTE
 ### Aceite Review — PENDENTE
 """
@@ -281,7 +281,7 @@ oráculo 1/1 verde
 
 def _sonda_task(nn, desc, tipo, grupo, dep, arq, goal=True, verif="python3 -m unittest test_sonda"):
     tid = "%s-TASK-%s" % (nn, desc)
-    c = ["# %s — %s" % (tid, desc.lower()), "", "id: " + tid, "frente: sonda", "tipo: " + tipo, "grupo: " + grupo,
+    c = ["# %s — %s" % (tid, desc.lower()), "", "id: " + tid, "feature: sonda", "tipo: " + tipo, "grupo: " + grupo,
          "agente: x", "CA: CA-01", "depends: " + dep, "status: PENDENTE", "gate: PENDENTE", ""]
     if goal:
         c += ["## Goal", "fazer e NÃO tocar o resto", ""]
@@ -294,15 +294,15 @@ def _sonda_task(nn, desc, tipo, grupo, dep, arq, goal=True, verif="python3 -m un
 def sonda():
     tmp = tempfile.mkdtemp(prefix="contrato-sonda-")
     try:
-        fd = os.path.join(tmp, "frentes", "sonda")
-        L.gravar(os.path.join(fd, "FRENTE.md"), SONDA_FRENTE)
+        fd = os.path.join(tmp, "features", "sonda")
+        L.gravar(L.feature_md(fd), SONDA_FEATURE)
         dep = "01-TASK-ORACULO (o oráculo vem antes)"
         tasks = [_sonda_task("01", "ORACULO", "ORACULO", "—", "—", "campanhas/sonda/oraculo/test_sonda.py"),
                  _sonda_task("02", "X", "CORRECAO", "G1", dep, "s/x.py"),
                  _sonda_task("03", "QA", "QA", "—", "02-TASK-X (precisa da correção)",
-                             ".claude/state/frentes/sonda/TASKS/03-TASK-QA.md", verif="bash portao.sh sonda --dry-run"),
+                             ".claude/state/features/sonda/TASKS/03-TASK-QA.md", verif="bash portao.sh sonda --dry-run"),
                  _sonda_task("04", "REVIEW", "REVIEW", "—", "03-TASK-QA (examina o QA)",
-                             ".claude/state/frentes/sonda/TASKS/04-TASK-REVIEW.md", verif="git diff --stat")]
+                             ".claude/state/features/sonda/TASKS/04-TASK-REVIEW.md", verif="git diff --stat")]
         for tid, txt in tasks:
             L.gravar(os.path.join(fd, "TASKS", tid + ".md"), txt)
         bom = Lacunas()
@@ -338,12 +338,12 @@ def emitir(lac, a, titulo):
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="contrato.py", description=__doc__.split("\n\n")[0],
                                  formatter_class=argparse.RawDescriptionHelpFormatter,
-                                 epilog="subcomandos: frente, completo, task, etapa, complexidade, --sonda (ver o "
+                                 epilog="subcomandos: feature, completo, task, etapa, complexidade, --sonda (ver o "
                                         "cabeçalho do arquivo)")
     ap.add_argument("--sonda", action="store_true", help="sonda negativa (0 ok · 3 NOT_RUN)")
     ap.add_argument("--json", action="store_true")
     sub = ap.add_subparsers(dest="cmd")
-    s = sub.add_parser("frente", help="Bloco A")
+    s = sub.add_parser("feature", help="Bloco A")
     s.add_argument("arquivo")
     s.add_argument("--json", action="store_true")
     s = sub.add_parser("completo", help="Bloco A + tasks + cobertura")
@@ -374,12 +374,12 @@ def main(argv=None):
         ap.print_help()
         return 3
     lac = Lacunas()
-    if a.cmd == "frente":
-        checar_frente(a.arquivo, lac)
-        return emitir(lac, a, "contrato frente")
+    if a.cmd == "feature":
+        checar_feature(a.arquivo, lac)
+        return emitir(lac, a, "contrato feature")
     if a.cmd == "completo":
         if not os.path.isdir(a.pasta):
-            print("pasta da frente não existe: %s" % a.pasta, file=sys.stderr)
+            print("pasta da feature não existe: %s" % a.pasta, file=sys.stderr)
             return 3
         checar_completo(a.pasta, lac)
         return emitir(lac, a, "contrato completo")

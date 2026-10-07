@@ -9,5 +9,5 @@
   {"glob": "scripts/{x}/**", "suites": ["{x}"], "porque": "a suíte do próprio pacote"},
   {"glob": "evals/**", "suites": ["evals"], "porque": "fixtures e suíte de evals"}
  ],
- "verificacoes": ["def-removido (portao.sh: nenhum def some vs HEAD nos arquivos da frente)", "privacidade (guard-privacidade.sh nos tocados)", "oraculo-intacto (ac.py oracle verify)", "pacote-sem-vazamento (package.sh --worktree no fechamento)"]
+ "verificacoes": ["def-removido (portao.sh: nenhum def some vs HEAD nos arquivos da feature)", "privacidade (guard-privacidade.sh nos tocados)", "oraculo-intacto (ac.py oracle verify)", "pacote-sem-vazamento (package.sh --worktree no fechamento)"]
 }

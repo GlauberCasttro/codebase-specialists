@@ -1,7 +1,7 @@
 {
  "schema": 1,
- "max_frentes_ativas": 2,
- "_max_frentes_ativas": "decisão do founder (harness-dev §8.2): até 2 frentes ativas, uma criação por vez e colisão de escopo provada por ac.py overlap na abertura",
+ "max_features_ativas": 2,
+ "_max_features_ativas": "decisão do founder (harness-dev §8.2): até 2 features ativas, uma criação por vez e colisão de escopo provada por ac.py overlap na abertura",
  "criacoes_simultaneas": 1,
  "aprovacao_palavras": ["ok", "sim", "aprovo", "aprovado"],
  "_aprovacao": "E1–E5 aprovadas pela palavra LITERAL do founder no chat (registrada com o sha da proposta); a senha só entra no script de aprovação (gate stop, gate oracle:requisito, preauth commit) e na frase conferir",

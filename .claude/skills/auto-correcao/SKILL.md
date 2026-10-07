@@ -1,21 +1,21 @@
 ---
 name: auto-correcao
 description: >
-  Conduz, DENTRO deste projeto, o laço de refinamento medido da codebase-specialists sobre uma frente: oráculo
+  Conduz, DENTRO deste projeto, o laço de refinamento medido da codebase-specialists sobre uma feature: oráculo
   confiável escrito por agente separado e congelado, medição do estado atual, diagnóstico com evidência, plano de
   correções em arquivos disjuntos, correção na cópia de trabalho com teste que falha antes e passa depois,
   integração pelo portão (2 Pythons), remedição e decisão parar/continuar/escalar — com o motor EMBUTIDO
   .claude/tools/ac/ac.py, aprovação humana só com a senha do founder no terminal dele e critério de parada fixado
   antes. Use quando o founder pedir "corrige até passar", "refina a skill", "auto corrige", "roda os evals e
-  corrige", "itera até o oráculo ficar verde", quando uma frente precisar de mais de uma rodada medida, ou para
-  mudar um oráculo congelado (mudança oficial). Não use para bug pontual com teste já falhando (corrija pela frente
+  corrige", "itera até o oráculo ficar verde", quando uma feature precisar de mais de uma rodada medida, ou para
+  mudar um oráculo congelado (mudança oficial). Não use para bug pontual com teste já falhando (corrija pela feature
   direto) nem para mexer no próprio motor ac/.
 disable-model-invocation: true
 ---
 
-# /auto-correcao — o método da casa sobre uma frente
+# /auto-correcao — o método da casa sobre uma feature
 
-Toda mudança no produto já é uma **frente = campanha** no motor embutido (`campanhas/<f>/`, estado local em
+Toda mudança no produto já é uma **feature = campanha** no motor embutido (`campanhas/<f>/`, estado local em
 `campanhas/<f>/.auto-correcao/`). Esta skill é o **método** que roda dentro dela, etapa a etapa. O motor guarda o
 estado, confere e recusa; você interpreta e decide; o founder aprova. Método completo, adaptado a este projeto:
 `references/metodo.md` desta skill (leia uma vez) e as lições `ac/references/licoes.json5` (no
@@ -56,15 +56,15 @@ As sub-etapas vêm do `ciclo.json5` do motor; `ctx: user` é portão do founder.
 
 | Etapa | O que garantir aqui (comandos em `references/etapas.md`) |
 |---|---|
-| intake | aberta pelo `/criar-frente`: `init --target . --scope <glob>` (um por glob), problema (a História), **critério de parada em números** (o Critério de parada do FRENTE.md) e orçamento (`set budget …`). Portão `stop` = founder (script de aprovação). |
+| intake | aberta pelo `/criar-feature`: `init --target . --scope <glob>` (um por glob), problema (a História), **critério de parada em números** (o Critério de parada do FEATURE.md) e orçamento (`set budget …`). Portão `stop` = founder (script de aprovação). |
 | oraculo | **agente separado** escreve `campanhas/<f>/oraculo/` (ESPEC.md + testes; caminhos por variável; nada privado). Calibre: vazio ≈ 0 medido; bom = conferência do founder (modo requisito, L15). `oracle freeze --file …` com TODOS os arquivos. Ver `references/oraculo.md`. |
 | base | mede o produto atual com o oráculo congelado (`run record --round 0 --config sistema …`); baseline sem a mudança ou `run waive --why`. |
 | diagnostico | `DEFEITOS.json5` (formato em `ac/references/formatos.json5`): evidência literal, P0–P3, **classe** sistema/oráculo/ambiente/executor. Só `sistema` vira correção (L08). |
-| plano | `PLANO.json5`: decisões (produto ⇒ portão `plan:<id>` do founder), **contrato de nomes**, frentes com escrita disjunta que não tocam o oráculo (≤ 3 grupos — os `grupo` G1..G3 das tasks CORRECAO). `plan check` + `overlap --other` contra outra campanha viva. |
+| plano | `PLANO.json5`: decisões (produto ⇒ portão `plan:<id>` do founder), **contrato de nomes**, a lista `frentes` (nome de chave do motor `ac/`, não renomeado — compat), itens com escrita disjunta que não tocam o oráculo (≤ 3 grupos — os `grupo` G1..G3 das tasks CORRECAO). `plan check` + `overlap --other` contra outra campanha viva. |
 | correcao | corretor(es) só na cópia de trabalho (`bash .claude/tools/copia.sh <f>`), prompt em `references/prompts.md`; cada defeito com teste que falha antes e passa depois; despacho, modelo e custo pelo `/tech-lead`. `front report <nome> --file …`. |
-| integracao | **você** roda o portão: `bash .claude/tools/portao.sh <f> --oraculo campanhas/<f>/oraculo:<mod> --lista …` (cópia limpa, 2 Pythons, suíte harness-dev, oráculos, nenhum def removido; background) e o `/e2e-loop`. VERDE ⇒ `set integration.tests_green true`; `oracle verify`; commit só com o `preauth commit` do founder, pelo `/fechar-frente`. |
+| integracao | **você** roda o portão: `bash .claude/tools/portao.sh <f> --oraculo campanhas/<f>/oraculo:<mod> --lista …` (cópia limpa, 2 Pythons, suíte harness-dev, oráculos, nenhum def removido; background) e o `/e2e-loop`. VERDE ⇒ `set integration.tests_green true`; `oracle verify`; commit só com o `preauth commit` do founder, pelo `/fechar-feature`. |
 | remedicao | mesmo oráculo congelado, produto congelado durante a medição; `run record … --decision GO|NO-GO` posterior ao `done correcao` (AC-09: no mesmo segundo não conta — repita). |
-| decisao | `results compare` × critério: **parar** (cumprido → `/fechar-frente`), **continuar** (orçamento + progresso medido → `round new`), **escalar** (2 rodadas sem progresso ou orçamento esgotado → devolva ao founder). Antes de `done decisao` o founder roda `frase conferir` no terminal dele. Nunca "mais uma" às cegas. |
+| decisao | `results compare` × critério: **parar** (cumprido → `/fechar-feature`), **continuar** (orçamento + progresso medido → `round new`), **escalar** (2 rodadas sem progresso ou orçamento esgotado → devolva ao founder). Antes de `done decisao` o founder roda `frase conferir` no terminal dele. Nunca "mais uma" às cegas. |
 
 ## Os três atalhos mecânicos (`campanha.py`)
 
@@ -96,7 +96,7 @@ defeitos da próxima rodada por prioridade; o que precisa de decisão dele. Núm
 
 ## Referências (sob demanda)
 
-- `references/metodo.md` — o método adaptado (frente = campanha, papéis, as 9 etapas, travas, lições aplicadas)
+- `references/metodo.md` — o método adaptado (feature = campanha, papéis, as 9 etapas, travas, lições aplicadas)
 - `references/etapas.md` — cada etapa com os comandos literais deste projeto
 - `references/oraculo.md` — modo requisito, calibração, freeze, mudança oficial
 - `references/prompts.md` — prompts de corretor, executor de medição e verificador

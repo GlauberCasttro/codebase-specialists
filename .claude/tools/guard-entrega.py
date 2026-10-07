@@ -5,7 +5,7 @@ Nega Edit/Write em arquivos do PRODUTO da skill codebase-specialists (tudo dentr
 .claude/ e o motor embutido .claude/tools/ac/), EXCETO: `.claude/state/**` (estado), `campanhas/**` (oráculos e
 relatórios das campanhas), `local/**` (cópias de trabalho, portões, notas privadas — gitignored) e `dist/**` (pacote
 gerado). Fora do projeto é permitido. Mudança no produto entra só pelo fluxo de entrega:
-  frente (campanha) → cópia de trabalho (tools/copia.sh) → portão (tools/portao.sh) → tools/portar.sh → commit.
+  feature (campanha) → cópia de trabalho (tools/copia.sh) → portão (tools/portao.sh) → tools/portar.sh → commit.
 
 Contrato (Claude Code): payload JSON pela stdin (tool_name, tool_input.file_path|notebook_path, cwd).
 Negar = stdout {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny",
@@ -43,8 +43,8 @@ def dentro(p, base):
     return p == base or p.startswith(base + os.sep)
 
 
-FLUXO = ("Mudança no produto da skill só pelo fluxo de entrega (.claude/CLAUDE.md): abra/retome a frente "
-         "(skill criar-frente; execução pela skill tech-lead), trabalhe na cópia de trabalho (`bash .claude/tools/copia.sh <frente>`), rode "
+FLUXO = ("Mudança no produto da skill só pelo fluxo de entrega (.claude/CLAUDE.md): abra/retome a feature "
+         "(skill criar-feature; execução pela skill tech-lead), trabalhe na cópia de trabalho (`bash .claude/tools/copia.sh <feature>`), rode "
          "`.claude/tools/portao.sh`, depois `.claude/tools/portar.sh` e `.claude/tools/conferir-commit.sh`. "
          "Editável direto: `.claude/state/**`, `campanhas/**`, `local/**`, `dist/**`.")
 

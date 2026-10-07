@@ -1,5 +1,5 @@
-"""Testes de regressão do G2 da frente harness-dev (orquestração, campanha e régua): tech_lead.py, exige-modelo.py,
-custo.py, rh.py, e2e.py, campanha.py, portao.sh e os dados JSON. Complementam o oráculo da frente com casos de borda.
+"""Testes de regressão do G2 da feature harness-dev (orquestração, campanha e régua): tech_lead.py, exige-modelo.py,
+custo.py, rh.py, e2e.py, campanha.py, portao.sh e os dados JSON. Complementam o oráculo da feature com casos de borda.
 Rodar nos 2 Pythons: cd .claude/tools && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests
 """
 import json
@@ -107,7 +107,7 @@ class RH(unittest.TestCase):
     def test_oraculista_e_fazer_direto_conferido(self):
         self.assertEqual(py("rh.py", "ficha", "--persona", "oraculista", "--task", "01-TASK-ORACULO", "--motivo", "x")[0], 2)
         rc, out, _ = py("rh.py", "ficha", "--persona", "oraculista", "--task", "01-TASK-ORACULO", "--motivo", "x",
-                        "--frente", "demo", "--json")
+                        "--feature", "demo", "--json")
         self.assertEqual(json.loads(out)["permissao"], "ESCRITA em campanhas/demo/oraculo/")
         tmp = tempfile.mkdtemp()
         try:
@@ -153,7 +153,7 @@ class Campanha(unittest.TestCase):
         try:
             rc, _, err = py("campanha.py", "etapa", "nada", env={"CS_DEV_SKILL_DIR": tmp})
             self.assertEqual(rc, 1)
-            self.assertIn("criar-frente", err)
+            self.assertIn("criar-feature", err)
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 

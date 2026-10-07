@@ -7,10 +7,10 @@ Subcomandos:
         ⇒ exit 1 (nunca chuta qual) — e soma por turno do assistente: turnos, contexto_primeiro_turno, contexto_somado
         (input + cache de criação + cache de leitura, por turno), cache_leitura, cache_escrita, saida, modelos,
         linhas_invalidas. NUNCA imprime conteúdo de mensagem.
-  registrar <agentId> --frente F --task T --papel P --modelo M [--transcript|--projects-dir] [--json]
+  registrar <agentId> --feature F --task T --papel P --modelo M [--transcript|--projects-dir] [--json]
         apensa uma linha em .claude/state/logs/custo.jsonl: status OK com os números, ou NOT_RUN com o motivo e SEM
         números (nunca estimado). Sempre exit 0: falta de medida é dado, não erro.
-  resumo --frente F [--json]
+  resumo --feature F [--json]
         por modelo PEDIDO (o que o tech-lead passou ao Agent): despachos, turnos, contexto_somado, saida, caches;
         e quantos NOT_RUN.
 Exit: 0 ok · 1 não mediu · 3 uso. Variável de teste: CS_DEV_SKILL_DIR.
@@ -100,7 +100,7 @@ def cmd_medir(a):
 
 
 def cmd_registrar(a):
-    reg = {"ts": L.agora(), "agente": a.agent, "frente": a.frente, "task": a.task, "papel": a.papel,
+    reg = {"ts": L.agora(), "agente": a.agent, "feature": a.feature, "task": a.task, "papel": a.papel,
            "modelo": a.modelo}
     try:
         reg.update(medir(a.agent, a.transcript, a.projects_dir))
@@ -109,7 +109,7 @@ def cmd_registrar(a):
         reg["status"] = "NOT_RUN"
         reg["motivo"] = str(e)
     L.apensar(os.path.join(L.state(), "logs", "custo.jsonl"), json.dumps(reg, ensure_ascii=False) + "\n")
-    L.saida(reg, a, "custo %s de %s/%s (%s, %s)%s" % (reg["status"], a.frente, a.task, a.papel, a.modelo,
+    L.saida(reg, a, "custo %s de %s/%s (%s, %s)%s" % (reg["status"], a.feature, a.task, a.papel, a.modelo,
                                                      " — " + reg.get("motivo", "") if reg["status"] != "OK" else
                                                      ": %d turnos · contexto %d" % (reg["turnos"], reg["contexto_somado"])))
     return 0
@@ -123,7 +123,7 @@ def cmd_resumo(a):
             e = json.loads(linha)
         except ValueError:
             continue
-        if e.get("frente") != a.frente:
+        if e.get("feature", e.get("frente")) != a.feature:  # COMPAT: ledger antigo gravava "frente"
             continue
         if e.get("status") != "OK":
             nr += 1
@@ -133,8 +133,8 @@ def cmd_resumo(a):
         m["despachos"] += 1
         for k in ("turnos", "contexto_somado", "saida", "cache_leitura", "cache_escrita"):
             m[k] += int(e.get(k) or 0)
-    obj = {"frente": a.frente, "por_modelo": por, "not_run": nr}
-    L.saida(obj, a, "custo da frente %s: %s · NOT_RUN %d" % (a.frente, "; ".join(
+    obj = {"feature": a.feature, "por_modelo": por, "not_run": nr}
+    L.saida(obj, a, "custo da feature %s: %s · NOT_RUN %d" % (a.feature, "; ".join(
         "%s: %d despachos / %d turnos / contexto %d" % (k, v["despachos"], v["turnos"], v["contexto_somado"])
         for k, v in sorted(por.items())) or "nenhum medido", nr))
     return 0
@@ -150,10 +150,10 @@ def main(argv=None):
         s.add_argument("--projects-dir")
         s.add_argument("--json", action="store_true")
         if n == "registrar":
-            for f in ("--frente", "--task", "--papel", "--modelo"):
+            for f in ("--feature", "--task", "--papel", "--modelo"):
                 s.add_argument(f, required=True)
     s = sub.add_parser("resumo")
-    s.add_argument("--frente", required=True)
+    s.add_argument("--feature", required=True)
     s.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
     fn = {"medir": cmd_medir, "registrar": cmd_registrar, "resumo": cmd_resumo}.get(a.cmd)

@@ -7,23 +7,23 @@ roda git, nunca aprova, nunca pede senha; relatório final curto (≤ 25 linhas)
 ## Autor do oráculo
 
 ```
-Você escreve o ORÁCULO da frente {frente} da skill codebase-specialists. Você não corrige o produto e não verá a
+Você escreve o ORÁCULO da feature {feature} da skill codebase-specialists. Você não corrige o produto e não verá a
 correção. Requisito (palavras do founder): "{requisito}". Contrato fixado: {contrato}.
-Escreva SÓ em campanhas/{frente}/oraculo/: ESPEC.md (decisão, isolamento, contrato item a item em tabela V/F) e
-test_{frente}.py (unittest, stdlib, Python 3.9+, projeto sob teste por $CS_SKILL_DIR; tudo em diretório
+Escreva SÓ em campanhas/{feature}/oraculo/: ESPEC.md (decisão, isolamento, contrato item a item em tabela V/F) e
+test_{feature}.py (unittest, stdlib, Python 3.9+, projeto sob teste por $CS_SKILL_DIR; tudo em diretório
 temporário; nada privado: pessoa "Ana", caminhos com ~ ou variável). Os testes do requisito têm de FALHAR no
 produto atual: rode nos 2 Pythons (python3 e /usr/bin/python3) e grave a saída em base.txt.
 Sistema com estados: inclua teste de vivacidade e um ponta a ponta pelos desvios. Não rode git.
 Relatório: testes × itens do contrato, quantos falham hoje e por quê, o que ficou ambíguo na ESPEC.
 ```
 
-## Corretor (frente de correção)
+## Corretor (feature de correção)
 
 ```
 Você corrige a skill codebase-specialists na CÓPIA DE TRABALHO {copia} (nunca no projeto vivo). Leia {plano}: as
-decisões e o contrato de nomes valem para todos; sua frente é {nome} e seus defeitos estão em {defeitos}.
-Escreva SÓ em: {escreve} (relativo à cópia). Outras frentes editam o resto em paralelo — não toque. NUNCA edite o
-oráculo (campanhas/{frente}/oraculo/): se achar que ele erra, registre no relatório com evidência conferida à mão.
+decisões e o contrato de nomes valem para todos; sua feature é {nome} e seus defeitos estão em {defeitos}.
+Escreva SÓ em: {escreve} (relativo à cópia). Outras features editam o resto em paralelo — não toque. NUNCA edite o
+oráculo (campanhas/{feature}/oraculo/): se achar que ele erra, registre no relatório com evidência conferida à mão.
 Para cada defeito: reproduza; escreva teste de regressão que FALHA antes; corrija; o teste passa. Não remova
 nem enfraqueça `def` nem teste existente (o portão acusa). Rode as suítes do seu escopo e o oráculo
 (CS_SKILL_DIR={copia}) em python3 e /usr/bin/python3. Não rode git. Nada privado.

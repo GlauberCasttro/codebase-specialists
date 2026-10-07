@@ -1,16 +1,16 @@
 #!/bin/bash
-# portao.sh <frente> [opções] -- <arquivo> [<arquivo>...]
-# Portão em CÓPIA LIMPA: `git archive HEAD` da skill + SÓ os arquivos da frente (vindos de --src; padrão: a cópia de
-# trabalho <local>/work/<frente>/codebase-specialists); roda as suítes da skill
+# portao.sh <feature> [opções] -- <arquivo> [<arquivo>...]
+# Portão em CÓPIA LIMPA: `git archive HEAD` da skill + SÓ os arquivos da feature (vindos de --src; padrão: a cópia de
+# trabalho <local>/work/<feature>/codebase-specialists); roda as suítes da skill
 # (scripts/*/tests e evals/tests) e a suíte do próprio harness (`harness-dev` = .claude/tools/tests) nos 2 Pythons,
-# os oráculos pedidos, e confere que nenhum `def` sumiu vs HEAD nos arquivos da frente. Arquivo listado que não existe em --src = arquivo REMOVIDO pela frente.
-# Saída incremental em <local>/portao-<frente>/portao.out; termina em "RESULTADO: VERDE|VERMELHO" e "FIM".
+# os oráculos pedidos, e confere que nenhum `def` sumiu vs HEAD nos arquivos da feature. Arquivo listado que não existe em --src = arquivo REMOVIDO pela feature.
+# Saída incremental em <local>/portao-<feature>/portao.out; termina em "RESULTADO: VERDE|VERMELHO" e "FIM".
 # Também grava arquivos.txt (a lista testada) e a cópia testada (lida por conferir-commit.sh).
 # Opções:
-#   --src DIR            de onde vêm os arquivos da frente (ex.: a skill viva, depois de portar.sh com merge)
+#   --src DIR            de onde vêm os arquivos da feature (ex.: a skill viva, depois de portar.sh com merge)
 #   --oraculo DIR:MOD    oráculo extra (repetível): roda `python3 -m unittest MOD` dentro de DIR
 #                        (ex.: campanhas/iter17/oraculo:test_x — relativo à raiz do projeto ou absoluto)
-#   --lista ARQ          lê os arquivos da frente de ARQ (um por linha) — evita o word-split que o zsh não faz
+#   --lista ARQ          lê os arquivos da feature de ARQ (um por linha) — evita o word-split que o zsh não faz
 #   --suites a,b         só estas suítes (nomes de scripts/<x>; "evals" = evals/tests; "harness-dev" =
 #                        .claude/tools/tests). Padrão: todas (a régua: python3 .claude/tools/e2e.py regua)
 #   --pythons "p1 p2"    padrão: "python3 /usr/bin/python3"
@@ -20,7 +20,7 @@
 set -u
 case "${1:-}" in -h|--help|'') sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;; esac
 . "$(dirname "$0")/_comum.sh"
-F="$1"; shift; frente_ok "$F"
+F="$1"; shift; feature_ok "$F"
 SRC="$WS/work/$F/$NOME"; ORACULOS=(); SUITES=""; PYS="python3 /usr/bin/python3"; DRY=0; ARQS=()
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -34,7 +34,7 @@ while [ $# -gt 0 ]; do
     *) die "opção desconhecida: $1 (arquivos vão depois de --)";;
   esac
 done
-[ ${#ARQS[@]} -gt 0 ] || die "nenhum arquivo da frente (passe depois de -- ou com --lista)"
+[ ${#ARQS[@]} -gt 0 ] || die "nenhum arquivo da feature (passe depois de -- ou com --lista)"
 [ -d "$SRC" ] || die "--src inexistente: $SRC"
 [ -n "$REPO" ] || die "a skill não está num repositório git: $SKILL"
 for f in "${ARQS[@]}"; do case "$f" in /*|../*|*/../*) die "arquivo deve ser relativo à skill: $f";; esac; done
@@ -87,7 +87,7 @@ for py in $PYS; do
   done
 done
 
-# nenhum def removido vs HEAD nos arquivos .py da frente (testes inclusive: enfraquecer teste também é remoção)
+# nenhum def removido vs HEAD nos arquivos .py da feature (testes inclusive: enfraquecer teste também é remoção)
 for f in "${ARQS[@]}"; do
   case "$f" in *.py) ;; *) continue;; esac
   antes="$(show_head "$f" 2>/dev/null | grep -oE '^ *def [A-Za-z_0-9]+' | sed 's/^ *//' | sort -u)"

@@ -2,13 +2,13 @@
 """guard_git.py — lógica do hook PreToolUse Bash `guard-git.sh` (harness de desenvolvimento da codebase-specialists).
 
 NEGA, quando o comando chama git (inclusive `git -C x`, `/usr/bin/git`, dentro de `sh -c '...'`, após `;` `&&` `|`):
-  a) reset --hard                     (apaga trabalho não commitado de outras frentes/sessões)
+  a) reset --hard                     (apaga trabalho não commitado de outras features/sessões)
   b) checkout ... -- <path>  e  restore sem --staged   (descarta alteração do worktree)
   c) clean -f / --force (qualquer combinação)
   d) stash (exceto `stash list` / `stash show`)
   e) push (SEMPRE — push só pelo humano, no terminal dele)
-  f) add -A / --all / `add .` / `add :/`  (só entram os arquivos da frente; adicione arquivo por arquivo)
-  g) commit -a / --all / -am          (mesmo motivo: só entram os arquivos da frente)
+  f) add -A / --all / `add .` / `add :/`  (só entram os arquivos da feature; adicione arquivo por arquivo)
+  g) commit -a / --all / -am          (mesmo motivo: só entram os arquivos da feature)
 Permite todo o resto (status, log, diff, show, archive, add <arquivo>, commit -F <arquivo>, merge-file...).
 
 Contrato: payload JSON pela stdin; negar = stdout hookSpecificOutput/deny + exit 0; permitir = exit 0 sem saída.
@@ -113,7 +113,7 @@ def curtas(args):
 def avaliar(cmd):
     for sub, args, _glob in git_calls(cmd):
         if sub == "reset" and "--hard" in args:
-            return "`git reset --hard` apaga trabalho não commitado (de outras frentes também)."
+            return "`git reset --hard` apaga trabalho não commitado (de outras features também)."
         if sub == "checkout" and "--" in args:
             return "`git checkout -- <path>` descarta alteração do worktree sem cópia."
         if sub == "restore" and "--staged" not in args and "-S" not in args:
@@ -125,9 +125,9 @@ def avaliar(cmd):
         if sub == "push":
             return "`git push` é só do humano, no terminal dele."
         if sub == "add" and ("-A" in args or "--all" in args or "." in args or ":/" in args or "A" in curtas(args)):
-            return "`git add -A/--all/.` pega frentes alheias; adicione os arquivos da frente um a um."
+            return "`git add -A/--all/.` pega features alheias; adicione os arquivos da feature um a um."
         if sub == "commit" and ("--all" in args or "a" in curtas(args)):
-            return "`git commit -a` pega alterações de outras frentes; faça `git add <arquivos>` + `commit -F`."
+            return "`git commit -a` pega alterações de outras features; faça `git add <arquivos>` + `commit -F`."
     return None
 
 

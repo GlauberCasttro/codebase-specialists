@@ -1,5 +1,5 @@
 {
- "_doc": "Fonte única do roteamento de modelo por papel (tech_lead.py modelo) e dos limites do loop do tech-lead. Mudar aqui muda o comportamento; a prosa da skill tech-lead só explica. A economia de custo é HIPÓTESE, não medida: confira com `custo.py resumo --frente F` ao fim de cada frente.",
+ "_doc": "Fonte única do roteamento de modelo por papel (tech_lead.py modelo) e dos limites do loop do tech-lead. Mudar aqui muda o comportamento; a prosa da skill tech-lead só explica. A economia de custo é HIPÓTESE, não medida: confira com `custo.py resumo --feature F` ao fim de cada feature.",
  "modelos_validos": ["haiku", "sonnet", "opus"],
  "papeis": {
   "executor": {"padrao": "sonnet", "baixa": "haiku", "ciclo_2_ou_mais": "opus",
@@ -7,8 +7,8 @@
   "revisor": {"padrao": "sonnet", "sensivel": "opus",
               "porque": "revisão pontual em sonnet; opus se a task toca área sensível (motor ac/, guard, hook, frase, scripts/harness/)"},
   "qa": {"padrao": "sonnet", "porque": "o QA segue o e2e-loop: execução mecânica com julgamento curto"},
-  "review": {"padrao": "opus", "porque": "revisão da frente inteira por instância nova que nunca executou nada nela"},
-  "oraculo": {"padrao": "opus", "porque": "o oráculo é a medida da frente; quem testa não constrói — sempre agente separado"}
+  "review": {"padrao": "opus", "porque": "revisão da feature inteira por instância nova que nunca executou nada nela"},
+  "oraculo": {"padrao": "opus", "porque": "o oráculo é a medida da feature; quem testa não constrói — sempre agente separado"}
  },
  "rh": {"porque": "rh:<persona> usa o `modelo` da persona em personas.json"},
  "limites": {

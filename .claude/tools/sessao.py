@@ -2,25 +2,25 @@
 """sessao.py — dono ÚNICO da fórmula do carimbo de sessão e do frescor (skills carregar-sessao e salvar-sessao).
 
 Carimbo (no RESUME.md, bloco `<!-- resume-stamp … -->`), só com campos COMPARÁVEIS:
-  FRENTES  ids das frentes ativas (frentes.json) ou —
+  FEATURES  ids das features ativas (features.json) ou —
   BRANCH   branch atual
   HEAD     sha curto na gravação (comparado POR REGRA: igual, ou avançou só com commits em .claude/state/ e
            campanhas/ — o próprio salvar commita, e um arquivo não contém o hash do commit que o contém)
   PRODUTO  sha1 do conteúdo do produto (SKILL.md MODO-DE-USO.md VERSION LICENSE scripts assets references docs evals
            .claude/package) — é o que o portão mede
-  ESTADO   sha1 de frentes.json + frentes/** (a máquina de estado das frentes)
-  GATE     VERDE (todas as ativas com local/portao-<id>/portao.out VERDE+FIM) | PENDENTE | — (sem frente ativa)
+  ESTADO   sha1 de features.json + features/** (a máquina de estado das features)
+  GATE     VERDE (todas as ativas com local/portao-<id>/portao.out VERDE+FIM) | PENDENTE | — (sem feature ativa)
 Nunca reimplemente um campo fora daqui: uma fórmula paralela dá cache-miss falso e silencioso.
 
 Subcomandos:
   carimbo [--write] [--json] [--field F]   imprime o carimbo; --write regrava o bloco no RESUME.md
-  frescor [--json|--brief]                 veredito: sem-state | sem-carimbo | bate | cache-miss (FRENTES/BRANCH/
+  frescor [--json|--brief]                 veredito: sem-state | sem-carimbo | bate | cache-miss (FEATURES/BRANCH/
                                            HEAD/ESTADO divergem) | produto-mudou (só PRODUTO/GATE: régua PENDENTE)
-  briefing [--json|--brief]                as duas sequências (macro: frentes; micro: tasks com ← PRÓXIMA e o porquê
+  briefing [--json|--brief]                as duas sequências (macro: features; micro: tasks com ← PRÓXIMA e o porquê
                                            do elo) + "Retomo daqui?"
-  salvar --resumo TXT [--frente F] [--feito TXT]… [--commit --mensagem ARQ] [--dry-run]
+  salvar --resumo TXT [--feature F] [--feito TXT]… [--commit --mensagem ARQ] [--dry-run]
                                            carimbo no RESUME + linha em logs/sessoes.jsonl (+ bloco no log da
-                                           frente) → privacidade → commit SÓ de .claude/state/** num índice
+                                           feature) → privacidade → commit SÓ de .claude/state/** num índice
                                            temporário (terceiros intactos; nunca push) → auto-teste (frescor = bate)
 Exit: 0 ok · 1 recusa (privacidade, auto-teste, sem estado) · 3 uso. Variável de teste: CS_DEV_SKILL_DIR.
 """
@@ -36,7 +36,7 @@ TOOLS = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, TOOLS)
 import estado_lib as L  # noqa: E402
 
-CAMPOS = ("FRENTES", "BRANCH", "HEAD", "PRODUTO", "ESTADO", "GATE")
+CAMPOS = ("FEATURES", "BRANCH", "HEAD", "PRODUTO", "ESTADO", "GATE")
 PRODUTO = ("SKILL.md", "MODO-DE-USO.md", "VERSION", "LICENSE", "scripts", "assets", "references", "docs", "evals",
            ".claude/package")
 CARVE_OUT = (".claude/state/", "campanhas/")
@@ -46,12 +46,12 @@ BLOCO_RE = re.compile(r"<!-- resume-stamp\n(.*?)-->\n?", re.S)
 # ------------------------------------------------------------------ carimbo
 
 def calcular(r):
-    d = L.frentes(r)
+    d = L.features(r)
     ids = [x["id"] for x in d["ativas"]]
     branch = L.git(r, "branch", "--show-current")[1] or "?"
     head = L.git(r, "rev-parse", "--short", "HEAD")[1] or "?"
     st = L.state(r)
-    estado = L.sha_arvore(st, ["frentes.json", "frentes"])
+    estado = L.sha_arvore(st, L.raizes_estado(r))
     if ids:
         verdes = []
         for i in ids:
@@ -61,7 +61,7 @@ def calcular(r):
         gate = "VERDE" if all(verdes) else "PENDENTE"
     else:
         gate = "—"
-    return {"FRENTES": ",".join(ids) or "—", "BRANCH": branch, "HEAD": head,
+    return {"FEATURES": ",".join(ids) or "—", "BRANCH": branch, "HEAD": head,
             "PRODUTO": L.sha_arvore(r, PRODUTO), "ESTADO": estado, "GATE": gate}
 
 
@@ -81,6 +81,8 @@ def ler_carimbo(r):
         if ":" in linha:
             k, v = linha.split(":", 1)
             out[k.strip()] = v.strip()
+    if L.LEGADO_CARIMBO in out:  # COMPAT: carimbo antigo (FRENTES:) vale como FEATURES
+        out.setdefault("FEATURES", out.pop(L.LEGADO_CARIMBO))
     return out if all(k in out for k in CAMPOS) else None
 
 
@@ -120,13 +122,13 @@ def frescor(r):
         return {"veredito": "sem-carimbo", "divergentes": list(CAMPOS), "atual": atual,
                 "motivo": "RESUME.md sem bloco resume-stamp"}
     div = []
-    for k in ("FRENTES", "BRANCH", "ESTADO", "PRODUTO", "GATE"):
+    for k in ("FEATURES", "BRANCH", "ESTADO", "PRODUTO", "GATE"):
         if salvo.get(k) != atual[k]:
             div.append(k)
     ok_head, fora = head_por_regra(r, salvo.get("HEAD"), atual["HEAD"])
     if not ok_head:
         div.append("HEAD")
-    contexto = [k for k in div if k in ("FRENTES", "BRANCH", "HEAD", "ESTADO")]
+    contexto = [k for k in div if k in ("FEATURES", "BRANCH", "HEAD", "ESTADO")]
     if contexto:
         v = "cache-miss"
     elif div:
@@ -139,7 +141,7 @@ def frescor(r):
 def texto_frescor(j):
     v = j["veredito"]
     acao = {"bate": "confie no RESUME; não leia logs",
-            "cache-miss": "reconstrua Onde paramos/Próximos passos do log da frente e regrave o carimbo "
+            "cache-miss": "reconstrua Onde paramos/Próximos passos do log da feature e regrave o carimbo "
                           "(sessao.py carimbo --write); rodapé: _contexto reconstruído do log_",
             "produto-mudou": "contexto vale; o produto mudou desde o save — régua PENDENTE (portão/e2e-loop antes "
                              "de commit de produto)",
@@ -162,11 +164,11 @@ def secao_resume(r, nome):
 
 def briefing(r):
     fr = frescor(r)
-    d = L.frentes(r)
+    d = L.features(r)
     head = L.git(r, "rev-parse", "--short", "HEAD")[1] or "?"
     branch = L.git(r, "branch", "--show-current")[1] or "?"
     sujos = len([x for x in L.git(r, "status", "--porcelain")[1].splitlines() if x.strip()])
-    linhas = ["Estado: %s · frentes ativas: %s" % ("IN_PROGRESS" if d["ativas"] else "IDLE",
+    linhas = ["Estado: %s · features ativas: %s" % ("IN_PROGRESS" if d["ativas"] else "IDLE",
                                                    ", ".join(x["id"] for x in d["ativas"]) or "nenhuma"),
               "Git: %s @ %s · %d arquivo(s) sujo(s) · carimbo: %s%s" % (
                   branch, head, sujos, fr["veredito"], " (%s)" % ",".join(fr["divergentes"])
@@ -178,29 +180,29 @@ def briefing(r):
     if onde:
         linhas.append("Onde paramos:")
         linhas += ["  " + x.strip() for x in onde.splitlines() if x.strip()][:3]
-    linhas.append("Sequência de frentes (macro):")
+    linhas.append("Sequência de features (macro):")
     if d["entregues"]:
         u = d["entregues"][-1]
         linhas.append("- [x] %s — entregue %s" % (u["id"], u.get("fechada_em", "")[:10]))
-    obj_frentes = []
+    obj_features = []
     for i, x in enumerate(d["ativas"], 1):
-        fd = L.frente_dir(x["id"], r)
-        fr_md = L.ler_frente(os.path.join(fd, "FRENTE.md")) or {}
+        fd = L.feature_dir(x["id"], r)
+        fr_md = L.ler_feature(L.feature_md(fd)) or {}
         tasks = L.ler_tasks(fd)
         nome = fr_md.get("nome") or ("campanha legada (adotada)" if x.get("origem") == "legado" else x["id"])
         linhas.append("- [ ] %d. %s — %s · %s tasks%s" % (i, x["id"], nome, L.progresso(tasks),
                                                           "   ← VOCÊ ESTÁ AQUI" if i == 1 else ""))
         linhas.append("      (%s)" % ("origem: %s, aberta em %s" % (x.get("origem"), x.get("aberta_em", "?")[:10])))
-        obj_frentes.append({"id": x["id"], "nome": nome, "progresso": L.progresso(tasks)})
+        obj_features.append({"id": x["id"], "nome": nome, "progresso": L.progresso(tasks)})
     cri = L.em_criacao(r)
     if cri:
         linhas.append("- [ ] criação em curso: %s · próxima etapa %s" % (cri[0], L.etapa_corrente(L.eventos(cri[0], r))
                                                                       or "abrir"))
     if not d["ativas"] and not cri:
-        linhas.append("- (nenhuma frente ativa — próxima: topo do BACKLOG, via criar-frente)")
+        linhas.append("- (nenhuma feature ativa — próxima: topo do BACKLOG, via criar-feature)")
     micro = []
     for x in d["ativas"]:
-        tasks = L.ler_tasks(L.frente_dir(x["id"], r))
+        tasks = L.ler_tasks(L.feature_dir(x["id"], r))
         if not tasks:
             continue
         el = L.elegiveis(tasks)
@@ -214,7 +216,7 @@ def briefing(r):
             if t["stem"] == prox:
                 linha += "   ← PRÓXIMA"
             linhas.append(linha)
-            micro.append({"frente": x["id"], "id": t["stem"], "status": t["status"], "proxima": t["stem"] == prox})
+            micro.append({"feature": x["id"], "id": t["stem"], "status": t["status"], "proxima": t["stem"] == prox})
         break
     passos = secao_resume(r, "Próximos passos")
     if passos:
@@ -223,7 +225,7 @@ def briefing(r):
     linhas.append("Retomo daqui? (sim / ajustar)")
     if len(linhas) > 40:
         linhas = linhas[:39] + ["Retomo daqui? (sim / ajustar)"]
-    return {"frescor": fr["veredito"], "divergentes": fr["divergentes"], "frentes": obj_frentes, "tasks": micro,
+    return {"frescor": fr["veredito"], "divergentes": fr["divergentes"], "features": obj_features, "tasks": micro,
             "texto": "\n".join(linhas)}
 
 
@@ -247,7 +249,7 @@ def privacidade(r, arquivos, msg):
 
 
 def commit_estado(r, msg):
-    import frente  # noqa: E402 — reaproveita o commit em índice temporário
+    import feature  # noqa: E402 — reaproveita o commit em índice temporário
     rc, out, _ = L.git(r, "status", "--porcelain", "--untracked-files=all", "--", ".claude/state")
     if not out.strip():
         return None, []
@@ -257,8 +259,8 @@ def commit_estado(r, msg):
         arquivos.append(p)
     priv = privacidade(r, arquivos, msg)
     if priv:
-        raise frente.Recusa("guard de privacidade achou termo privado — nada commitado:\n" + "\n".join(priv))
-    return frente.commit_indice_temporario(r, [".claude/state"], os.path.realpath(msg)), arquivos
+        raise feature.Recusa("guard de privacidade achou termo privado — nada commitado:\n" + "\n".join(priv))
+    return feature.commit_indice_temporario(r, [".claude/state"], os.path.realpath(msg)), arquivos
 
 
 def cmd_salvar(a, r):
@@ -279,9 +281,9 @@ def cmd_salvar(a, r):
     c = calcular(r)
     branch = c["BRANCH"]
     reg = {"evento": "sessao-salva", "data": L.agora(), "resumo": a.resumo, "branch": branch, "head": c["HEAD"],
-           "frentes": [x for x in c["FRENTES"].split(",") if x != "—"]}
-    if a.frente:
-        reg["frente"] = a.frente
+           "features": [x for x in c["FEATURES"].split(",") if x != "—"]}
+    if a.feature:
+        reg["feature"] = a.feature
     if a.dry_run:
         print("dry-run: regravaria o carimbo do RESUME (%s) e apensaria em logs/sessoes.jsonl:\n  %s%s"
               % (", ".join("%s=%s" % (k, c[k][:12]) for k in CAMPOS), json.dumps(reg, ensure_ascii=False),
@@ -289,16 +291,16 @@ def cmd_salvar(a, r):
         return 0
     gravar_carimbo(r, c)
     L.apensar(os.path.join(st, "logs", "sessoes.jsonl"), json.dumps(reg, ensure_ascii=False) + "\n")
-    if a.frente:
+    if a.feature:
         linhas = ["", "## %s — sessão salva" % reg["data"], "- Resumo: %s" % a.resumo]
         linhas += ["- Feito: %s" % x for x in (a.feito or [])][:18]
-        L.apensar(os.path.join(st, "logs", a.frente, a.frente + ".md"), "\n".join(linhas) + "\n")
+        L.apensar(os.path.join(st, "logs", a.feature, a.feature + ".md"), "\n".join(linhas) + "\n")
     sha = None
     if a.commit:
-        import frente
+        import feature
         try:
             sha, arqs = commit_estado(r, a.mensagem)
-        except frente.Recusa as e:
+        except feature.Recusa as e:
             print("RECUSADO: %s" % e, file=sys.stderr)
             return 1
     j = frescor(r)
@@ -326,7 +328,7 @@ def main(argv=None):
         s.add_argument("--brief", action="store_true")
     s = sub.add_parser("salvar")
     s.add_argument("--resumo", required=True)
-    s.add_argument("--frente")
+    s.add_argument("--feature")
     s.add_argument("--feito", action="append")
     s.add_argument("--commit", action="store_true")
     s.add_argument("--mensagem")

@@ -1,18 +1,18 @@
 # Etapas — comandos literais deste projeto
 
-`AC` abaixo é só abreviação de leitura: **digite sempre** `python3 .claude/tools/ac/ac.py --work campanhas/<frente>`
+`AC` abaixo é só abreviação de leitura: **digite sempre** `python3 .claude/tools/ac/ac.py --work campanhas/<feature>`
 (o hook de aprovação nega variável + palavra de aprovação; zsh não faz word-split). Ordem fixa em
 `.claude/tools/ac/references/ciclo.json5`; `load` recusa etapa anterior aberta; `done` roda os checks.
 `ctx`: main = você · sub = subagente (protege a janela) · user = founder no terminal dele.
 
-## intake (rodada 0) — via `/criar-frente`
+## intake (rodada 0) — via `/criar-feature`
 
 ```
 AC init --target . --scope 'scripts/x/*.py' --scope 'scripts/x/tests/*.py' \
         --problem "<problema>" --stop "<oráculo N/N; suítes verdes em python3 e /usr/bin/python3; nenhum def removido>" \
         --max-rounds 2 --max-hours 6 --max-parallel 3
 AC overlap --other campanhas/<outra-ativa>           # colisão = exit 1: serialize
-bash .claude/tools/script-aprovacao.sh <frente> --criterio '<texto>' --oraculo '<texto>'   # GERA; o founder roda
+bash .claude/tools/script-aprovacao.sh <feature> --criterio '<texto>' --oraculo '<texto>'   # GERA; o founder roda
 AC done intake                                        # depois que o founder avisar
 ```
 
@@ -22,12 +22,12 @@ AC done intake                                        # depois que o founder avi
 ## oraculo (rodada 0)
 
 1. Despache o AUTOR DO ORÁCULO (agente separado) com `prompts.md` → "autor do oráculo". Ele escreve
-   `campanhas/<frente>/oraculo/{ESPEC.md,test_<frente>.py,base.txt}`.
-2. `AC set oracle.command "cd campanhas/<frente>/oraculo && python3 -m unittest test_<frente>"`
+   `campanhas/<feature>/oraculo/{ESPEC.md,test_<feature>.py,base.txt}`.
+2. `AC set oracle.command "cd campanhas/<feature>/oraculo && python3 -m unittest test_<feature>"`
 3. Calibração em modo requisito (ver `oraculo.md`): `base.txt` = rodada no produto atual (0% dos testes do
    requisito passam); conferência do founder dos testes × ESPEC (`gate oracle:requisito`, no script dele).
 4. `AC set oracle.split '{"quality":"...","structure":"..."}'`
-5. `AC oracle freeze --file campanhas/<frente>/oraculo/ESPEC.md --file campanhas/<frente>/oraculo/test_<frente>.py`
+5. `AC oracle freeze --file campanhas/<feature>/oraculo/ESPEC.md --file campanhas/<feature>/oraculo/test_<feature>.py`
    (TODOS os arquivos, um `--file` cada) → `AC done oraculo`
 
 ## base (rodada 0)
@@ -45,8 +45,8 @@ AC round new
 AC load diagnostico     # escreva .auto-correcao/rounds/<n>/DEFEITOS.json5 (formatos.json5)
 AC defects check
 AC done diagnostico
-AC load plano           # PLANO.json5: decisoes, contrato, frentes {nome, escreve, defeitos, criterio}
-AC plan check           # disjunção + nenhuma frente escreve no oráculo
+AC load plano           # PLANO.json5: decisoes, contrato, frentes {nome, escreve, defeitos, criterio}  (chave do motor ac/, não renomeada — compat)
+AC plan check           # disjunção + nenhuma feature escreve no oráculo
 AC plan gates           # decisão de produto ⇒ portão plan:<id> do founder
 AC done plano
 ```
@@ -54,23 +54,23 @@ AC done plano
 ## correcao
 
 ```
-bash .claude/tools/copia.sh <frente>          # local/work/<frente>/codebase-specialists
+bash .claude/tools/copia.sh <feature>          # local/work/<feature>/codebase-specialists
 # despacho pelo /tech-lead (prompt "corretor" de prompts.md); ≤ 5 agentes; cada um só no seu `escreve`
-AC front report <nome> --file local/work/<frente>/relatorio-<nome>.md
+AC front report <nome> --file local/work/<feature>/relatorio-<nome>.md
 AC done correcao
 ```
 
 ## integracao
 
 ```
-bash .claude/tools/portao.sh <frente> --oraculo campanhas/<frente>/oraculo:test_<frente> -- <arquivos>   # background
-tail -3 local/portao-<frente>/portao.out      # RESULTADO: VERDE + FIM
+bash .claude/tools/portao.sh <feature> --oraculo campanhas/<feature>/oraculo:test_<feature> -- <arquivos>   # background
+tail -3 local/portao-<feature>/portao.out      # RESULTADO: VERDE + FIM
 AC set integration.tests_green true           # só com o portão VERDE nos 2 Pythons
 AC oracle verify
 AC done integracao                            # integracao.3 = preauth commit do founder
 ```
 
-Commit pelo `/fechar-frente` (portar → conferir-commit → commit só da frente). Houve merge no `portar.sh` ⇒ rode
+Commit pelo `/fechar-feature` (portar → conferir-commit → commit só da feature). Houve merge no `portar.sh` ⇒ rode
 o portão de novo com `--src .`.
 
 ## remedicao
@@ -94,5 +94,5 @@ AC done decisao
 AC round new                                   # só se continuar
 ```
 
-Parar ⇒ `/fechar-frente` (aceite, archive, LAST_DELIVERY) e `/install`. Escalar ⇒ documente os limites e
+Parar ⇒ `/fechar-feature` (aceite, archive, LAST_DELIVERY) e `/install`. Escalar ⇒ documente os limites e
 devolva ao founder. Depois de qualquer saída: `/salvar-sessao`.

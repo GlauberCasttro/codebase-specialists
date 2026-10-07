@@ -1,5 +1,5 @@
-"""Testes de regressão do G1 da frente harness-dev (motor da frente e sessão): contrato.py, frente.py, guard-estado.py,
-sessao.py, estado_lib.py. Complementam o oráculo da frente (campanhas/harness-dev/oraculo) com casos de borda.
+"""Testes de regressão do G1 da feature harness-dev (motor da feature e sessão): contrato.py, feature.py, guard-estado.py,
+sessao.py, estado_lib.py. Complementam o oráculo da feature (campanhas/harness-dev/oraculo) com casos de borda.
 Rodar nos 2 Pythons: cd .claude/tools && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests
 Tudo em diretórios temporários; nunca toca o projeto vivo.
 """
@@ -16,7 +16,7 @@ warnings.simplefilter("ignore", ResourceWarning)
 TOOLS = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CLAUDE = os.path.dirname(TOOLS)
 PY = sys.executable
-MODELOS = os.path.join(CLAUDE, "skills", "criar-frente", "references", "modelos")
+MODELOS = os.path.join(CLAUDE, "skills", "criar-feature", "references", "modelos")
 
 
 def escrever(base, rel, txt):
@@ -75,7 +75,7 @@ class ContratoBordas(Base):
     def test_modelos_da_skill_passam_no_contrato(self):
         for e in ("E1", "E2", "E5"):
             self.assertEqual(self.run_py("contrato.py", "etapa", e, os.path.join(MODELOS, e + ".md"))[0], 0, e)
-        self.assertEqual(self.run_py("contrato.py", "frente", os.path.join(MODELOS, "FRENTE.md"))[0], 0)
+        self.assertEqual(self.run_py("contrato.py", "feature", os.path.join(MODELOS, "FEATURE.md"))[0], 0)
         self.assertEqual(self.run_py("contrato.py", "complexidade", os.path.join(MODELOS, "TASK.md"))[0], 0)
 
     def test_task_isolada_e_nome(self):
@@ -94,30 +94,30 @@ class ContratoBordas(Base):
 
 class CriacaoBordas(Base):
     def test_e1_com_id_diferente_reprova(self):
-        self.assertEqual(self.run_py("frente.py", "criar", "iniciar", "iter19-preauth-senha", "--demanda", "x")[0], 0)
+        self.assertEqual(self.run_py("feature.py", "criar", "iniciar", "iter19-preauth-senha", "--demanda", "x")[0], 0)
         p = escrever(self.tmp, "E1.md", ler(os.path.join(MODELOS, "E1.md")).replace(
-            "FRENTE-ID: iter19-preauth-senha", "FRENTE-ID: outra"))
-        rc, out, _ = self.run_py("frente.py", "criar", "propor", "iter19-preauth-senha", "--etapa", "E1", "--arquivo",
+            "FEATURE-ID: iter19-preauth-senha", "FEATURE-ID: outra"))
+        rc, out, _ = self.run_py("feature.py", "criar", "propor", "iter19-preauth-senha", "--etapa", "E1", "--arquivo",
                                  p, "--json")
         self.assertEqual(rc, 2)
         self.assertIn("id_difere", out)
 
     def test_status_idle_e_workflow_preservado_na_adocao(self):
-        j = json.loads(self.run_py("frente.py", "status", "--json")[1])
+        j = json.loads(self.run_py("feature.py", "status", "--json")[1])
         self.assertEqual((j["estado"], j["workflow_em_dia"]), ("IDLE", True))
         ac = os.path.join(self.sk, ".claude", "tools", "ac", "ac.py")
         subprocess.run([PY, ac, "--work", "campanhas/velha", "init", "--target", ".", "--scope", "b/x.py"],
                        cwd=self.sk, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        self.assertEqual(self.run_py("frente.py", "adotar", "velha", "--dry-run")[0], 0)
-        self.assertFalse(os.path.exists(os.path.join(self.sk, ".claude", "state", "frentes.json")))
-        self.assertEqual(self.run_py("frente.py", "adotar", "velha")[0], 0)
+        self.assertEqual(self.run_py("feature.py", "adotar", "velha", "--dry-run")[0], 0)
+        self.assertFalse(os.path.exists(os.path.join(self.sk, ".claude", "state", "features.json")))
+        self.assertEqual(self.run_py("feature.py", "adotar", "velha")[0], 0)
         wf = ler(os.path.join(self.sk, ".claude", "state", "WORKFLOW.md"))
         self.assertIn("nota humana", wf)
         self.assertIn("**Estado:** IN_PROGRESS", wf)
-        self.assertTrue(json.loads(self.run_py("frente.py", "status", "--json")[1])["workflow_em_dia"])
+        self.assertTrue(json.loads(self.run_py("feature.py", "status", "--json")[1])["workflow_em_dia"])
 
     def test_help_cita_tudo(self):
-        rc, out, _ = self.run_py("frente.py", "--help")
+        rc, out, _ = self.run_py("feature.py", "--help")
         self.assertEqual(rc, 0)
         for s in ("criar iniciar", "criar propor", "criar aprovar", "criar rejeitar", "criar abrir", "checklist",
                   "adotar", "task marcar", "fechar plano", "fechar commit", "--dry-run", "--json", "--brief"):
@@ -126,21 +126,21 @@ class CriacaoBordas(Base):
 
 class GuardBordas(Base):
     def test_propostas_multiedit_e_archive(self):
-        self.assertEqual(self.guard(".claude/state/frentes/x/propostas/E1.md", content="x"), "deny")
+        self.assertEqual(self.guard(".claude/state/features/x/propostas/E1.md", content="x"), "deny")
         self.assertEqual(self.guard(".claude/state/archive/x/notas/extra.md", content="x"), "deny")
         self.assertEqual(self.guard(".claude/state/INDEX-solto.md", content="x"), "allow")
-        self.assertEqual(self.guard(".claude/state/frentes/x/HISTORICO.md", content="x"), "allow")
+        self.assertEqual(self.guard(".claude/state/features/x/HISTORICO.md", content="x"), "allow")
         rc, out, _ = self.run_py("guard-estado.py", stdin=json.dumps({"tool_name": "Write", "tool_input": {}}))
         self.assertIn("deny", out)
 
     def test_multiedit_done_sem_gate(self):
-        rc, _, _ = self.run_py("frente.py", "criar", "iniciar", "demo", "--demanda", "x")
+        rc, _, _ = self.run_py("feature.py", "criar", "iniciar", "demo", "--demanda", "x")
         self.assertEqual(rc, 0)
-        st = os.path.join(self.sk, ".claude", "state", "frentes", "demo")
-        # frente aberta por adoção não existe aqui; simula a E3 aprovada pelo evento (o hook lê eventos.jsonl)
+        st = os.path.join(self.sk, ".claude", "state", "features", "demo")
+        # feature aberta por adoção não existe aqui; simula a E3 aprovada pelo evento (o hook lê eventos.jsonl)
         with open(os.path.join(st, "eventos.jsonl"), "a", encoding="utf-8") as fh:
             fh.write(json.dumps({"seq": 9, "tipo": "aprovacao", "etapa": "E3", "sha": "0" * 64, "ts": "t"}) + "\n")
-        tarefa = ".claude/state/frentes/demo/TASKS/02-TASK-UM.md"
+        tarefa = ".claude/state/features/demo/TASKS/02-TASK-UM.md"
         escrever(self.sk, tarefa, "# 02-TASK-UM — x\n\nstatus: PENDENTE\ngate: PENDENTE\n\n## Handoff\n")
         self.assertEqual(self.guard(tarefa, "MultiEdit", edits=[{"old_string": "status: PENDENTE",
                                                                   "new_string": "status: DONE"}]), "deny")
@@ -168,6 +168,49 @@ class SessaoBordas(Base):
         self.run_py("sessao.py", "carimbo", "--write")
         self.run_py("sessao.py", "carimbo", "--write")
         self.assertEqual(ler(os.path.join(self.sk, ".claude", "state", "RESUME.md")).count("resume-stamp"), 1)
+
+
+class CompatStateAntigo(Base):
+    """COMPAT: state gravado antes da renomeação frente→feature continua legível; a escrita sai no formato novo."""
+
+    def setUp(self):
+        super().setUp()
+        sys.path.insert(0, TOOLS)
+        import estado_lib
+        self.L = estado_lib
+
+    def test_le_antigo_escreve_novo(self):
+        L, st = self.L, os.path.join(self.sk, ".claude", "state")
+        escrever(st, L.LEGADO_JSON, json.dumps({"schema": 1, "ativas": [{"id": "demo", "origem": "legado"}],
+                                                 "entregues": []}))
+        md = ler(os.path.join(MODELOS, "FEATURE.md")).replace("FEATURE-ID:", L.LEGADO_ID + ":").replace(
+            "## Aceite da Feature", "## " + L.LEGADO_ACEITE)
+        p = escrever(st, os.path.join(L.LEGADO_DIR, "demo", L.LEGADO_MD), md)
+        self.assertEqual(L.ids_ativas(self.sk), ["demo"])
+        fd = L.feature_dir("demo", self.sk)
+        self.assertEqual(L.feature_md(fd), p)
+        fr = L.ler_feature(p)
+        self.assertTrue(fr["id"] and fr["aceite_qa"], fr["id"])
+        self.assertEqual(self.run_py("contrato.py", "feature", p)[0], 0)
+        tk = escrever(fd, "TASKS/01-TASK-UM.md", "# 01-TASK-UM — x\n\n%s: demo\nstatus: PENDENTE\n" % L.LEGADO_CAB)
+        self.assertEqual(L.ler_task(tk)["cab"].get("feature"), "demo")
+        escrever(st, "WORKFLOW.md", "# WORKFLOW\n\n%s -->\nvelho\n%s\n\nnota\n" % (L.LEGADO_WF_INI, L.LEGADO_WF_FIM))
+        L.salvar_features(L.features(self.sk), self.sk)
+        L.regravar_workflow(L.features(self.sk), self.sk)
+        self.assertTrue(os.path.isfile(os.path.join(st, "features.json")))
+        self.assertFalse(os.path.exists(os.path.join(st, L.LEGADO_JSON)))
+        wf = ler(os.path.join(st, "WORKFLOW.md"))
+        self.assertIn(L.WF_INI, wf)
+        self.assertNotIn(L.LEGADO_WF_INI, wf)
+        self.assertIn("nota", wf)
+        self.assertEqual(self.guard(".claude/state/%s/demo/CHECKLIST.md" % L.LEGADO_DIR, content="x"), "deny")
+
+    def test_carimbo_antigo(self):
+        self.run_py("sessao.py", "carimbo", "--write")
+        p = os.path.join(self.sk, ".claude", "state", "RESUME.md")
+        escrever(self.sk, ".claude/state/RESUME.md", ler(p).replace("FEATURES:", self.L.LEGADO_CARIMBO + ":"))
+        j = json.loads(self.run_py("sessao.py", "frescor", "--json")[1])
+        self.assertEqual(j["veredito"], "bate", j)
 
 
 if __name__ == "__main__":

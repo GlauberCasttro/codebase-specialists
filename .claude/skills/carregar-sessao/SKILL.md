@@ -2,8 +2,8 @@
 name: carregar-sessao
 description: >
   Retoma o desenvolvimento da skill codebase-specialists pela âncora em .claude/state/, sem reler o projeto:
-  carimbo comparável (FRENTES/BRANCH/HEAD/PRODUTO/ESTADO/GATE) calculado por um script dono da fórmula, frescor por
-  regra (bate | cache-miss | produto-mudou), briefing em duas sequências (frentes e tasks, com ← PRÓXIMA e o porquê
+  carimbo comparável (FEATURES/BRANCH/HEAD/PRODUTO/ESTADO/GATE) calculado por um script dono da fórmula, frescor por
+  regra (bate | cache-miss | produto-mudou), briefing em duas sequências (features e tasks, com ← PRÓXIMA e o porquê
   de cada elo) e gate de retomada "Retomo daqui?". Só desce ao log em cache-miss. Frases que disparam: "carregar
   sessão", "/carregar-sessao", "onde paramos", "retoma o contexto", "continua de onde paramos", "o que fizemos na
   última sessão". Só leitura (a única escrita permitida é o self-heal do RESUME em cache-miss).
@@ -14,7 +14,7 @@ description: >
 Contraparte do `/salvar-sessao`. O script decide (`.claude/tools/sessao.py`); você enuncia e **para**.
 
 **Meta de custo:** caminho feliz = **1 comando** (`python3 .claude/tools/sessao.py briefing`) — ele lê o RESUME, o
-`frentes.json` e, só com frente ativa, as tasks da frente, e calcula o carimbo. **Nunca** leia logs, `SKILL.md` da
+`features.json` e, só com feature ativa, as tasks da feature, e calcula o carimbo. **Nunca** leia logs, `SKILL.md` da
 raiz, `scripts/`, `docs/` ou as campanhas no caminho feliz: write-once-read-many — o custo foi pago no save.
 
 ## Contrato
@@ -23,17 +23,17 @@ raiz, `scripts/`, `docs/` ou as campanhas no caminho feliz: write-once-read-many
 |---|---|
 | rodar `sessao.py briefing/frescor/carimbo` e `git` só leitura (`status`, `log`, `rev-parse`) | `git add`, `commit`, `push`, `checkout`, `stash`, `reset` |
 | reescrever `.claude/state/RESUME.md` em cache-miss (self-heal: narrativa + `sessao.py carimbo --write`) | escrever qualquer outro arquivo |
-| ler o log da frente **só em cache-miss** (as últimas ~40 linhas de `.claude/state/logs/<f>/<f>.md`) | iniciar trabalho sem o gate de retomada |
+| ler o log da feature **só em cache-miss** (as últimas ~40 linhas de `.claude/state/logs/<f>/<f>.md`) | iniciar trabalho sem o gate de retomada |
 | `python3 .claude/tools/ac/ac.py --work campanhas/<f> status` de uma campanha ativa | rodar portão, régua ou suítes por conta própria (custa tempo: é decisão do founder) |
 
 ## O carimbo (dono único: `sessao.py`)
 
     <!-- resume-stamp
-    FRENTES: {ids das frentes ativas em frentes.json | —}
+    FEATURES: {ids das features ativas em features.json | —}
     BRANCH: {branch}
     HEAD: {sha curto na gravação}
     PRODUTO: {sha1 do conteúdo do produto: SKILL.md MODO-DE-USO.md VERSION LICENSE scripts assets references docs evals .claude/package}
-    ESTADO: {sha1 de frentes.json + frentes/**}
+    ESTADO: {sha1 de features.json + features/**}
     GATE: {VERDE | PENDENTE | —}
     -->
 
@@ -47,7 +47,7 @@ carimbo comparável ao `sessao.py`.
   Commit que tocou outra coisa, outra branch, rebase ⇒ não bate.
 - **PRODUTO** é o campo mais caro de descobrir tarde: mudou ⇒ o produto vivo não é mais o que foi testado. Estado,
   campanhas, `.claude/` (fora `package/`) e `local/` não entram: salvar sessão nunca invalida a régua.
-- **GATE = VERDE** só com evidência no disco: cada frente ativa com `local/portao-<f>/portao.out` terminando em
+- **GATE = VERDE** só com evidência no disco: cada feature ativa com `local/portao-<f>/portao.out` terminando em
   `RESULTADO: VERDE` + `FIM`. Qualquer outra coisa é PENDENTE.
 
 ## Fluxo
@@ -62,7 +62,7 @@ python3 .claude/tools/sessao.py frescor --json    # detalhe: campos divergentes,
 | `sem-state` | diga que o estado nunca foi inicializado e ofereça `/salvar-sessao` (cria a árvore). **Pare.** | 1 stat |
 | `sem-carimbo` | RESUME sem bloco `resume-stamp`: enuncie o que há e sugira `/salvar-sessao` (ou `sessao.py carimbo --write`) | 1 comando |
 | `bate` | confie no RESUME e enuncie o briefing. **Não leia o log.** | 1 comando |
-| `cache-miss` (FRENTES, BRANCH, HEAD por regra ou ESTADO divergem) | leia as últimas ~40 linhas do log da frente; **julgamento:** reconstrua "Onde paramos" e "Próximos passos" do RESUME a partir dele; `python3 .claude/tools/sessao.py carimbo --write`; rodapé de uma linha `_contexto reconstruído do log_` | +1 leitura, +1 escrita |
+| `cache-miss` (FEATURES, BRANCH, HEAD por regra ou ESTADO divergem) | leia as últimas ~40 linhas do log da feature; **julgamento:** reconstrua "Onde paramos" e "Próximos passos" do RESUME a partir dele; `python3 .claude/tools/sessao.py carimbo --write`; rodapé de uma linha `_contexto reconstruído do log_` | +1 leitura, +1 escrita |
 | `produto-mudou` (só PRODUTO/GATE divergem) | **não é cache-miss de contexto**: o produto mudou desde o save. Mantenha a âncora e **avise que a régua está PENDENTE** (portão / `/e2e-loop` antes de commit de produto ou pacote) | 0 escrita |
 
 Cache-miss é **self-healing, não erro**: âncora defasada → reconstruída. Nunca reporte como falha.
@@ -76,18 +76,18 @@ SessionStart sugeriu `/install` (pacote desatualizado, travas que faltavam), pro
 
 O `briefing` já renderiza; você copia, completa só o que a regra abaixo exigir, e **para**.
 
-    Estado: {IDLE | IN_PROGRESS} · frentes ativas: {ids}
+    Estado: {IDLE | IN_PROGRESS} · features ativas: {ids}
     Git: {branch} @ {HEAD} · {N} arquivo(s) sujo(s) · carimbo: {veredito}
     {Autorizado / NÃO autorizado / Aguardando decisão — do RESUME, seção "Escopo autorizado e limites"}
     Onde paramos: {1–3 linhas do RESUME}
 
-    Sequência de frentes (macro):
+    Sequência de features (macro):
     - [x] {última entregue} — entregue {data}
-    - [ ] 1. {frente ativa} — {nome} · {k}/{t} tasks   ← VOCÊ ESTÁ AQUI
+    - [ ] 1. {feature ativa} — {nome} · {k}/{t} tasks   ← VOCÊ ESTÁ AQUI
           ({origem, aberta em …})
     - [ ] criação em curso: {id} · próxima etapa {EN}
 
-    Sequência de tasks (micro) — {frente} · {sequencial | paralelo} · {k}/{t}:
+    Sequência de tasks (micro) — {feature} · {sequencial | paralelo} · {k}/{t}:
     - [x] 01-TASK-ORACULO — {o que a task faz}
     - [ ] 02-TASK-UM — {o que a task faz} (01-TASK-ORACULO: {por que depende})   ← PRÓXIMA
 
@@ -103,7 +103,7 @@ O `briefing` já renderiza; você copia, completa só o que a regra abaixo exigi
 | Só a **última** entregue aparece na macro | é fila, não histórico (o histórico vive em `archive/` e `campanhas/README.md`) |
 | `{k}/{t} tasks` é obrigatório | único número que responde "quanto falta" sem abrir nada |
 | Nunca marque `[x]` em task que não está DONE | checklist que se auto-aprova é decoração |
-| IDLE: só a macro, com a próxima do BACKLOG; sem bloco micro | não há frente para ler |
+| IDLE: só a macro, com a próxima do BACKLOG; sem bloco micro | não há feature para ler |
 
 ### Gate de retomada — obrigatório
 
@@ -122,7 +122,7 @@ lugar errado custa mais que uma pergunta.
 
 ## Ponteiros (sob demanda — NÃO ler eager)
 
-- Log da frente: `.claude/state/logs/<f>/<f>.md` · índice das sessões: `.claude/state/logs/sessoes.jsonl`
+- Log da feature: `.claude/state/logs/<f>/<f>.md` · índice das sessões: `.claude/state/logs/sessoes.jsonl`
 - Decisões: `.claude/state/DECISIONS.md` · fila: `BACKLOG.md` · última entrega: `LAST_DELIVERY.md`
-- Frentes encerradas: `.claude/state/archive/<f>/<f>.md` · ativas: `python3 .claude/tools/frente.py status --brief`
-- Trio de sessão: `/carregar-sessao` (este) · `/salvar-sessao` (checkpoint) · `/fechar-frente` (encerrar → IDLE)
+- Features encerradas: `.claude/state/archive/<f>/<f>.md` · ativas: `python3 .claude/tools/feature.py status --brief`
+- Trio de sessão: `/carregar-sessao` (este) · `/salvar-sessao` (checkpoint) · `/fechar-feature` (encerrar → IDLE)

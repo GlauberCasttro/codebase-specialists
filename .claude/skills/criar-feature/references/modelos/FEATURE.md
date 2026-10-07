@@ -1,6 +1,6 @@
 # iter19-preauth-senha — Senha nos comandos que mudam o mandato
 
-FRENTE-ID: iter19-preauth-senha
+FEATURE-ID: iter19-preauth-senha
 Nome: Senha nos comandos que mudam o mandato
 
 ## História
@@ -35,7 +35,7 @@ O portão humano do mandato vale do começo ao fim, não só na abertura — é 
 - senha errada 3 vezes: recusa sem gravar.
 
 ## Dependências
-- nenhuma frente bloqueante (a iter14 já entregou o canal humano).
+- nenhuma feature bloqueante (a iter14 já entregou o canal humano).
 
 ## Escopo IN
 - os 4 subcomandos do mandato e os testes deles.
@@ -53,6 +53,6 @@ oráculo 4/4 verde em python3 e /usr/bin/python3; suítes do produto verdes; 0 `
 ## Métrica de sucesso
 4 de 4 subcomandos que mudam o mandato recusam sem a senha (hoje: 0 de 4).
 
-## Aceite da Frente
+## Aceite da Feature
 ### Aceite QA — PENDENTE
 ### Aceite Review — PENDENTE

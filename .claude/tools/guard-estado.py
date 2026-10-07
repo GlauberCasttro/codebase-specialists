@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""guard-estado.py — hook PreToolUse (Edit|Write|MultiEdit|NotebookEdit) do ESTADO das frentes (.claude/state/).
+"""guard-estado.py — hook PreToolUse (Edit|Write|MultiEdit|NotebookEdit) do ESTADO das features (.claude/state/).
 
-O guard-entrega deixa `.claude/state/**` editável; este guard estreita o que é do SCRIPT (frente.py) e a ordem das
+O guard-entrega deixa `.claude/state/**` editável; este guard estreita o que é do SCRIPT (feature.py) e a ordem das
 etapas da criação. Nega:
-  - `frentes.json`, `frentes/<id>/CHECKLIST.md`, `frentes/<id>/eventos.jsonl`, `frentes/<id>/propostas/**`
-    (só o frente.py escreve: o checklist é a projeção dos eventos; as propostas guardam o sha aprovado);
-  - `frentes/<id>/FRENTE.md` antes da E2 aprovada (frente aberta: livre);
-  - `frentes/<id>/TASKS/*` antes da E3 aprovada, ou com nome fora de {NN}-{TASK|BUG|GAP|DEBT}-{DESC}.md;
+  - `features.json`, `features/<id>/CHECKLIST.md`, `features/<id>/eventos.jsonl`, `features/<id>/propostas/**`
+    (só o feature.py escreve: o checklist é a projeção dos eventos; as propostas guardam o sha aprovado);
+  - `features/<id>/FEATURE.md` antes da E2 aprovada (feature aberta: livre);
+  - `features/<id>/TASKS/*` antes da E3 aprovada, ou com nome fora de {NN}-{TASK|BUG|GAP|DEBT}-{DESC}.md;
   - task com `status: DONE` sem `gate: PASS` e `## Handoff` preenchido (Write, Edit e MultiEdit: avalia o
     conteúdo RESULTANTE);
   - `archive/<id>/<qualquer coisa>` que não seja `archive/<id>/<id>.md` (documento único).
@@ -16,7 +16,7 @@ Contrato (Claude Code): payload JSON pela stdin (tool_name, tool_input.file_path
 old_string/new_string, edits, cwd). Negar = stdout {"hookSpecificOutput":{"hookEventName":"PreToolUse",
 "permissionDecision":"deny","permissionDecisionReason":...}} e exit 0 (igual ao guard-entrega). Payload inválido = nega.
 LIMITE HONESTO: só vê Edit/Write/MultiEdit/NotebookEdit; escrita por Bash no estado não passa aqui (é por Bash que
-os scripts escrevem). `frente.py checklist` e o sha das propostas detectam a adulteração depois.
+os scripts escrevem). `feature.py checklist` e o sha das propostas detectam a adulteração depois.
 Uso: echo '<payload>' | python3 guard-estado.py · --help. Variável de teste: CS_DEV_SKILL_DIR.
 """
 import json
@@ -80,39 +80,39 @@ def decidir(raw):
         return 0
     rel = os.path.relpath(real, st).replace(os.sep, "/")
     partes = rel.split("/")
-    if rel == "frentes.json":
-        return negar("frentes.json só pelo frente.py (status/abrir/adotar/fechar idle).")
+    if rel in ("features.json", L.LEGADO_JSON):  # COMPAT: frentes.json antigo
+        return negar("features.json só pelo feature.py (status/abrir/adotar/fechar idle).")
     if partes[0] == "archive" and len(partes) >= 2:
         fid = partes[1]
         if len(partes) != 3 or partes[2] != fid + ".md":
-            return negar("archive/%s/ guarda só o documento único %s.md (frente.py fechar archive)." % (fid, fid))
+            return negar("archive/%s/ guarda só o documento único %s.md (feature.py fechar archive)." % (fid, fid))
         return 0
-    if partes[0] != "frentes" or len(partes) < 3:
+    if partes[0] not in ("features", L.LEGADO_DIR) or len(partes) < 3:  # COMPAT: frentes/ antigo
         return 0
     fid = partes[1]
     resto = "/".join(partes[2:])
     if resto in ("CHECKLIST.md", "eventos.jsonl") or partes[2] == "propostas":
-        return negar("%s é escrito só pelo frente.py criar (checklist = projeção dos eventos; propostas guardam o "
+        return negar("%s é escrito só pelo feature.py criar (checklist = projeção dos eventos; propostas guardam o "
                      "sha que o founder aprovou)." % rel)
     ev = L.eventos(fid)
     aberta = fid in L.ids_ativas() or any(e.get("tipo") == "abertura" for e in ev)
     ap = L.aprovadas(ev)
-    if resto == "FRENTE.md":
+    if resto in ("FEATURE.md", L.LEGADO_MD):  # COMPAT: FRENTE.md antigo
         if not aberta and "E2" not in ap:
-            return negar("FRENTE.md só depois da E2 aprovada (investigação medida antes de escrever a frente).")
+            return negar("FEATURE.md só depois da E2 aprovada (investigação medida antes de escrever a feature).")
         return 0
     if partes[2] == "TASKS":
         nome = partes[-1]
         if len(partes) != 4 or not L.TASK_NOME_RE.match(nome):
             return negar("nome de task fora da gramática {NN}-{TASK|BUG|GAP|DEBT}-{DESCRICAO}.md: %s" % nome)
         if not aberta and "E3" not in ap:
-            return negar("TASKS só depois da E3 aprovada (o FRENTE.md vem antes da decomposição).")
+            return negar("TASKS só depois da E3 aprovada (o FEATURE.md vem antes da decomposição).")
         txt = conteudo_resultante(tool, ti, real)
         if txt is not None and re.search(r"(?m)^status:\s*DONE\s*$", txt):
             gate = re.search(r"(?m)^gate:\s*PASS\s*$", txt)
             ho = L.secoes(txt).get("Handoff", "").strip()
             if not gate or not ho:
-                return negar("task DONE exige `gate: PASS` e `## Handoff` preenchido — use `frente.py task marcar` "
+                return negar("task DONE exige `gate: PASS` e `## Handoff` preenchido — use `feature.py task marcar` "
                              "depois da verificação.")
         return 0
     return 0

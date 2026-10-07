@@ -473,7 +473,7 @@ class ScriptAprovacao(unittest.TestCase):
     def test_sem_campanha_recusa(self):
         code, out, err = self.sa("f1")
         self.assertNotEqual(code, 0)
-        self.assertIn("criar-frente", err)
+        self.assertIn("criar-feature", err)
 
     def test_gera_em_local_com_motor_embutido(self):
         code, out, err = run([PY, AC, "--work", "campanhas/f1", "init", "--target", ".", "--scope", "a/*",
@@ -581,14 +581,14 @@ class AjudaETools(unittest.TestCase):
 
     def test_skills_do_harness(self):
         nomes = sorted(os.listdir(os.path.join(SKILL, ".claude", "skills")))
-        self.assertEqual(nomes, ["auto-correcao", "carregar-sessao", "criar-frente", "e2e-loop", "fechar-frente",
+        self.assertEqual(nomes, ["auto-correcao", "carregar-sessao", "criar-feature", "e2e-loop", "fechar-feature",
                                  "install", "package", "revisor", "rh", "salvar-sessao", "tech-lead"])
         for n in nomes:
             s = open(os.path.join(SKILL, ".claude", "skills", n, "SKILL.md"), encoding="utf-8").read()
             self.assertTrue(s.startswith("---\nname: %s\n" % n), n)
-        for n in ("criar-frente", "fechar-frente"):
+        for n in ("criar-feature", "fechar-feature"):
             s = open(os.path.join(SKILL, ".claude", "skills", n, "SKILL.md"), encoding="utf-8").read()
-            self.assertIn("python3 .claude/tools/frente.py", s, n)
+            self.assertIn("python3 .claude/tools/feature.py", s, n)
         for n in ("auto-correcao",):
             s = open(os.path.join(SKILL, ".claude", "skills", n, "SKILL.md"), encoding="utf-8").read()
             self.assertIn("python3 .claude/tools/ac/ac.py", s, n)

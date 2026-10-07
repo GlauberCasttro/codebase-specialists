@@ -8,7 +8,7 @@ Subcomandos:
         pythons (regua.json) e verificações extras do portão.
   selecionar (--arquivos A … | --lista ARQ) [--fechamento] [--json]
         {"suites", "completa", "porque"}: `.claude/**` ⇒ só harness-dev; `scripts/<x>/**` ⇒ x; desconhecido ou
-        --fechamento ⇒ TODAS (completa: true). A completa roda no fechamento e no portão; durante a frente, a seletiva.
+        --fechamento ⇒ TODAS (completa: true). A completa roda no fechamento e no portão; durante a feature, a seletiva.
   rodar --suites a,b [--pythons "p1 p2"] [--dry-run]
         `<py> -m unittest discover -s tests` dentro de cada suíte, em cada Python; resumo Ran/OK/FAILED por linha.
         Python ausente ⇒ NOT_RUN (não é PASS nem FAIL). --dry-run imprime os comandos.

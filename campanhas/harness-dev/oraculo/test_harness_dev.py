@@ -1,4 +1,4 @@
-"""Oráculo da frente harness-dev — o harness de DESENVOLVIMENTO da skill (comandos em português, ricos como o
+"""Oráculo da feature harness-dev — o harness de DESENVOLVIMENTO da skill (comandos em português, ricos como o
 harness de referência, mecânica em scripts). Contrato em ESPEC.md (esta pasta).
 
 unittest puro, Python 3.9+, nos 2 Pythons:  cd <esta pasta> && python3 -m unittest -v test_harness_dev
@@ -38,14 +38,14 @@ PROJ = _projeto()
 SKILL_VIVA = os.path.realpath(os.path.join(ORACULO, "..", "..", ".."))
 PRODUTO = ("SKILL.md", "MODO-DE-USO.md", "VERSION", "LICENSE", "scripts", "assets", "references", "docs", "evals",
            ".claude/package")
-SKILLS = ["auto-correcao", "carregar-sessao", "criar-frente", "e2e-loop", "fechar-frente", "install", "package",
+SKILLS = ["auto-correcao", "carregar-sessao", "criar-feature", "e2e-loop", "fechar-feature", "install", "package",
           "revisor", "rh", "salvar-sessao", "tech-lead"]
-MUDAM_ESTADO = {"auto-correcao", "criar-frente", "fechar-frente", "install", "package", "salvar-sessao", "tech-lead"}
+MUDAM_ESTADO = {"auto-correcao", "criar-feature", "fechar-feature", "install", "package", "salvar-sessao", "tech-lead"}
 SO_LEITURA = {"carregar-sessao", "e2e-loop", "revisor", "rh"}
 SUBSTITUIDAS = ["close-front", "load-session", "new-front", "save-session"]
 SCRIPTS = {
-    "frente.py": ["status", "criar", "checklist", "adotar", "task", "fechar"],
-    "contrato.py": ["frente", "completo", "task", "etapa", "complexidade", "--sonda"],
+    "feature.py": ["status", "criar", "checklist", "adotar", "task", "fechar"],
+    "contrato.py": ["feature", "completo", "task", "etapa", "complexidade", "--sonda"],
     "tech_lead.py": ["plano", "proxima", "modelo", "snap"],
     "custo.py": ["medir", "registrar", "resumo"],
     "rh.py": ["ficha", "conferir", "elenco"],
@@ -132,19 +132,19 @@ BACKLOG_FIX = "# BACKLOG — teste\n\n| id | P | item |\n|---|---|---|\n| B-01 |
 DECISIONS_FIX = "# Decisões — teste\n\n| id | data | decisão |\n|---|---|---|\n"
 README_CAMP = "# campanhas\n\n| campanha | o quê | commit de entrega | decisão |\n|---|---|---|---|\n"
 
-FRENTE_OK = """# demo-x — Exemplo de frente para o oráculo
+FEATURE_OK = """# demo-x — Exemplo de feature para o oráculo
 
-FRENTE-ID: demo-x
-Nome: Exemplo de frente para o oráculo
+FEATURE-ID: demo-x
+Nome: Exemplo de feature para o oráculo
 
 ## História
-Como mantenedor da skill, quero que `um()` e `dois()` devolvam o dobro, para provar o fluxo de frente.
+Como mantenedor da skill, quero que `um()` e `dois()` devolvam o dobro, para provar o fluxo de feature.
 
 ## Problema / Contexto
 Hoje `a/um.py:2` devolve 1 e `a/dois.py:2` devolve 2 (medido: 2 ocorrências de return em 2 arquivos).
 
 ## Valor de negócio
-O fluxo de frente fica exercitado de ponta a ponta sem tocar o produto real.
+O fluxo de feature fica exercitado de ponta a ponta sem tocar o produto real.
 
 ## Personas / Stakeholders
 - founder (aprova cada etapa)
@@ -181,17 +181,17 @@ oráculo 2/2 verde nos 2 Pythons e 0 `def` removido
 ## Métrica de sucesso
 2 de 2 CAs com prova verde.
 
-## Aceite da Frente
+## Aceite da Feature
 ### Aceite QA — PENDENTE
 ### Aceite Review — PENDENTE
 """
 
 E1_OK = """# E1 — Análise da demanda
 Demanda (literal): "quero que um e dois devolvam o dobro"
-Problema por trás: o fluxo de frente nunca foi exercitado de ponta a ponta (dito pelo usuário).
+Problema por trás: o fluxo de feature nunca foi exercitado de ponta a ponta (dito pelo usuário).
 O que NÃO é: não é mudança no produto real.
 Perguntas abertas: 1. dobrar ou triplicar? → recomendo: dobrar — dito pelo usuário.
-FRENTE-ID: demo-x
+FEATURE-ID: demo-x
 """
 
 E2_OK = """# E2 — Investigação medida
@@ -241,7 +241,7 @@ def task_md(nn, desc, tipo, grupo, ca, depends, arquivos, verif=None, goal=True,
     tid = "%s-TASK-%s" % (nn, desc)
     verif = verif or "python3 -m unittest discover -s campanhas/demo-x/oraculo"
     corpo = ["# %s — tarefa %s" % (tid, desc.lower()), "",
-             "id: %s" % tid, "frente: demo-x", "tipo: %s" % tipo, "grupo: %s" % grupo,
+             "id: %s" % tid, "feature: demo-x", "tipo: %s" % tipo, "grupo: %s" % grupo,
              "agente: %s" % {"ORACULO": "oraculo", "CORRECAO": "corretor", "QA": "qa", "REVIEW": "revisor"}[tipo],
              "CA: %s" % ca, "depends: %s" % depends, "status: PENDENTE", "gate: PENDENTE",
              "complexidade: %s" % complexidade, ""]
@@ -259,7 +259,7 @@ def task_md(nn, desc, tipo, grupo, ca, depends, arquivos, verif=None, goal=True,
 
 def tasks_ok():
     dep1 = "01-TASK-ORACULO (o oráculo congelado vem antes)"
-    tf = ".claude/state/frentes/demo-x/TASKS/%s.md"
+    tf = ".claude/state/features/demo-x/TASKS/%s.md"
     return dict([
         task_md("01", "ORACULO", "ORACULO", "—", "CA-01, CA-02", "—", ["campanhas/demo-x/oraculo/test_demo.py"]),
         task_md("02", "UM", "CORRECAO", "G1", "CA-01", dep1, ["a/um.py"]),
@@ -327,14 +327,14 @@ def montar(tmp):
 
 
 class Copia(unittest.TestCase):
-    """Base: cópia temporária do projeto + helpers do fluxo criar-frente."""
+    """Base: cópia temporária do projeto + helpers do fluxo criar-feature."""
     fake = False
 
     def setUp(self):
         self.tmp = os.path.realpath(tempfile.mkdtemp(prefix="hd-"))
         self.sk = montar(self.tmp)
         self.st = os.path.join(self.sk, ".claude", "state")
-        self.fd = os.path.join(self.st, "frentes", F)
+        self.fd = os.path.join(self.st, "features", F)
         self.fake_py = escrever(self.tmp, "fake/ac.py", FAKE_AC)
         self.fake_log = os.path.join(self.tmp, "fake-ac.log")
         self.extra = {}
@@ -365,13 +365,13 @@ class Copia(unittest.TestCase):
         return rodar([PY, self.tool("ac/ac.py")] + list(a), self.env(False), self.sk)
 
     def fr(self, *a, **kw):
-        return self.py("frente.py", *a, **kw)
+        return self.py("feature.py", *a, **kw)
 
     def ok(self, r, msg=""):
         self.assertEqual(r[0], 0, "%s\nstdout:\n%s\nstderr:\n%s" % (msg, r[1][-3000:], r[2][-3000:]))
         return r
 
-    # --- fluxo criar-frente
+    # --- fluxo criar-feature
     def iniciar(self, demanda="quero que um e dois devolvam o dobro"):
         return self.fr("criar", "iniciar", F, "--demanda", demanda)
 
@@ -392,7 +392,7 @@ class Copia(unittest.TestCase):
         if etapa == "E2":
             return escrever(self.tmp, "prop/E2.md", E2_OK)
         if etapa == "E3":
-            escrever(self.fd, "FRENTE.md", FRENTE_OK)
+            escrever(self.fd, "FEATURE.md", FEATURE_OK)
             return None
         if etapa == "E4":
             for tid, txt in tasks_ok().items():
@@ -420,12 +420,12 @@ class Copia(unittest.TestCase):
     def checklist(self):
         return ler(os.path.join(self.fd, "CHECKLIST.md"))
 
-    def frentes_json(self):
-        p = os.path.join(self.st, "frentes.json")
+    def features_json(self):
+        p = os.path.join(self.st, "features.json")
         return jload(ler(p)) if os.path.exists(p) else {"ativas": [], "entregues": []}
 
     def ids_ativas(self):
-        return [x["id"] for x in self.frentes_json().get("ativas", [])]
+        return [x["id"] for x in self.features_json().get("ativas", [])]
 
     def head(self):
         return git(self.sk, "rev-parse", "HEAD")[1]
@@ -482,7 +482,7 @@ class Fronteira(unittest.TestCase):
                         rel = os.path.relpath(os.path.join(d, f), PROJ).replace(os.sep, "/")
                         if rel not in head and not f.endswith(".pyc") and f != ".DS_Store":
                             ruins.append("NOVO " + rel)
-        self.assertEqual(ruins, [], "a frente harness-dev não pode tocar o produto")
+        self.assertEqual(ruins, [], "a feature harness-dev não pode tocar o produto")
 
     def test_pacote_sem_nada_do_harness(self):
         tmp = os.path.realpath(tempfile.mkdtemp(prefix="hd-pk-"))
@@ -525,8 +525,8 @@ class Fronteira(unittest.TestCase):
         tmp = tempfile.mkdtemp()
         try:
             escrever(tmp, "SKILL.md", "x")
-            escrever(tmp, ".claude/skills/criar-frente/SKILL.md", "x")
-            self.assertIn(".claude/skills/criar-frente/SKILL.md", pv.vazamentos(tmp))
+            escrever(tmp, ".claude/skills/criar-feature/SKILL.md", "x")
+            self.assertIn(".claude/skills/criar-feature/SKILL.md", pv.vazamentos(tmp))
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
@@ -595,24 +595,24 @@ class Skills(unittest.TestCase):
         falta = [x for x in termos if x.lower() not in t.lower()]
         self.assertEqual(falta, [], "%s pobre: faltam %s" % (n, falta))
 
-    def test_criar_frente_rica(self):
-        self.termos("criar-frente", ["E0", "E1", "E2", "E3", "E4", "E5", "CHECKLIST", "frente.py criar iniciar",
-                                     "frente.py criar propor", "frente.py criar aprovar", "frente.py criar rejeitar",
-                                     "frente.py criar abrir", "contrato.py", "--sonda", "script-aprovacao.sh",
+    def test_criar_feature_rica(self):
+        self.termos("criar-feature", ["E0", "E1", "E2", "E3", "E4", "E5", "CHECKLIST", "feature.py criar iniciar",
+                                     "feature.py criar propor", "feature.py criar aprovar", "feature.py criar rejeitar",
+                                     "feature.py criar abrir", "contrato.py", "--sonda", "script-aprovacao.sh",
                                      "agente separado", "pare", "retom", "Medir antes de afirmar", "DADO",
                                      "Arquivos permitidos", "grupo"])
-        self.assertRegex(self.s("criar-frente"), r"(?i)(nunca|não) commita")
+        self.assertRegex(self.s("criar-feature"), r"(?i)(nunca|não) commita")
 
-    def test_fechar_frente_rica(self):
-        self.termos("fechar-frente", ["frente.py fechar check", "frente.py fechar archive", "frente.py fechar entrega",
-                                      "frente.py fechar limpar", "frente.py fechar idle", "frente.py fechar commit",
-                                      "frente.py fechar plano", "conferir-commit", "frase conferir", "LAST_DELIVERY",
+    def test_fechar_feature_rica(self):
+        self.termos("fechar-feature", ["feature.py fechar check", "feature.py fechar archive", "feature.py fechar entrega",
+                                      "feature.py fechar limpar", "feature.py fechar idle", "feature.py fechar commit",
+                                      "feature.py fechar plano", "conferir-commit", "frase conferir", "LAST_DELIVERY",
                                       "archive", "campanha.py fechar", "push", "idempot", "install"])
 
     def test_tech_lead_rica(self):
         self.termos("tech-lead", ["autônomo", "iterativo", "status", "tech_lead.py plano", "tech_lead.py modelo",
-                                  "tech_lead.py snap", "custo.py registrar", "frente.py task marcar", "rh", "revisor",
-                                  "e2e-loop", "auto-correcao", "criar-frente", "fechar-frente", "carregar-sessao",
+                                  "tech_lead.py snap", "custo.py registrar", "feature.py task marcar", "rh", "revisor",
+                                  "e2e-loop", "auto-correcao", "criar-feature", "fechar-feature", "carregar-sessao",
                                   "LACUNAS", "IMPASSE", "NOT_RUN", "push"])
 
     def test_sessao_ricas(self):
@@ -689,11 +689,11 @@ class Ajuda(unittest.TestCase):
             self.assertEqual(rc, 0, nome + err)
             for sub in subs:
                 self.assertIn(sub, out, "%s --help não cita %s" % (nome, sub))
-        for nome in ("frente.py", "sessao.py", "campanha.py"):
+        for nome in ("feature.py", "sessao.py", "campanha.py"):
             rc, out, _ = rodar([PY, os.path.join(tools, nome), "--help"], env_limpo(tempfile.gettempdir(), PROJ),
                                PROJ)
             self.assertIn("--json", out, nome)
-        rc, out, _ = rodar([PY, os.path.join(tools, "frente.py"), "--help"], env_limpo(tempfile.gettempdir(), PROJ),
+        rc, out, _ = rodar([PY, os.path.join(tools, "feature.py"), "--help"], env_limpo(tempfile.gettempdir(), PROJ),
                            PROJ)
         self.assertIn("--brief", out)
 
@@ -701,7 +701,7 @@ class Ajuda(unittest.TestCase):
         for nome in DADOS:
             jload(ler(os.path.join(PROJ, ".claude", "tools", nome)))
         r = jload(ler(os.path.join(PROJ, ".claude", "tools", "regras.json")))
-        self.assertIn(r.get("max_frentes_ativas"), (1, 2))
+        self.assertIn(r.get("max_features_ativas"), (1, 2))
 
     def test_motor_embutido_intacto(self):
         txt = ler(os.path.join(PROJ, ".claude", "tools", "ac", "ORIGEM.txt"))
@@ -715,12 +715,12 @@ class Ajuda(unittest.TestCase):
 
 # ================================================================================================ contrato (guard de schema)
 class Contrato(unittest.TestCase):
-    """contrato.py: Bloco A (FRENTE.md), Bloco B (tasks), cobertura, grupos, depends, etapas E1/E2/E5, complexidade."""
+    """contrato.py: Bloco A (FEATURE.md), Bloco B (tasks), cobertura, grupos, depends, etapas E1/E2/E5, complexidade."""
 
     def setUp(self):
         self.tmp = os.path.realpath(tempfile.mkdtemp(prefix="hd-ct-"))
-        self.d = os.path.join(self.tmp, "frentes", F)
-        escrever(self.d, "FRENTE.md", FRENTE_OK)
+        self.d = os.path.join(self.tmp, "features", F)
+        escrever(self.d, "FEATURE.md", FEATURE_OK)
         for tid, txt in tasks_ok().items():
             escrever(self.d, "TASKS/%s.md" % tid, txt)
 
@@ -750,10 +750,10 @@ class Contrato(unittest.TestCase):
         self.assertEqual(rc, 2, cods)
         self.assertTrue(any(pedaco in c for c in cods), "esperava lacuna com %r em %s" % (pedaco, cods))
 
-    def test_frente_e_tasks_validas_passam(self):
+    def test_feature_e_tasks_validas_passam(self):
         rc, cods = self.lacunas("completo", self.d)
         self.assertEqual((rc, cods), (0, []))
-        rc, cods = self.lacunas("frente", os.path.join(self.d, "FRENTE.md"))
+        rc, cods = self.lacunas("feature", os.path.join(self.d, "FEATURE.md"))
         self.assertEqual((rc, cods), (0, []))
 
     def test_sonda_negativa(self):
@@ -789,7 +789,7 @@ class Contrato(unittest.TestCase):
         self.reprova("verificacao_trivial")
 
     def test_ca_orfao_reprova(self):
-        escrever(self.d, "FRENTE.md", FRENTE_OK.replace(
+        escrever(self.d, "FEATURE.md", FEATURE_OK.replace(
             "## RNFs", "- **CA-03 — sobra.** DADO x, QUANDO y, ENTÃO z.\n  Prova: `python3 -m unittest test_demo`\n\n## RNFs"))
         self.reprova("ca_orfao")
 
@@ -845,25 +845,25 @@ class Contrato(unittest.TestCase):
         self.reprova("task_nome_invalido")
 
     def test_ca_sem_prova_e_sem_dado_quando_entao_reprovam(self):
-        escrever(self.d, "FRENTE.md", FRENTE_OK.replace("  Prova: `python3 -m unittest test_demo.TestUm`\n", ""))
-        rc, cods = self.lacunas("frente", os.path.join(self.d, "FRENTE.md"))
+        escrever(self.d, "FEATURE.md", FEATURE_OK.replace("  Prova: `python3 -m unittest test_demo.TestUm`\n", ""))
+        rc, cods = self.lacunas("feature", os.path.join(self.d, "FEATURE.md"))
         self.assertTrue(any("ca_sem_prova" in c and "CA-01" in c for c in cods), cods)
-        escrever(self.d, "FRENTE.md", FRENTE_OK.replace("DADO a função `um`, QUANDO chamada, ENTÃO devolve 2.",
+        escrever(self.d, "FEATURE.md", FEATURE_OK.replace("DADO a função `um`, QUANDO chamada, ENTÃO devolve 2.",
                                                         "um deve funcionar corretamente."))
-        rc, cods = self.lacunas("frente", os.path.join(self.d, "FRENTE.md"))
+        rc, cods = self.lacunas("feature", os.path.join(self.d, "FEATURE.md"))
         self.assertTrue(any("ca_sem_dado_quando_entao" in c for c in cods), cods)
 
     def test_campos_do_bloco_a_e_id(self):
-        escrever(self.d, "FRENTE.md", FRENTE_OK.replace("## RNFs\n- RNF-01: só biblioteca padrão; Python 3.9+.\n", ""))
-        rc, cods = self.lacunas("frente", os.path.join(self.d, "FRENTE.md"))
+        escrever(self.d, "FEATURE.md", FEATURE_OK.replace("## RNFs\n- RNF-01: só biblioteca padrão; Python 3.9+.\n", ""))
+        rc, cods = self.lacunas("feature", os.path.join(self.d, "FEATURE.md"))
         self.assertEqual(rc, 2)
         self.assertTrue(any("campo_ausente" in c and "RNF" in c for c in cods), cods)
-        escrever(self.d, "FRENTE.md", FRENTE_OK.replace("FRENTE-ID: demo-x", "FRENTE-ID: Demo_X"))
-        rc, cods = self.lacunas("frente", os.path.join(self.d, "FRENTE.md"))
+        escrever(self.d, "FEATURE.md", FEATURE_OK.replace("FEATURE-ID: demo-x", "FEATURE-ID: Demo_X"))
+        rc, cods = self.lacunas("feature", os.path.join(self.d, "FEATURE.md"))
         self.assertTrue(any("id_invalido" in c for c in cods), cods)
-        escrever(self.d, "FRENTE.md", FRENTE_OK.replace("- `a/um.py`\n- `a/dois.py`\n\n## Critério",
+        escrever(self.d, "FEATURE.md", FEATURE_OK.replace("- `a/um.py`\n- `a/dois.py`\n\n## Critério",
                                                         "- `**`\n\n## Critério"))
-        rc, cods = self.lacunas("frente", os.path.join(self.d, "FRENTE.md"))
+        rc, cods = self.lacunas("feature", os.path.join(self.d, "FEATURE.md"))
         self.assertTrue(any("escopo_amplo" in c for c in cods), cods)
 
     def test_etapas_e1_e2_e5(self):
@@ -888,8 +888,8 @@ class Contrato(unittest.TestCase):
             self.assertEqual(self.c("complexidade", p)[0], esperado, nome)
 
 
-# ================================================================================================ criar-frente
-class CriarFrente(Copia):
+# ================================================================================================ criar-feature
+class CriarFeature(Copia):
     """E0→E5 com aprovação registrada entre cada etapa, checklist append-only, abertura sem commit."""
 
     def test_e0_aborta_sem_state(self):
@@ -907,7 +907,7 @@ class CriarFrente(Copia):
             self.assertRegex(t, r"(?m)^- \[ \] \*\*%s\b" % e)
         self.assertIn('Demanda: "quero que um e dois devolvam o dobro"', t)
         self.assertIn("### E0", t)
-        self.assertFalse(os.path.exists(os.path.join(self.fd, "FRENTE.md")))
+        self.assertFalse(os.path.exists(os.path.join(self.fd, "FEATURE.md")))
         self.assertFalse(os.path.exists(os.path.join(self.fd, "TASKS")))
         self.assertEqual(self.ids_ativas(), [])
 
@@ -921,10 +921,10 @@ class CriarFrente(Copia):
         self.ok(self.iniciar())
         rc, out, err = self.fr("criar", "iniciar", "demo-y", "--demanda", "outra")
         self.assertEqual(rc, 1, out + err)
-        self.assertFalse(os.path.exists(os.path.join(self.st, "frentes", "demo-y")))
+        self.assertFalse(os.path.exists(os.path.join(self.st, "features", "demo-y")))
 
-    def test_limite_de_frentes_ativas(self):
-        mx = jload(ler(self.tool("regras.json")))["max_frentes_ativas"]
+    def test_limite_de_features_ativas(self):
+        mx = jload(ler(self.tool("regras.json")))["max_features_ativas"]
         for i in range(mx):
             self.campanha("velha%d" % i, "b%d/x.py" % i)
             self.ok(self.fr("adotar", "velha%d" % i))
@@ -933,7 +933,50 @@ class CriarFrente(Copia):
         self.assertIn("limite", (out + err).lower())
         self.assertFalse(os.path.exists(self.fd))
 
-    def test_adotar_frente_legada(self):
+    # --- compatibilidade: o state antigo (rótulos "frente") continua sendo LIDO; o novo é o que se ESCREVE
+    def _para_rotulos_antigos(self):
+        """Devolve o state às convenções antigas: frentes.json / frentes/ (nomes montados por partes)."""
+        fr = "fr" + "ente"
+        for novo, antigo in (("features.json", fr + "s.json"), ("features", fr + "s")):
+            a, b = os.path.join(self.st, novo), os.path.join(self.st, antigo)
+            if os.path.exists(a):
+                os.rename(a, b)
+
+    def test_state_antigo_frentes_json_e_lido(self):
+        self.campanha("velha", "b/x.py")
+        self.ok(self.fr("adotar", "velha"))
+        self._para_rotulos_antigos()
+        self.assertFalse(os.path.exists(os.path.join(self.st, "features.json")))
+        self.assertTrue(os.path.exists(os.path.join(self.st, "fr" + "entes.json")))
+        j = jload(self.ok(self.fr("status", "--json"))[1])
+        self.assertEqual([(x["id"], x["origem"]) for x in j["ativas"]], [("velha", "legado")])
+        self.assertEqual(j["estado"], "IN_PROGRESS")
+
+    def test_rotulos_antigos_lidos_e_reescritos_com_os_novos(self):
+        fr = "fr" + "ente"
+        self.campanha("velha", "b/x.py")
+        self.ok(self.fr("adotar", "velha"))
+        self.ok(self.py("sessao.py", "carimbo", "--write"))
+        p = os.path.join(self.st, "WORKFLOW.md")
+        wf = ler(p)
+        self.assertIn("features:inicio", wf)
+        escrever(self.st, "WORKFLOW.md", wf.replace("features:", fr + "s:").replace(
+            "**Features ativas:**", "**" + fr.capitalize() + "s ativas:**"))
+        r = os.path.join(self.st, "RESUME.md")
+        escrever(self.st, "RESUME.md", ler(r).replace("FEATURES:", fr.upper() + "S:"))
+        self._para_rotulos_antigos()
+        rc, out, err = self.py("sessao.py", "frescor", "--json")
+        self.assertEqual(rc, 0, out + err)
+        self.assertNotIn("Traceback", err)
+        self.campanha("nova", "c/y.py")
+        self.ok(self.fr("adotar", "nova"))
+        self.assertEqual(sorted(self.ids_ativas()), ["nova", "velha"], "o ativo do state antigo não se perde")
+        self.assertTrue(os.path.exists(os.path.join(self.st, "features.json")), "escreve o rótulo novo")
+        wf = ler(p)
+        self.assertIn("features:inicio", wf)
+        self.assertNotIn(fr + "s:inicio", wf)
+
+    def test_adotar_feature_legada(self):
         self.assertEqual(self.fr("adotar", "nada")[0], 1)
         self.campanha("velha", "b/x.py")
         self.ok(self.fr("adotar", "velha"))
@@ -1005,7 +1048,7 @@ class CriarFrente(Copia):
         rc, out, _ = self.propor("E2", escrever(self.tmp, "prop/E2b.md", E2_SEM_EVIDENCIA))
         self.assertEqual(rc, 2)
         self.etapa_ok("E2")
-        escrever(self.fd, "FRENTE.md", FRENTE_OK.replace("## Edge cases\n- chamada repetida devolve o mesmo valor.\n",
+        escrever(self.fd, "FEATURE.md", FEATURE_OK.replace("## Edge cases\n- chamada repetida devolve o mesmo valor.\n",
                                                          ""))
         rc, out, _ = self.propor("E3")
         self.assertEqual(rc, 2)
@@ -1038,7 +1081,7 @@ class CriarFrente(Copia):
 
     def test_alteracao_depois_da_aprovacao_bloqueia_abertura(self):
         self.fluxo()
-        escrever(self.fd, "FRENTE.md", FRENTE_OK + "\nlinha nova depois do ok\n")
+        escrever(self.fd, "FEATURE.md", FEATURE_OK + "\nlinha nova depois do ok\n")
         rc, out, err = self.fr("criar", "abrir", F)
         self.assertEqual(rc, 1, out + err)
         self.assertFalse(os.path.exists(os.path.join(self.sk, "campanhas", F, ".auto-correcao")))
@@ -1088,7 +1131,7 @@ class CriarFrente(Copia):
                           if x.endswith(".sh")] if os.path.isdir(os.path.join(self.sk, "local")) else [], [])
         self.assertEqual(self.fr("criar", "abrir", F)[0], 1, "abrir duas vezes")
 
-    def test_colisao_com_frente_ativa_recusa_abertura(self):
+    def test_colisao_com_feature_ativa_recusa_abertura(self):
         self.campanha("outra", "a/um.py")
         self.ok(self.fr("adotar", "outra"))
         self.fluxo()
@@ -1147,7 +1190,7 @@ class TechLead(Copia):
         self.abrir()
         j = jload(self.ok(self.tl("plano", "--modo", "iterativo", "--json"))[1])
         self.assertEqual(j["modo"], "iterativo")
-        fr = j["frentes"][0]
+        fr = j["features"][0]
         self.assertEqual(fr["id"], F)
         self.assertEqual(fr["progresso"], "0/5")
         self.assertEqual(fr["proxima"], "01-TASK-ORACULO")
@@ -1267,16 +1310,16 @@ class Custo(Copia):
         self.assertNotEqual(self.py("custo.py", "medir", "abc123", "--projects-dir", self.proj)[0], 0)
 
     def test_registrar_e_resumo_por_modelo(self):
-        self.ok(self.py("custo.py", "registrar", "abc123", "--frente", F, "--task", "02-TASK-UM", "--papel",
+        self.ok(self.py("custo.py", "registrar", "abc123", "--feature", F, "--task", "02-TASK-UM", "--papel",
                         "executor", "--modelo", "sonnet", "--projects-dir", self.proj))
-        self.ok(self.py("custo.py", "registrar", "zzz", "--frente", F, "--task", "03-TASK-DOIS", "--papel",
+        self.ok(self.py("custo.py", "registrar", "zzz", "--feature", F, "--task", "03-TASK-DOIS", "--papel",
                         "executor", "--modelo", "sonnet", "--projects-dir", self.proj))
         linhas = [jload(x) for x in ler(os.path.join(self.st, "logs", "custo.jsonl")).splitlines() if x.strip()]
         self.assertEqual([x["status"] for x in linhas], ["OK", "NOT_RUN"])
         self.assertTrue(linhas[1]["motivo"])
         self.assertFalse(linhas[1].get("turnos"))
         self.assertNotIn("SEGREDO-ABC", ler(os.path.join(self.st, "logs", "custo.jsonl")))
-        j = jload(self.ok(self.py("custo.py", "resumo", "--frente", F, "--json"))[1])
+        j = jload(self.ok(self.py("custo.py", "resumo", "--feature", F, "--json"))[1])
         self.assertEqual(j["por_modelo"]["sonnet"]["turnos"], 2)
         self.assertEqual(j["por_modelo"]["sonnet"]["contexto_somado"], 335)
         self.assertEqual(j["not_run"], 1)
@@ -1363,7 +1406,7 @@ class E2E(unittest.TestCase):
         return jload(out)
 
     def test_seleciona_pelo_arquivo_tocado(self):
-        j = self.sel("--arquivos", ".claude/tools/frente.py", ".claude/skills/rh/SKILL.md")
+        j = self.sel("--arquivos", ".claude/tools/feature.py", ".claude/skills/rh/SKILL.md")
         self.assertEqual((j["suites"], j["completa"]), (["harness-dev"], False))
         j = self.sel("--arquivos", "scripts/emit/render.py")
         self.assertIn("emit", j["suites"])
@@ -1374,7 +1417,7 @@ class E2E(unittest.TestCase):
         j = self.sel("--arquivos", "qualquer/coisa.txt")
         self.assertTrue(j["completa"])
         self.assertEqual(sorted(j["suites"]), sorted(self.todas()))
-        j = self.sel("--arquivos", ".claude/tools/frente.py", "--fechamento")
+        j = self.sel("--arquivos", ".claude/tools/feature.py", "--fechamento")
         self.assertTrue(j["completa"])
         self.assertEqual(sorted(j["suites"]), sorted(self.todas()))
 
@@ -1385,9 +1428,9 @@ class E2E(unittest.TestCase):
             self.assertIn(t, out)
 
 
-# ================================================================================================ fechar-frente
-class FecharFrente(Copia):
-    """Gate de aceite + completude cruzada, archive único, LAST_DELIVERY, limpeza, IDLE, commit só da frente."""
+# ================================================================================================ fechar-feature
+class FecharFeature(Copia):
+    """Gate de aceite + completude cruzada, archive único, LAST_DELIVERY, limpeza, IDLE, commit só da feature."""
     fake = True
     OK = "intake.3,integracao.3,oracle"
 
@@ -1398,8 +1441,8 @@ class FecharFrente(Copia):
         for tid in sorted(tasks_ok()):
             self.handoff(tid)
             self.ok(self.marcar(tid), tid)
-        p = os.path.join(self.fd, "FRENTE.md")
-        escrever(self.fd, "FRENTE.md", ler(p).replace("### Aceite QA — PENDENTE", "### Aceite QA — ACCEPT")
+        p = os.path.join(self.fd, "FEATURE.md")
+        escrever(self.fd, "FEATURE.md", ler(p).replace("### Aceite QA — PENDENTE", "### Aceite QA — ACCEPT")
                  .replace("### Aceite Review — PENDENTE", "### Aceite Review — APPROVED"))
         novos = {"a/um.py": "def um():\n    return 2\n", "a/dois.py": "def dois():\n    return 4\n"}
         g = os.path.join(self.sk, "local", "portao-" + F)
@@ -1436,7 +1479,7 @@ class FecharFrente(Copia):
             escrever(self.sk, rel, orig.replace(de, para))
             return lambda: escrever(self.sk, rel, orig)
 
-        fd = ".claude/state/frentes/%s/" % F
+        fd = ".claude/state/features/%s/" % F
         tarefa = os.path.join(self.fd, "TASKS", "03-TASK-DOIS.md")
         guarda = ler(tarefa)
         os.remove(tarefa)
@@ -1445,7 +1488,7 @@ class FecharFrente(Copia):
         volta = mexe(fd + "TASKS/03-TASK-DOIS.md", "status: DONE", "status: IN_PROGRESS")
         reprova("task_aberta")
         volta()
-        volta = mexe(fd + "FRENTE.md", "Aceite QA — ACCEPT", "Aceite QA — PENDENTE")
+        volta = mexe(fd + "FEATURE.md", "Aceite QA — ACCEPT", "Aceite QA — PENDENTE")
         reprova("aceite")
         volta()
         volta = mexe(fd + "HISTORICO.md", "## [PASS] 03-TASK-DOIS", "## [NOTA] 03-TASK-DOIS")
@@ -1472,22 +1515,22 @@ class FecharFrente(Copia):
         self.ok(self.fc("archive", F, "--notas", self.notas))
         self.assertEqual(os.listdir(self.arch()), [F + ".md"])
         t = ler(os.path.join(self.arch(), F + ".md"))
-        for s in ("### CA-01", "### CA-02", "Aceite QA — ACCEPT", "Aceite Review — APPROVED", "## Arquivos da frente",
-                  "- `a/um.py`", "- `a/dois.py`", "## Como a frente nasceu", 'Aprovação: "ok"', "## Campanha",
+        for s in ("### CA-01", "### CA-02", "Aceite QA — ACCEPT", "Aceite Review — APPROVED", "## Arquivos da feature",
+                  "- `a/um.py`", "- `a/dois.py`", "## Como a feature nasceu", 'Aprovação: "ok"', "## Campanha",
                   "## Tasks", "## Aprendizados", "o fluxo inteiro roda em cópia", "## Oráculo",
                   "campanhas/demo-x/oraculo/test_demo.py"):
             self.assertIn(s, t)
-        arqs = t.split("## Arquivos da frente")[1].split("\n## ")[0]
+        arqs = t.split("## Arquivos da feature")[1].split("\n## ")[0]
         self.assertNotIn("TASKS/", arqs)
         self.assertNotIn("oraculo", arqs)
-        self.assertEqual(t.rstrip().splitlines()[-1], "<!-- fechar-frente:archive-completo -->")
+        self.assertEqual(t.rstrip().splitlines()[-1], "<!-- fechar-feature:archive-completo -->")
         antes = arvore(self.sk)
         self.ok(self.fc("archive", F, "--notas", self.notas))
         self.assertEqual(arvore(self.sk), antes)
 
     def test_archive_recusa_com_gate_reprovado(self):
-        p = os.path.join(self.fd, "FRENTE.md")
-        escrever(self.fd, "FRENTE.md", ler(p).replace("Aceite Review — APPROVED", "Aceite Review — PENDENTE"))
+        p = os.path.join(self.fd, "FEATURE.md")
+        escrever(self.fd, "FEATURE.md", ler(p).replace("Aceite Review — APPROVED", "Aceite Review — PENDENTE"))
         self.assertEqual(self.fc("archive", F, "--notas", self.notas)[0], 1)
         self.assertFalse(os.path.exists(self.arch()))
 
@@ -1499,13 +1542,13 @@ class FecharFrente(Copia):
         self.assertFalse(etapas()["limpar"])
         self.ok(self.fc("entrega", F))
         corpo = [x for x in ler(os.path.join(self.st, "LAST_DELIVERY.md")).splitlines()[1:] if x.strip()]
-        self.assertEqual(corpo[0], "**Frente-ID:** %s" % F)
+        self.assertEqual(corpo[0], "**Feature-ID:** %s" % F)
         self.ok(self.fc("limpar", F))
         self.assertFalse(os.path.exists(self.fd))
         self.assertFalse(os.path.exists(os.path.join(self.st, "logs", F)))
         self.assertTrue(os.path.isfile(os.path.join(self.arch(), F + ".md")))
         self.ok(self.fc("idle", F))
-        fj = self.frentes_json()
+        fj = self.features_json()
         self.assertEqual(fj["ativas"], [])
         self.assertEqual(fj["entregues"][-1]["id"], F)
         wf = ler(os.path.join(self.st, "WORKFLOW.md"))
@@ -1521,17 +1564,17 @@ class FecharFrente(Copia):
         self.ok(self.fc("archive", F, "--notas", self.notas))
         self.ok(self.fc("entrega", F))
         self.ok(self.fc("limpar", F))
-        escrever(self.arch(), "FRENTE.md", "snapshot solto")
+        escrever(self.arch(), "FEATURE.md", "snapshot solto")
         rc, out, err = self.fc("idle", F)
         self.assertEqual(rc, 1)
-        self.assertIn("FRENTE.md", out + err)
+        self.assertIn("FEATURE.md", out + err)
         self.assertEqual(self.ids_ativas(), [F])
 
     def fechar_ate_idle(self):
         for passo in (("archive", F, "--notas", self.notas), ("entrega", F), ("limpar", F), ("idle", F)):
             self.ok(self.fc(*passo), str(passo))
 
-    def test_commit_so_da_frente(self):
+    def test_commit_so_da_feature(self):
         self.fechar_ate_idle()
         escrever(self.sk, "x/terceiro.txt", "de outra sessão\n")
         git(self.sk, "add", "x/terceiro.txt")
@@ -1584,8 +1627,8 @@ class Guards(Copia):
 
     def test_arquivos_do_script_nunca_a_mao(self):
         self.ok(self.iniciar())
-        fd = ".claude/state/frentes/%s/" % F
-        for rel in (".claude/state/frentes.json", fd + "CHECKLIST.md", fd + "eventos.jsonl"):
+        fd = ".claude/state/features/%s/" % F
+        for rel in (".claude/state/features.json", fd + "CHECKLIST.md", fd + "eventos.jsonl"):
             self.assertEqual(self.g(rel, "Edit", old="a", new="b"), "deny", rel)
         self.assertEqual(self.g(".claude/state/RESUME.md", "Edit", old="a", new="b"), "allow")
         self.assertEqual(self.g("a/um.py", "Write", content="x"), "allow")
@@ -1593,11 +1636,11 @@ class Guards(Copia):
 
     def test_artefato_so_depois_da_aprovacao(self):
         self.ok(self.iniciar())
-        fd = ".claude/state/frentes/%s/" % F
-        self.assertEqual(self.g(fd + "FRENTE.md", content=FRENTE_OK), "deny")
+        fd = ".claude/state/features/%s/" % F
+        self.assertEqual(self.g(fd + "FEATURE.md", content=FEATURE_OK), "deny")
         self.etapa_ok("E1")
         self.etapa_ok("E2")
-        self.assertEqual(self.g(fd + "FRENTE.md", content=FRENTE_OK), "allow")
+        self.assertEqual(self.g(fd + "FEATURE.md", content=FEATURE_OK), "allow")
         tid, txt = sorted(tasks_ok().items())[1]
         self.assertEqual(self.g(fd + "TASKS/%s.md" % tid, content=txt), "deny")
         self.etapa_ok("E3")
@@ -1606,7 +1649,7 @@ class Guards(Copia):
 
     def test_task_done_sem_gate_ou_handoff(self):
         self.fluxo(ate="E3")
-        fd = ".claude/state/frentes/%s/" % F
+        fd = ".claude/state/features/%s/" % F
         tid, txt = sorted(tasks_ok().items())[1]
         done = txt.replace("status: PENDENTE", "status: DONE")
         self.assertEqual(self.g(fd + "TASKS/%s.md" % tid, content=done), "deny")
@@ -1636,7 +1679,7 @@ class Sessao(Copia):
         r = ler(os.path.join(self.st, "RESUME.md"))
         m = re.search(r"<!-- resume-stamp\n(.*?)-->", r, re.S)
         self.assertIsNotNone(m)
-        for campo in ("FRENTES:", "BRANCH:", "HEAD:", "PRODUTO:", "ESTADO:", "GATE:"):
+        for campo in ("FEATURES:", "BRANCH:", "HEAD:", "PRODUTO:", "ESTADO:", "GATE:"):
             self.assertIn(campo, m.group(1))
         self.assertIn("## Onde paramos", r)
         self.assertEqual(self.frescor()["veredito"], "bate")
@@ -1769,13 +1812,13 @@ class Ligacoes(Copia):
         self.assertIn("carregar-sessao", out)
         self.assertLessEqual(len(out.splitlines()), 40)
 
-    def test_guard_entrega_e_script_de_aprovacao_citam_criar_frente(self):
+    def test_guard_entrega_e_script_de_aprovacao_citam_criar_feature(self):
         raw = json.dumps({"tool_name": "Edit", "tool_input": {"file_path": os.path.join(self.sk, "SKILL.md")}})
         rc, out, _ = self.py("guard-entrega.py", stdin=raw)
-        self.assertIn("criar-frente", out)
+        self.assertIn("criar-feature", out)
         rc, out, err = self.sh("script-aprovacao.sh", "nada")
         self.assertNotEqual(rc, 0)
-        self.assertIn("criar-frente", out + err)
+        self.assertIn("criar-feature", out + err)
 
     def test_portao_roda_a_suite_do_harness(self):
         rc, out, err = self.sh("portao.sh", F, "--src", self.sk, "--dry-run", "--", "a/um.py")

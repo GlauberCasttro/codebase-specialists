@@ -10,9 +10,9 @@ lista fechada: persona nova entra no JSON com os mesmos campos.
 | `investigador-ambiente` | NOT_RUN de ambiente: `/usr/bin/python3` ausente, 429, git, permissão, sandbox | haiku | SOMENTE LEITURA | o que exatamente falta para a verificação rodar? medir, não consertar | não instala, não mexe em PATH/venv |
 | `especialista-seguranca` | a task toca área sensível: motor `ac/`, guards, hooks, frase/senha, `scripts/harness/`, privacidade do pacote | opus | SOMENTE LEITURA | a entrega abre brecha (aprovação contornável, guard que deixa passar, segredo, vazamento)? | não corrige; não revisa fora da entrega |
 | `explorador` | task larga, universo desconhecido, antes do executor | sonnet | SOMENTE LEITURA | onde vive o comportamento e o que o executor precisa tocar? | localiza, não julga |
-| `oraculista` | frente aberta sem oráculo congelado | opus | ESCRITA em `campanhas/<frente>/oraculo/` | escrever ESPEC + testes que falham hoje a partir dos CAs | não vê a cópia do corretor; não congela (o tech-lead congela) |
+| `oraculista` | feature aberta sem oráculo congelado | opus | ESCRITA em `campanhas/<feature>/oraculo/` | escrever ESPEC + testes que falham hoje a partir dos CAs | não vê a cópia do corretor; não congela (o tech-lead congela) |
 | `executor` | só quando pedido explicitamente (o executor do loop usa `tech-lead/references/executor-prompt.md`) | sonnet | ESCRITA nos paths exatos da task | implementar a entrega na cópia de trabalho | não escreve estado, não roda git, não toca o oráculo |
 
 Por que o modelo varia: o custo de um erro de diagnóstico (sonnet) é um ciclo; o de um cético ou especialista que
 deixa passar um BLOQUEANTE (opus) é uma regressão publicada; medir o ambiente (haiku) é mecânico. A economia é
-hipótese até o `custo.py resumo` da frente dizer o contrário.
+hipótese até o `custo.py resumo` da feature dizer o contrário.

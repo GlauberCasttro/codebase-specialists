@@ -2,7 +2,7 @@
 name: salvar-sessao
 description: >
   Salva o contexto de desenvolvimento da codebase-specialists em .claude/state/: regrava o carimbo comparável do
-  RESUME.md (FRENTES/BRANCH/HEAD/PRODUTO/ESTADO/GATE), apensa a sessão em logs/sessoes.jsonl (e no log da frente),
+  RESUME.md (FEATURES/BRANCH/HEAD/PRODUTO/ESTADO/GATE), apensa a sessão em logs/sessoes.jsonl (e no log da feature),
   atualiza RESUME/WORKFLOW/BACKLOG/DECISIONS (julgamento) e, com --commit, COMMITA só .claude/state/** num índice
   temporário, depois do guard de privacidade (terceiros intactos; nunca push). Auto-teste: um carregar imediato tem
   de dar "bate". Também INICIALIZA o .claude/state/ quando ele não existe. Frases que disparam: "salvar sessão",
@@ -20,12 +20,12 @@ entra no BACKLOG) é seu.
 | Artefato | Operação | Quem |
 |---|---|---|
 | `RESUME.md` | **sobrescrever** o texto (snapshot "você está aqui"; cache regenerável) | carimbo: script · texto: você |
-| `logs/sessoes.jsonl` | **apensar** (1 linha: evento, data, resumo, branch, HEAD, frentes) | script |
-| `logs/<f>/<f>.md` | **apensar** (≤ 20 linhas por sessão; nunca reescrever bloco antigo) | script (`--frente F --feito …`) |
-| `WORKFLOW.md` | o bloco gerado é do `frente.py`; fora dele: sequência de frentes, entregas | você (copie números de scripts) |
+| `logs/sessoes.jsonl` | **apensar** (1 linha: evento, data, resumo, branch, HEAD, features) | script |
+| `logs/<f>/<f>.md` | **apensar** (≤ 20 linhas por sessão; nunca reescrever bloco antigo) | script (`--feature F --feito …`) |
+| `WORKFLOW.md` | o bloco gerado é do `feature.py`; fora dele: sequência de features, entregas | você (copie números de scripts) |
 | `DECISIONS.md` | **apensar**: só decisão DO FOUNDER, com o porquê | você |
 | `BACKLOG.md` | itens novos (inclusive achados de outras sessões) com origem e critério de pronto | você |
-| `frentes.json`, `frentes/<f>/` | **não é deste ritual**: é do `/criar-frente`, do `/tech-lead` e do `/fechar-frente` | — |
+| `features.json`, `features/<f>/` | **não é deste ritual**: é do `/criar-feature`, do `/tech-lead` e do `/fechar-feature` | — |
 
 ## Contrato
 
@@ -35,11 +35,11 @@ entra no BACKLOG) é seu.
 | **commitar só o estado** (`--commit`: `.claude/state/**`, índice temporário) | `push`, `tag`, `checkout`, `reset --hard`, `stash`, `add -A` |
 | criar a árvore do estado que faltar (o `salvar` cria RESUME/WORKFLOW/BACKLOG/DECISIONS/logs) | apagar log, reescrever bloco antigo, editar o carimbo à mão |
 | reportar a régua PENDENTE | **rodar** portão/régua sem o founder pedir |
-| registrar o estado das frentes ativas | **encerrar** frente (é do `/fechar-frente`) ou abrir frente |
+| registrar o estado das features ativas | **encerrar** feature (é do `/fechar-feature`) ou abrir feature |
 
 **Pós-condição (auto-teste):** um `/carregar-sessao` imediato dá **bate**. O `salvar` confere isso sozinho e sai com
-exit 1 e "O SAVE ESTÁ ERRADO" se não der. Código da sessão nunca entra por aqui: entra pela frente (portão →
-`/fechar-frente`).
+exit 1 e "O SAVE ESTÁ ERRADO" se não der. Código da sessão nunca entra por aqui: entra pela feature (portão →
+`/fechar-feature`).
 
 ## Passos
 
@@ -47,7 +47,7 @@ exit 1 e "O SAVE ESTÁ ERRADO" se não der. Código da sessão nunca entra por a
 
 ```bash
 python3 .claude/tools/sessao.py frescor --brief
-python3 .claude/tools/frente.py status --brief
+python3 .claude/tools/feature.py status --brief
 ```
 
 Campanha ativa: `python3 .claude/tools/ac/ac.py --work campanhas/<f> status` (copie a etapa; não estime).
@@ -70,7 +70,7 @@ privacidade recusa o commit).
 
 ### 3. WORKFLOW, DECISIONS, BACKLOG (julgamento)
 
-- WORKFLOW (fora do bloco gerado): a sequência de frentes em checklist (`- [x]` entregue · `- [ ] n. <id> — <o que
+- WORKFLOW (fora do bloco gerado): a sequência de features em checklist (`- [x]` entregue · `- [ ] n. <id> — <o que
   entrega>` com o porquê da ordem na 2ª linha) e "Últimas entregas" (commit e data do `git log`, não da memória).
 - DECISIONS: `| D-nn | data | decisão | porquê | onde vale |` — só o que o FOUNDER decidiu nesta sessão.
 - BACKLOG: achados novos com origem e "pronto quando" verificável.
@@ -78,11 +78,11 @@ privacidade recusa o commit).
 ### 4. Salvar (o script faz o mecânico, nesta ordem)
 
 ```bash
-python3 .claude/tools/sessao.py salvar --resumo "<1 frase>" [--frente <f> --feito "<o que mudou>"] --dry-run
-python3 .claude/tools/sessao.py salvar --resumo "<1 frase>" [--frente <f> --feito "<o que mudou>"] --commit --mensagem local/msg-sessao.txt
+python3 .claude/tools/sessao.py salvar --resumo "<1 frase>" [--feature <f> --feito "<o que mudou>"] --dry-run
+python3 .claude/tools/sessao.py salvar --resumo "<1 frase>" [--feature <f> --feito "<o que mudou>"] --commit --mensagem local/msg-sessao.txt
 ```
 
-`salvar` = (cria o estado se faltar) → carimbo no RESUME → linha em `logs/sessoes.jsonl` (+ bloco no log da frente)
+`salvar` = (cria o estado se faltar) → carimbo no RESUME → linha em `logs/sessoes.jsonl` (+ bloco no log da feature)
 → com `--commit`: guard de **privacidade** nos arquivos do estado e na mensagem (achou ⇒ exit 1, nada commitado) →
 commit **só** de `.claude/state/**` num índice temporário a partir do HEAD (o stage de terceiros fica onde está) →
 auto-teste (frescor = bate). Mensagem sempre em arquivo. `--dry-run` mostra sem escrever. Data, HEAD e contagens vêm
@@ -93,7 +93,7 @@ estado. Liste no relatório (seção "Estado do ambiente").
 
 ### 5. Reportar (curto)
 
-    Sessão salva{ e commitada: {sha}} · frentes ativas: {ids} · {k}/{t} tasks
+    Sessão salva{ e commitada: {sha}} · features ativas: {ids} · {k}/{t} tasks
     Git: {branch} @ {sha} · fora do commit: {— | N caminhos de terceiros, intactos}
     Régua: {VERDE | PENDENTE — portão/e2e-loop antes de commit de produto ou pacote}
     autoteste (carregar imediato): bate
@@ -107,5 +107,5 @@ estado. Liste no relatório (seção "Estado do ambiente").
 
 ## Ponteiros
 
-- Trio: `/carregar-sessao` · `/salvar-sessao` (este) · `/fechar-frente` (encerrar → IDLE, archive, LAST_DELIVERY)
+- Trio: `/carregar-sessao` · `/salvar-sessao` (este) · `/fechar-feature` (encerrar → IDLE, archive, LAST_DELIVERY)
 - Fórmula do carimbo (dono único): `.claude/tools/sessao.py` (`carimbo.sh --write` a chama)

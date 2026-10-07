@@ -7,7 +7,7 @@ description: >
   no elenco e devolve, por script (rh.py), uma FICHA DE CONTRATAÇÃO conferida: tipo verificado (substituição
   declarada), modelo, permissão, prompt com escopo e travas contra achado inventado, retorno com LACUNAS e linha de
   log. Use quando o tech-lead precisar de um subagente auxiliar, uma task travar, um finding precisar ser refutado,
-  a frente precisar do oráculo por um agente separado, ou o founder disser "contrata um…", "chama um especialista",
+  a feature precisar do oráculo por um agente separado, ou o founder disser "contrata um…", "chama um especialista",
   "monta um subagente para…", "rh". Não despacha nem escreve estado.
 ---
 
@@ -27,8 +27,8 @@ contratar, a persona certa, o motivo concreto em uma linha e o material mínimo 
 ## Entrada (linguagem livre; declare o que for inferido)
 
 - **Persona / necessidade** — o que o contratado deve descobrir ou fazer, em uma frase.
-- **Motivo** — o que aconteceu no loop (régua falhou 2×, finding contestado, NOT_RUN, frente sem oráculo…).
-- **Material** — frente/task, arquivos, comando que falhou e onde está a saída, finding em disputa.
+- **Motivo** — o que aconteceu no loop (régua falhou 2×, finding contestado, NOT_RUN, feature sem oráculo…).
+- **Material** — feature/task, arquivos, comando que falhou e onde está a saída, finding em disputa.
 - **Tipo sugerido** (opcional) — sugestão, não ordem: será verificado.
 - **Contratados ativos** na mesma task (opcional).
 
@@ -46,14 +46,14 @@ contratar, a persona certa, o motivo concreto em uma linha e o material mínimo 
    localiza, não julga: não serve para missão de avaliar.
 3. **Ficha + prompt:**
    ```bash
-   python3 .claude/tools/rh.py ficha --persona diagnosticador --task 02-TASK-UM --frente <f> \
+   python3 .claude/tools/rh.py ficha --persona diagnosticador --task 02-TASK-UM --feature <f> \
      --motivo "verificação falhou em 2 ciclos com AssertionError no /usr/bin/python3" --tipos-arq local/tech-lead/elenco.txt
    ```
    - persona fora de `.claude/tools/personas.json` ⇒ exit 2;
    - `--tipo X` fora do elenco ⇒ exit 2 ("inexistente") — ou, com `--aceitar-substituicao`, o preferido da persona
      que existe, **com a substituição declarada na linha `Tipo:`**;
    - `executor` sem `--arquivos` (paths exatos da task, NA CÓPIA) ⇒ exit 2; `oraculista` escreve só em
-     `campanhas/<frente>/oraculo/` (`--frente`).
+     `campanhas/<feature>/oraculo/` (`--feature`).
 4. **Permissão:** SOMENTE LEITURA é o padrão de toda persona auxiliar (conferido pelo tech-lead por snapshot —
    `tech_lead.py snap`; escreveu ⇒ descartado). ESCRITA só para `executor` (paths exatos) e `oraculista` (o oráculo).
    Nunca estado, nunca o oráculo congelado, nunca `scripts/**` inteiro.

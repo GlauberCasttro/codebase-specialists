@@ -1,7 +1,7 @@
 # 02-TASK-MOTOR-SENHA — Senha nos 4 subcomandos do mandato
 
 id: 02-TASK-MOTOR-SENHA
-frente: iter19-preauth-senha
+feature: iter19-preauth-senha
 tipo: CORRECAO
 grupo: G1
 agente: corretor (papel; o executor real e o model passado vão para o Handoff)
@@ -11,7 +11,7 @@ status: PENDENTE
 gate: PENDENTE
 complexidade: normal
 
-<!-- MODELO (gabarito de profundidade). Na frente real, âncoras e linhas vêm da investigação da E2. Outras tasks do
+<!-- MODELO (gabarito de profundidade). Na feature real, âncoras e linhas vêm da investigação da E2. Outras tasks do
      mesmo conjunto: 01-TASK-ORACULO (tipo ORACULO, grupo —, Arquivos permitidos só em campanhas/<id>/oraculo/),
      03-TASK-QA (tipo QA, depends desta, Arquivos permitidos = o próprio arquivo da task, Verificação com portao.sh),
      04-TASK-REVIEW (tipo REVIEW, depends da QA). -->

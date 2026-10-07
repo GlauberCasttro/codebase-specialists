@@ -1,11 +1,11 @@
 #!/bin/bash
-# copia.sh <frente> [--force] [--dry-run] — cria a cópia de trabalho da frente: `git archive HEAD` da skill em
-# <local>/work/<frente>/codebase-specialists/ e imprime o caminho. O corretor (agente) só escreve ali.
+# copia.sh <feature> [--force] [--dry-run] — cria a cópia de trabalho da feature: `git archive HEAD` da skill em
+# <local>/work/<feature>/codebase-specialists/ e imprime o caminho. O corretor (agente) só escreve ali.
 # Já existe ⇒ recusa (não apaga trabalho); --force recria do zero. --dry-run: só mostra o que faria.
 set -eu
 case "${1:-}" in -h|--help|'') sed -n '2,4p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;; esac
 . "$(dirname "$0")/_comum.sh"
-F="$1"; shift; frente_ok "$F"
+F="$1"; shift; feature_ok "$F"
 FORCE=0; DRY=0
 for a in "$@"; do case "$a" in --force) FORCE=1;; --dry-run) DRY=1;; *) die "opção desconhecida: $a";; esac; done
 [ -n "$REPO" ] || die "a skill não está num repositório git: $SKILL"

@@ -6,7 +6,7 @@ Subcomandos:
         tipos de subagente que EXISTEM: elenco.json + .claude/agents/*.md + os tipos colados de ARQ (um por linha;
         copie da descrição da ferramenta Agent da sessão). Tipo fora do elenco não dá erro no despacho — vira
         genérico em silêncio; por isso o rh confere.
-  ficha --persona P --task T --motivo M [--tipo X [--aceitar-substituicao]] [--arquivos A …] [--frente F]
+  ficha --persona P --task T --motivo M [--tipo X [--aceitar-substituicao]] [--arquivos A …] [--feature F]
         [--contratados N] [--n K] [--tipos-arq ARQ] [--json]
         FICHA DE CONTRATAÇÃO com Decisão, Persona, Nome do agente (rh-<persona>-<task>-<n>), Tipo (substituição
         declarada), Modelo, Permissão (SOMENTE LEITURA | ESCRITA em …), Critério de descarte, Linha de log e o bloco
@@ -62,20 +62,20 @@ def elenco(tipos_arq=None):
     return tipos
 
 
-def prompt(p, persona, task, motivo, permissao, frente):
+def prompt(p, persona, task, motivo, permissao, feature):
     linhas = [
         "MISSÃO (uma pergunta): %s" % p["missao"],
         "",
         "CONTEXTO MÍNIMO (você não vê a conversa): projeto codebase-specialists, harness de DESENVOLVIMENTO; "
-        "task %s%s. Motivo da contratação: %s." % (task, " da frente %s" % frente if frente else "", motivo),
-        "Comece pelo arquivo da task (.claude/state/frentes/<frente>/TASKS/%s.md) e pela saída citada no motivo; "
-        "leia por faixa, agrupe comandos num Bash só e use -q." % task if not frente else
-        "Comece pelo arquivo da task (.claude/state/frentes/%s/TASKS/%s.md) e pela saída citada no motivo; leia por "
-        "faixa, agrupe comandos num Bash só e use -q." % (frente, task),
+        "task %s%s. Motivo da contratação: %s." % (task, " da feature %s" % feature if feature else "", motivo),
+        "Comece pelo arquivo da task (.claude/state/features/<feature>/TASKS/%s.md) e pela saída citada no motivo; "
+        "leia por faixa, agrupe comandos num Bash só e use -q." % task if not feature else
+        "Comece pelo arquivo da task (.claude/state/features/%s/TASKS/%s.md) e pela saída citada no motivo; leia por "
+        "faixa, agrupe comandos num Bash só e use -q." % (feature, task),
         "",
         "ESCOPO: só o que a missão pede. Fora do escopo: %s." % p["nao_faz"],
         "PERMISSÃO: %s. Proibido em qualquer caso: escrever em .claude/state/, no oráculo congelado "
-        "(campanhas/<frente>/oraculo/) ou em dist/; rodar git que altere o repositório (add, commit, reset, checkout, "
+        "(campanhas/<feature>/oraculo/) ou em dist/; rodar git que altere o repositório (add, commit, reset, checkout, "
         "stash, clean, push); instalar dependência; os comandos gate, preauth e frase do motor (são do founder)."
         % permissao,
         "O repositório é PÚBLICO: nada de caminho absoluto de usuário, nome real ou credencial no retorno.",
@@ -121,10 +121,10 @@ def montar(a):
             raise ValueError("persona %s escreve: passe --arquivos com os caminhos EXATOS da task" % a.persona)
         permissao = "ESCRITA em %s" % ", ".join(a.arquivos)
     elif p["permissao"] == "escrita-oraculo":
-        alvo = a.arquivos or (["campanhas/%s/oraculo/" % a.frente] if a.frente else None)
+        alvo = a.arquivos or (["campanhas/%s/oraculo/" % a.feature] if a.feature else None)
         if not alvo:
-            raise ValueError("oraculista escreve só no oráculo: passe --frente F (ou --arquivos dentro de "
-                             "campanhas/<frente>/oraculo/)")
+            raise ValueError("oraculista escreve só no oráculo: passe --feature F (ou --arquivos dentro de "
+                             "campanhas/<feature>/oraculo/)")
         permissao = "ESCRITA em %s" % ", ".join(alvo)
     else:
         permissao = "SOMENTE LEITURA"
@@ -153,7 +153,7 @@ def montar(a):
                "Linha de log: Contratado: %s (%s, %s) · %s · resultado: (preencher após o retorno)"
                % (a.persona, tipo, p["modelo"], a.motivo),
                "Despacho: Agent subagent_type=%s · model=%s · description=\"%s\"" % (tipo, p["modelo"], nome),
-               "--- PROMPT ---", prompt(p, a.persona, a.task, a.motivo, permissao, a.frente),
+               "--- PROMPT ---", prompt(p, a.persona, a.task, a.motivo, permissao, a.feature),
                "--- FIM DO PROMPT ---"]
     return j, "\n".join(linhas) + "\n"
 
@@ -199,7 +199,7 @@ def conferir(txt, tipos_arq=None):
             if p["permissao"] == "leitura" and not le:
                 falhas.append("persona auxiliar %s tem de ser SOMENTE LEITURA" % pers.group(1))
             if p["permissao"] == "escrita-oraculo" and ("/oraculo/" not in perm.group(1) or le):
-                falhas.append("oraculista só escreve em campanhas/<frente>/oraculo/")
+                falhas.append("oraculista só escreve em campanhas/<feature>/oraculo/")
             if p["permissao"] == "escrita" and (le or any(c in perm.group(1) for c in "*?")):
                 falhas.append("executor escreve só em caminhos EXATOS")
     elif not perm:
@@ -220,7 +220,7 @@ def main(argv=None):
     s.add_argument("--tipo")
     s.add_argument("--aceitar-substituicao", action="store_true")
     s.add_argument("--arquivos", nargs="+")
-    s.add_argument("--frente")
+    s.add_argument("--feature")
     s.add_argument("--contratados", type=int, default=0)
     s.add_argument("--n", type=int, default=1)
     s.add_argument("--tipos-arq")

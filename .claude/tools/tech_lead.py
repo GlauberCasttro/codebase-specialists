@@ -3,14 +3,14 @@
 modelo por papel e snapshot para conferir quem só lê. O tech-lead julga; este script calcula.
 
 Subcomandos:
-  plano [--modo autonomo|iterativo|status] [--frente F] [--json|--brief]
-        sem --modo ⇒ exit 2 com a PERGUNTA do modo (o founder escolhe a cada invocação). Com modo: por frente ativa,
+  plano [--modo autonomo|iterativo|status] [--feature F] [--json|--brief]
+        sem --modo ⇒ exit 2 com a PERGUNTA do modo (o founder escolhe a cada invocação). Com modo: por feature ativa,
         progresso k/t, próxima, elegíveis, bloqueio, topologia, caminho crítico (cadeia mais longa de depends até a
         REVIEW), gates humanos e o despacho da próxima (papel, modelo, motivo).
-  proxima [--frente F] [--json]
+  proxima [--feature F] [--json]
         elegíveis agora: depends DONE; CORRECAO só depois da aprovação do founder (`ac.py check intake.3`) ⇒ senão
         bloqueio "aprovacao_founder"; "paralelo" só com ≥2 elegíveis de arquivos disjuntos e sem `Execução:
-        sequencial` no FRENTE.md.
+        sequencial` no FEATURE.md.
   modelo --papel executor|revisor|qa|review|oraculo|rh:<persona> [--ciclo N] [--task ARQ] [--json]
         modelo pela tabela roteamento.json (+ personas.json para rh:); papel desconhecido ⇒ exit 2.
   snap --out ARQ [--dir D] | snap --comparar ARQ [--dir D] [--json]
@@ -79,13 +79,13 @@ def modelo(papel, ciclo=1, task=None):
 
 # ------------------------------------------------------------------ plano / próxima
 
-def frentes_com_tasks(r, so=None):
+def features_com_tasks(r, so=None):
     out = []
-    for x in L.frentes(r)["ativas"]:
+    for x in L.features(r)["ativas"]:
         if so and x["id"] != so:
             continue
-        fd = L.frente_dir(x["id"], r)
-        out.append((x, L.ler_tasks(fd), L.ler_frente(os.path.join(fd, "FRENTE.md"))))
+        fd = L.feature_dir(x["id"], r)
+        out.append((x, L.ler_tasks(fd), L.ler_feature(L.feature_md(fd))))
     return out
 
 
@@ -136,11 +136,11 @@ def caminho_critico(tasks):
     return melhor
 
 
-def plano_frente(x, tasks, fr, r):
+def plano_feature(x, tasks, fr, r):
     fid = x["id"]
     if not tasks:
         return {"id": fid, "origem": x.get("origem"), "progresso": "—", "proxima": None, "elegiveis": [],
-                "bloqueio": "frente_legada_sem_tasks", "topologia": "—", "caminho_critico": [],
+                "bloqueio": "feature_legada_sem_tasks", "topologia": "—", "caminho_critico": [],
                 "gates_humanos": ["aceite_humano", "frase_conferir"], "despacho": None}
     el, bloq, top = proxima_de(fid, tasks, fr, r)
     gates = []
@@ -167,9 +167,9 @@ def cmd_plano(a, r):
         else:
             print(PERGUNTA)
         return 2
-    fs = [plano_frente(x, t, fr, r) for x, t, fr in frentes_com_tasks(r, a.frente)]
-    obj = {"modo": a.modo, "frentes": fs}
-    linhas = ["Modo: %s · frentes ativas: %d" % (a.modo, len(fs))]
+    fs = [plano_feature(x, t, fr, r) for x, t, fr in features_com_tasks(r, a.feature)]
+    obj = {"modo": a.modo, "features": fs}
+    linhas = ["Modo: %s · features ativas: %d" % (a.modo, len(fs))]
     for f in fs:
         linhas.append("%s · %s · próxima: %s · topologia: %s%s" % (f["id"], f["progresso"], f["proxima"] or "—",
                                                                   f["topologia"], " · BLOQUEIO: %s" % f["bloqueio"]
@@ -181,22 +181,22 @@ def cmd_plano(a, r):
             d = f["despacho"]
             linhas.append("  despacho: %s (%s) em %s — %s" % (d["task"], d["papel"], d["modelo"], d["motivo"]))
     if not fs:
-        linhas.append("nenhuma frente ativa — IDLE: pergunte ao founder qual frente criar (criar-frente)")
+        linhas.append("nenhuma feature ativa — IDLE: pergunte ao founder qual feature criar (criar-feature)")
     t = "\n".join(linhas)
     L.saida(obj, a, t, t)
     return 0
 
 
 def cmd_proxima(a, r):
-    fs = frentes_com_tasks(r, a.frente)
+    fs = features_com_tasks(r, a.feature)
     fs = [f for f in fs if f[1]] or fs
     if not fs:
-        L.saida({"frente": None, "elegiveis": [], "bloqueio": "sem_frente_ativa", "topologia": "—"}, a,
-                "nenhuma frente ativa")
+        L.saida({"feature": None, "elegiveis": [], "bloqueio": "sem_feature_ativa", "topologia": "—"}, a,
+                "nenhuma feature ativa")
         return 0
     x, tasks, fr = fs[0]
     el, bloq, top = proxima_de(x["id"], tasks, fr, r)
-    obj = {"frente": x["id"], "elegiveis": el, "bloqueio": bloq, "topologia": top}
+    obj = {"feature": x["id"], "elegiveis": el, "bloqueio": bloq, "topologia": top}
     L.saida(obj, a, "%s · elegíveis: %s · topologia: %s%s" % (x["id"], ", ".join(el) or "—", top,
                                                               " · bloqueio: %s" % bloq if bloq else ""))
     return 0
@@ -269,11 +269,11 @@ def main(argv=None):
     sub = ap.add_subparsers(dest="cmd")
     s = sub.add_parser("plano")
     s.add_argument("--modo", choices=MODOS)
-    s.add_argument("--frente")
+    s.add_argument("--feature")
     s.add_argument("--json", action="store_true")
     s.add_argument("--brief", action="store_true")
     s = sub.add_parser("proxima")
-    s.add_argument("--frente")
+    s.add_argument("--feature")
     s.add_argument("--json", action="store_true")
     s = sub.add_parser("modelo")
     s.add_argument("--papel", required=True)

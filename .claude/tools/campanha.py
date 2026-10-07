@@ -49,7 +49,7 @@ def exige_campanha(f, r):
         raise SystemExit("nome de campanha inválido: %r" % f)
     st = L.campanha_estado(f, r)
     if st is None:
-        print("RECUSADO: campanha campanhas/%s não iniciada (criar-frente abre com ac.py init)" % f, file=sys.stderr)
+        print("RECUSADO: campanha campanhas/%s não iniciada (criar-feature abre com ac.py init)" % f, file=sys.stderr)
         sys.exit(1)
     return st
 
@@ -76,7 +76,7 @@ def cmd_etapa(a, r):
             pend[0]["id"], pend[0]["ctx"], pend[0]["do"], AC_LITERAL, a.f, pend[0]["id"])
     else:
         prox = "campanha %s: %s" % (a.f, etapa)
-    obj = {"frente": a.f, "motor": L.motor(), "etapa": etapa, "rodada": st.get("round"), "pendentes": pend,
+    obj = {"feature": a.f, "motor": L.motor(), "etapa": etapa, "rodada": st.get("round"), "pendentes": pend,
            "proximo": prox}
     t = "campanha %s · rodada %s · etapa %s\n%s\npróximo: %s" % (
         a.f, st.get("round"), etapa, "\n".join("  [ ] %s (%s) %s" % (p["id"], p["ctx"], p["do"]) for p in pend)

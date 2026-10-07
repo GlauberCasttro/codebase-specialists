@@ -5,7 +5,7 @@
 - Não despacha subagentes nem roda o oráculo ou as suítes: `oracle.calibration`, `integration.tests_green`,
   `decision` e `report` são **declarados** por você com `set`; o motor confere presença e coerência, não verdade.
 - Não roda git: o portão `commit` registra autorização; não impede um commit feito fora dele.
-- Não confere que a frente escreveu só no seu `escreve` (o `plan check` valida o plano, não o diff — quem confere o
+- Não confere que a feature escreveu só no seu `escreve` (o `plan check` valida o plano, não o diff — quem confere o
   diff é o portão + `conferir-commit.sh` + o `/revisor`).
 - Orçamento: só `max_rounds` é aplicado (no `round new`); `max_hours`/`max_parallel` são informativos; "2 rodadas sem
   progresso → escalar" é julgamento seu.
@@ -18,7 +18,7 @@
 | AC-08 | `oracle change` re-hasheia o disco e absorve edição indevida | confira o diff dos arquivos do oráculo desde o freeze antes |
 | AC-09 | `run record` no mesmo segundo do `done correcao` é recusado | registre de novo |
 | AC-10 | `round new` abriu rodada com remedicao/decisao abertas | confira `status` antes do `round new` |
-| AC-12 | `set scope` muda o escopo depois do portão, sem evento | não use; escopo novo = frente nova ou founder |
+| AC-12 | `set scope` muda o escopo depois do portão, sem evento | não use; escopo novo = feature nova ou founder |
 | AC-13 | o hook nega comando legítimo com variável + palavra de aprovação | caminho literal sempre |
 | — | trocar o critério de parada não invalida o portão `stop` | critério novo ⇒ peça novo script de aprovação |
 

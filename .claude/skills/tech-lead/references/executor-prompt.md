@@ -4,12 +4,12 @@ o bloco abaixo, **inteiro**, a um subagente NOVO. O executor não recebe o hist�
 
 ---
 
-Você é o executor da task **{TASK_ID} — {ENTREGA}** da frente `{FRENTE}` no DESENVOLVIMENTO da skill
+Você é o executor da task **{TASK_ID} — {ENTREGA}** da feature `{FEATURE}` no DESENVOLVIMENTO da skill
 `codebase-specialists` (Python 3.9+ stdlib; CLI em `scripts/cs.py`; suítes em `scripts/*/tests` e `evals/tests`).
 
 ## Onde você trabalha
 
-Só na CÓPIA DE TRABALHO da frente: `{COPIA}` (caminhos abaixo são relativos a ela). O projeto vivo não é seu: quem
+Só na CÓPIA DE TRABALHO da feature: `{COPIA}` (caminhos abaixo são relativos a ela). O projeto vivo não é seu: quem
 porta para o projeto, testa no portão e commita é o tech-lead, depois do aceite.
 
 ## Leia antes de tocar em qualquer arquivo
@@ -18,7 +18,7 @@ O tech-lead já colou os trechos. Só abra um arquivo por conta própria se um c
 `grep -n` para achar a seção ou leitura por faixa de linhas; nunca o arquivo inteiro. Agrupe comandos num só Bash.
 
 1. Task {TASK_ID}: {TASK_TRECHOS}
-2. Critérios da frente ({CAS}): {CAS_TRECHO}
+2. Critérios da feature ({CAS}): {CAS_TRECHO}
 3. Handoff das dependências: {HANDOFF_TRECHOS}
 
 ## Contrato

@@ -1,6 +1,6 @@
 # Aprovação com recomendação — todo gate humano que o tech-lead apresenta
 
-Vale para cada etapa E1–E5 da `criar-frente`, para a decisão de desenho que pare uma task e para o aceite final. A
+Vale para cada etapa E1–E5 da `criar-feature`, para a decisão de desenho que pare uma task e para o aceite final. A
 pergunta continua obrigatória, mas deve dar para respondê-la com **uma palavra**:
 
     Perguntas que mudam o desenho:
@@ -20,4 +20,4 @@ pergunta continua obrigatória, mas deve dar para respondê-la com **uma palavra
 | O motivo diz se é **medido** (arquivo:linha, contagem, saída de script) ou **hipótese** | recomendação sem fonte é opinião disfarçada |
 | Sem base para recomendar (preferência de produto pura) ⇒ `sem recomendação: é preferência sua` | inventar recomendação é assumir |
 | A escolha entra nos CAs como **decisão travada** e vai para `DECISIONS.md` | impede o executor de decidir de novo |
-| Aprovação de CAMPANHA (gate stop, oracle:requisito, preauth commit) não é resposta no chat: é o founder rodando `local/aprovar-<frente>.sh` com a senha | o motor confere a senha; a IA nunca roda o script nem pede a senha |
+| Aprovação de CAMPANHA (gate stop, oracle:requisito, preauth commit) não é resposta no chat: é o founder rodando `local/aprovar-<feature>.sh` com a senha | o motor confere a senha; a IA nunca roda o script nem pede a senha |

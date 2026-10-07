@@ -1,8 +1,8 @@
 #!/bin/bash
-# portar.sh <frente> [--dry-run] [--src DIR] [--lista ARQ] -- <arquivo>...
-# Leva os arquivos da frente da cópia de trabalho (<local>/work/<frente>/codebase-specialists, ou --src) para a
+# portar.sh <feature> [--dry-run] [--src DIR] [--lista ARQ] -- <arquivo>...
+# Leva os arquivos da feature da cópia de trabalho (<local>/work/<feature>/codebase-specialists, ou --src) para a
 # skill VIVA (a raiz do projeto).
-# Por arquivo: se o vivo == HEAD (ninguém mexeu), copia; se o vivo mudou desde HEAD (outra sessão/frente), faz merge
+# Por arquivo: se o vivo == HEAD (ninguém mexeu), copia; se o vivo mudou desde HEAD (outra sessão/feature), faz merge
 # de 3 vias (git merge-file; base = HEAD, nosso = vivo, deles = cópia) e PARA em conflito sem escrever aquele
 # arquivo. Arquivo ausente na cópia = remoção (só se o vivo == HEAD).
 # Depois de um merge, o vivo difere da cópia testada: rode o portão de novo com --src <skill viva>.
@@ -10,7 +10,7 @@
 set -u
 case "${1:-}" in -h|--help|'') sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;; esac
 . "$(dirname "$0")/_comum.sh"
-F="$1"; shift; frente_ok "$F"; SRC="$WS/work/$F/$NOME"; DRY=0; ARQS=()
+F="$1"; shift; feature_ok "$F"; SRC="$WS/work/$F/$NOME"; DRY=0; ARQS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY=1; shift;;
@@ -35,7 +35,7 @@ for f in "${ARQS[@]}"; do
   if [ ! -e "$w" ]; then
     if [ ! -e "$v" ]; then echo "já ausente: $f"
     elif [ $vivo_igual_head -eq 1 ]; then echo "REMOVE: $f"; [ $DRY -eq 1 ] || rm -f "$v"
-    else echo "CONFLITO (a frente remove, mas o vivo mudou desde HEAD): $f"; CONF=1; fi
+    else echo "CONFLITO (a feature remove, mas o vivo mudou desde HEAD): $f"; CONF=1; fi
     continue
   fi
   if [ -e "$v" ] && cmp -s "$w" "$v"; then echo "igual: $f"; continue; fi
@@ -55,5 +55,5 @@ done
 rm -rf "$TMP"
 [ $DRY -eq 1 ] && echo "(dry-run: nada escrito)"
 [ $MERGES -eq 1 ] && echo "ATENÇÃO: houve merge — rode o portão de novo com --src $SKILL antes de conferir-commit."
-[ $CONF -eq 1 ] && { echo "PARADO: resolva os conflitos (ou devolva à frente) antes de seguir."; exit 1; }
+[ $CONF -eq 1 ] && { echo "PARADO: resolva os conflitos (ou devolva à feature) antes de seguir."; exit 1; }
 exit 0

@@ -1,11 +1,11 @@
-"""estado_lib.py — biblioteca comum dos scripts do harness de desenvolvimento (frente, contrato, guard-estado, sessao,
+"""estado_lib.py — biblioteca comum dos scripts do harness de desenvolvimento (feature, contrato, guard-estado, sessao,
 tech_lead, campanha). Não é comando: só importável. Stdlib, Python 3.9+.
 
 O que mora aqui (uma fonte para todos):
   - caminhos: raiz do projeto ($CS_DEV_SKILL_DIR; padrão: dois níveis acima de .claude/tools), estado, motor
     ($CS_DEV_AC — variável de TESTE; padrão: o motor embutido .claude/tools/ac/ac.py);
-  - leitura dos formatos da ESPEC §3: frentes.json, eventos.jsonl, FRENTE.md (Bloco A), tasks (Bloco B), INDEX;
-  - o bloco gerado do WORKFLOW.md (entre <!-- frentes:inicio --> e <!-- frentes:fim -->; o resto é humano);
+  - leitura dos formatos da ESPEC §3: features.json, eventos.jsonl, FEATURE.md (Bloco A), tasks (Bloco B), INDEX;
+  - o bloco gerado do WORKFLOW.md (entre <!-- features:inicio --> e <!-- features:fim -->; o resto é humano);
   - git e motor por subprocess (nunca shell).
 """
 import datetime
@@ -20,15 +20,24 @@ TOOLS = os.path.dirname(os.path.abspath(__file__))
 ID_RE = re.compile(r"^[a-z][a-z0-9]*(-[a-z0-9]+){0,5}$")
 TASK_NOME_RE = re.compile(r"^(\d{2})-(TASK|BUG|GAP|DEBT)-([A-Z0-9]+(?:-[A-Z0-9]+)*)\.md$")
 TIPOS_TASK = ("ORACULO", "CORRECAO", "QA", "REVIEW")
-CAB_TASK = ("id", "frente", "tipo", "grupo", "agente", "CA", "depends", "status", "gate")
+CAB_TASK = ("id", "feature", "tipo", "grupo", "agente", "CA", "depends", "status", "gate")
 SECOES_TASK = ("Goal", "Contexto", "Subtasks", "Invariants", "Scope IN / OUT", "Arquivos permitidos", "AC", "DoD",
                "Verificação", "Handoff")
 ETAPAS = ("E1", "E2", "E3", "E4", "E5")
 NOMES_ETAPA = {"E0": "Pré-condição", "E1": "Analisar a demanda", "E2": "Investigação medida",
-               "E3": "FRENTE.md (Bloco A)", "E4": "Tasks (Bloco B)", "E5": "Abertura"}
-WF_INI = "<!-- frentes:inicio (gerado por .claude/tools/frente.py; não edite à mão) -->"
-WF_FIM = "<!-- frentes:fim -->"
-MARCADOR_ARCHIVE = "<!-- fechar-frente:archive-completo -->"
+               "E3": "FEATURE.md (Bloco A)", "E4": "Tasks (Bloco B)", "E5": "Abertura"}
+WF_INI = "<!-- features:inicio (gerado por .claude/tools/feature.py; não edite à mão) -->"
+WF_FIM = "<!-- features:fim -->"
+MARCADOR_ARCHIVE = "<!-- fechar-feature:archive-completo -->"
+# COMPAT (state antigo, só LEITURA): até a renomeação frente→feature o state usava os rótulos abaixo. Os scripts
+# leem os dois e escrevem só os novos. Não remova enquanto houver state antigo em algum clone.
+LEGADO_DIR, LEGADO_JSON, LEGADO_MD = "frentes", "frentes.json", "FRENTE.md"  # COMPAT
+LEGADO_ID = "FRENTE-ID"  # COMPAT
+LEGADO_ACEITE = "Aceite da Frente"  # COMPAT
+LEGADO_CAB = "frente"  # COMPAT: chave antiga do cabeçalho de task
+LEGADO_CARIMBO = "FRENTES"  # COMPAT: campo antigo do resume-stamp
+LEGADO_WF_INI, LEGADO_WF_FIM = "<!-- frentes:inicio", "<!-- frentes:fim -->"  # COMPAT
+LEGADO_MARCADOR = "<!-- fechar-frente:archive-completo -->"  # COMPAT
 # área sensível (roteia opus no revisor; impede complexidade baixa) e texto de protocolo (idem)
 SENSIVEIS = (".claude/tools/ac/", "scripts/harness/")
 SENSIVEIS_NOME = ("guard", "hook", "frase")
@@ -52,8 +61,24 @@ def state(r=None):
     return os.path.join(r or raiz(), ".claude", "state")
 
 
-def frente_dir(fid, r=None):
-    return os.path.join(state(r), "frentes", fid)
+def feature_dir(fid, r=None):
+    novo = os.path.join(state(r), "features", fid)
+    velho = os.path.join(state(r), LEGADO_DIR, fid)  # COMPAT: feature criada antes da renomeação
+    return velho if not os.path.exists(novo) and os.path.isdir(velho) else novo
+
+
+def feature_md(fd):
+    """FEATURE.md da pasta da feature (COMPAT: lê FRENTE.md se só o antigo existir)."""
+    novo, velho = os.path.join(fd, "FEATURE.md"), os.path.join(fd, LEGADO_MD)
+    return velho if not os.path.exists(novo) and os.path.isfile(velho) else novo
+
+
+def raizes_estado(r=None):
+    """raízes do sha ESTADO: as novas; COMPAT: as antigas enquanto o state não tiver nenhuma nova."""
+    st = state(r)
+    if os.path.exists(os.path.join(st, "features.json")) or os.path.exists(os.path.join(st, "features")):
+        return ["features.json", "features"]
+    return [LEGADO_JSON, LEGADO_DIR]
 
 
 def campanha_dir(fid, r=None):
@@ -176,11 +201,13 @@ def campanha_estado(fid, r=None):
         return None
 
 
-# ------------------------------------------------------------------ frentes.json e eventos
+# ------------------------------------------------------------------ features.json e eventos
 
-def frentes(r=None):
+def features(r=None):
     d = None
-    t = ler(os.path.join(state(r), "frentes.json"))
+    t = ler(os.path.join(state(r), "features.json"))
+    if t is None:
+        t = ler(os.path.join(state(r), LEGADO_JSON))  # COMPAT: frentes.json antigo
     if t:
         try:
             d = json.loads(t)
@@ -193,16 +220,19 @@ def frentes(r=None):
     return d
 
 
-def salvar_frentes(d, r=None):
-    gravar(os.path.join(state(r), "frentes.json"), json.dumps(d, ensure_ascii=False, indent=1) + "\n")
+def salvar_features(d, r=None):
+    gravar(os.path.join(state(r), "features.json"), json.dumps(d, ensure_ascii=False, indent=1) + "\n")
+    velho = os.path.join(state(r), LEGADO_JSON)  # COMPAT: migra — o novo passa a valer, o antigo sai
+    if os.path.isfile(velho):
+        os.remove(velho)
 
 
 def ids_ativas(r=None):
-    return [x["id"] for x in frentes(r)["ativas"]]
+    return [x["id"] for x in features(r)["ativas"]]
 
 
 def eventos(fid, r=None):
-    t = ler(os.path.join(frente_dir(fid, r), "eventos.jsonl"), "")
+    t = ler(os.path.join(feature_dir(fid, r), "eventos.jsonl"), "")
     out = []
     for linha in t.splitlines():
         if linha.strip():
@@ -215,13 +245,16 @@ def eventos(fid, r=None):
 
 def em_criacao(r=None):
     """ids com eventos.jsonl e sem evento de abertura (criação em andamento)."""
-    base = os.path.join(state(r), "frentes")
+    nomes = set()
+    for b in ("features", LEGADO_DIR):  # COMPAT: lê também a pasta antiga
+        base = os.path.join(state(r), b)
+        if os.path.isdir(base):
+            nomes.update(os.listdir(base))
     out = []
-    if os.path.isdir(base):
-        for n in sorted(os.listdir(base)):
-            ev = eventos(n, r)
-            if ev and not any(e.get("tipo") == "abertura" for e in ev):
-                out.append(n)
+    for n in sorted(nomes):
+        ev = eventos(n, r)
+        if ev and not any(e.get("tipo") == "abertura" for e in ev):
+            out.append(n)
     return out
 
 
@@ -279,15 +312,17 @@ def itens_codigo(corpo):
     return [m.group(1).strip() for m in re.finditer(r"(?m)^\s*-\s+`([^`]+)`", corpo or "")]
 
 
-# ------------------------------------------------------------------ FRENTE.md
+# ------------------------------------------------------------------ FEATURE.md
 
-def ler_frente(p):
+def ler_feature(p):
     txt = ler(p)
     if txt is None:
         return None
-    m = re.search(r"(?m)^FRENTE-ID:\s*(\S*)\s*$", txt)
+    m = re.search(r"(?m)^(?:FEATURE-ID|%s):\s*(\S*)\s*$" % LEGADO_ID, txt)  # COMPAT: FRENTE-ID
     n = re.search(r"(?m)^Nome:\s*(.+?)\s*$", txt)
     sc = secoes(txt)
+    if "Aceite da Feature" not in sc and LEGADO_ACEITE in sc:  # COMPAT: seção antiga
+        sc["Aceite da Feature"] = sc[LEGADO_ACEITE]
     cas = []
     corpo = sc.get("Critérios de Aceitação", "")
     blocos = re.split(r"(?m)^(?=- \*\*CA-\d+)", corpo)
@@ -297,7 +332,7 @@ def ler_frente(p):
             prova = re.search(r"Prova:\s*`([^`]+)`", b)
             cas.append({"id": mm.group(1), "titulo": mm.group(2).strip().rstrip("."), "texto": b.strip(),
                         "prova": prova.group(1) if prova else None})
-    aceite = sc.get("Aceite da Frente", "")
+    aceite = sc.get("Aceite da Feature", "")
     qa = re.search(r"(?m)^### Aceite QA\s*[—–-]\s*(\S+)", aceite)
     rv = re.search(r"(?m)^### Aceite Review\s*[—–-]\s*(\S+)", aceite)
     return {"txt": txt, "id": m.group(1) if m else None, "nome": n.group(1) if n else None, "secoes": sc,
@@ -352,8 +387,8 @@ def ler_task(p):
             titulo = (m.group(1), m.group(2).strip())
             continue
         m = re.match(r"^([A-Za-z]+):\s?(.*)$", linha)
-        if m and m.group(1) in CAB_TASK + ("complexidade",):
-            cab.setdefault(m.group(1), m.group(2).strip())
+        if m and m.group(1) in CAB_TASK + ("complexidade", LEGADO_CAB):
+            cab.setdefault("feature" if m.group(1) == LEGADO_CAB else m.group(1), m.group(2).strip())  # COMPAT
     sc = secoes(txt)
     verif = sc.get("Verificação", "")
     blocos = re.findall(r"```[a-z]*\n(.*?)```", verif, re.S)
@@ -472,7 +507,7 @@ def progresso(tasks):
 def render_index(fid, tasks):
     el = elegiveis(tasks)
     prox = el[0]["stem"] if el else "—"
-    linhas = ["# INDEX — frente %s" % fid, "", "<!-- gerado por .claude/tools/frente.py a partir dos cabeçalhos das "
+    linhas = ["# INDEX — feature %s" % fid, "", "<!-- gerado por .claude/tools/feature.py a partir dos cabeçalhos das "
               "tasks; não edite à mão -->", "",
               "Progresso: %s · próxima: %s" % (progresso(tasks), prox), "",
               "| id | entrega | tipo | grupo | CAs | depends | status |", "|---|---|---|---|---|---|---|"]
@@ -484,7 +519,7 @@ def render_index(fid, tasks):
 
 
 def linhas_index(fid, r=None):
-    t = ler(os.path.join(frente_dir(fid, r), "INDEX.md"), "")
+    t = ler(os.path.join(feature_dir(fid, r), "INDEX.md"), "")
     return [l.split("|")[1].strip() for l in t.splitlines() if re.match(r"^\| \d{2}-(TASK|BUG|GAP|DEBT)-", l)]
 
 
@@ -492,9 +527,9 @@ def render_bloco_workflow(d):
     at = d.get("ativas") or []
     linhas = [WF_INI, "**Estado:** %s" % ("IN_PROGRESS" if at else "IDLE")]
     if at:
-        linhas.append("**Frentes ativas:** " + ", ".join("%s (%s)" % (x["id"], x.get("origem", "?")) for x in at))
+        linhas.append("**Features ativas:** " + ", ".join("%s (%s)" % (x["id"], x.get("origem", "?")) for x in at))
     else:
-        linhas.append("**Frentes ativas:** nenhuma")
+        linhas.append("**Features ativas:** nenhuma")
     if d.get("entregues"):
         u = d["entregues"][-1]
         linhas.append("**Última entrega:** %s (%s) — %s" % (u["id"], u.get("fechada_em", "?"), u.get("archive", "")))
@@ -503,9 +538,10 @@ def render_bloco_workflow(d):
 
 
 def bloco_workflow_atual(txt):
-    if txt and WF_INI in txt and WF_FIM in txt:
-        i = txt.index(WF_INI)
-        return txt[i:txt.index(WF_FIM, i) + len(WF_FIM)]
+    for ini, fim in ((WF_INI, WF_FIM), (LEGADO_WF_INI, LEGADO_WF_FIM)):  # COMPAT: marcadores antigos
+        if txt and ini in txt and fim in txt:
+            i = txt.index(ini)
+            return txt[i:txt.index(fim, i) + len(fim)]
     return None
 
 
