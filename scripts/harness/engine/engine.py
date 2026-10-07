@@ -236,8 +236,56 @@ def tree_sha(root, paths):
     return h.hexdigest()
 
 
+def git_ignored(root, paths):
+    """Subconjunto de `paths` ignorado pelo git (.gitignore; rastreado nunca conta). Sem git/falha → set()."""
+    paths = [p for p in paths or [] if p]
+    if not paths:
+        return set()
+    try:
+        p = subprocess.run(["git", "check-ignore", "-z", "--stdin"], cwd=root, input="\0".join(paths).encode("utf-8"),
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
+    except (OSError, subprocess.TimeoutExpired):
+        return set()
+    if p.returncode not in (0, 1):
+        return set()
+    return {x for x in p.stdout.decode("utf-8", "replace").split("\0") if x}
+
+
+def _git_files_in_scope(root, patterns):
+    """R1 (iter18): rastreados + não rastreados NÃO ignorados (git ls-files -co --exclude-standard) nos prefixos
+    literais — artefato de build ignorado (bin/, obj/) fica fora do tree_sha256. None = sem git ou git falhou."""
+    if not os.path.isdir(root):
+        return None
+    code, _ = git(root, ["rev-parse", "--is-inside-work-tree"])
+    if code != 0:
+        return None
+    prefixes = sorted(set(hcore.literal_prefix(p).rstrip("/") for p in patterns))
+    spec = [] if "" in prefixes else [":(literal)" + x for x in prefixes]
+    try:
+        p = subprocess.run(["git", "ls-files", "-co", "--exclude-standard", "-z", "--"] + spec, cwd=root,
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if p.returncode != 0:
+        return None
+    out = set()
+    skip = (".git", "node_modules", hcore.STATE_DIR)
+    for rel in p.stdout.decode("utf-8", "replace").split("\0"):
+        if not rel or any(part in skip for part in rel.split("/")[:-1]) or not os.path.isfile(os.path.join(root, rel)):
+            continue
+        if hcore.matches_any(rel, patterns):
+            out.add(rel)
+    return out
+
+
 def files_in_scope(root, patterns):
-    """Arquivos existentes que casam com allowed_paths (walk limitado aos prefixos literais)."""
+    """Arquivos existentes que casam com allowed_paths: pelo git (sem os ignorados); sem git, walk limitado aos
+    prefixos literais."""
+    if not patterns:
+        return []
+    viagit = _git_files_in_scope(root, patterns)
+    if viagit is not None:
+        return sorted(viagit)
     out = set()
     for p in patterns or []:
         lp = hcore.literal_prefix(p).rstrip("/")
@@ -619,6 +667,8 @@ def brief_problems(ctx, task, agent=None):
             P.append("allowed_path em área reservada do harness: %r" % p)
         elif terr and not hcore.pattern_within(p, terr):
             P.append("allowed_path %r fora do território de %s (%s)" % (p, agent, ", ".join(terr)))
+        elif terr and whole_territory(p, terr):
+            P.append(whole_territory_problem(task.get("tree_id") or task.get("id"), p, agent, terr))
         elif not terr and ctx.team is not None:
             P.append("%s sem território em team.json5" % agent)
     for p in task.get("protected_paths") or []:
@@ -667,6 +717,39 @@ def brief_problems(ctx, task, agent=None):
     if need - have:
         P.append("invariantes do escopo não anexados: %s (rode cs-state amend ou re-add)" % ", ".join(sorted(need - have)))
     return P
+
+
+MATCH_ALL_TAILS = ("", "**", "**/*", "**/")
+
+
+def whole_territory(pattern, territory):
+    """R7 (iter18): o glob casa TODO arquivo de algum glob do território? (igual, `X/**`, `X/**/*`, `X/`, `X`)."""
+    try:
+        p = hcore.norm_rel(pattern)
+    except StateError:
+        return False
+    if hcore.has_wild(p):
+        pl = hcore.literal_prefix(p)
+        if p[len(pl):] not in MATCH_ALL_TAILS:
+            return False
+    else:
+        pl = p.rstrip("/") + "/"
+    for t in territory or []:
+        try:
+            tl = hcore.literal_prefix(t)
+        except StateError:
+            continue
+        if not hcore.has_wild(t) and not t.endswith("/") and not hcore.has_wild(p):
+            continue  # território de arquivo explícito: o mesmo arquivo explícito é escopo estreito
+        if tl.startswith(pl):
+            return True
+    return False
+
+
+def whole_territory_problem(ident, pattern, agent, territory):
+    return ("allowed_path %r é o território inteiro de %s (%s): estreite para arquivos explícitos ou diretório "
+            "estreito — cs-state amend %s --field allowed_paths --after '[\"<arquivo>\"]' --reason '<por quê>'"
+            % (pattern, agent, ", ".join(territory), ident or "<id>"))
 
 
 def required_invariants(ctx, allowed_paths):
@@ -960,6 +1043,9 @@ def g_reverify(ctx, kind, ent, a):
         return ["sem submission da tentativa %d para verificar de novo (use retry/reroute/drop)" % task["attempts"]]
     if ent.get("state") == "REJECTED" and verify_failure(ctx, task)[0] != "environment":
         return ["reverify de REJECTED só quando o verify falhou por AMBIENTE; falha de código → cs-state retry"]
+    if ent.get("state") in ("VERIFIED", "REVIEWED") and not tree_changed(ctx.root, task):
+        return ["reverify de %s só quando a árvore mudou desde o verify (tree_sha256 igual): siga para review/accept"
+                % ent.get("state")]
     return []
 
 
@@ -1003,10 +1089,16 @@ def g_evidence(ctx, kind, ent, a):
 def g_tree(ctx, kind, ent, a):
     task = hcore.task_of_deleg(ctx.board, ent["id"])
     b = ((task.get("gate_report") or {}).get("build") or {})
-    files = b.get("tree_files") or []
-    if b.get("tree_sha256") and tree_sha(ctx.root, files) != b["tree_sha256"]:
-        return ["árvore mudou desde o verify (tree_sha256 diverge): rode verify de novo"]
+    if tree_changed(ctx.root, task):
+        return ["árvore mudou desde o verify (tree_sha256 diverge): cs-state reverify --task %s (verifica de novo; "
+                "reviews valem se os files_changed não mudaram)" % task["id"]]
     return []
+
+
+def tree_changed(root, task):
+    """O tree_sha256 do último verify diverge da árvore de agora? (False sem verify gravado)."""
+    b = ((task.get("gate_report") or {}).get("build") or {})
+    return bool(b.get("tree_sha256")) and tree_sha(root, b.get("tree_files") or []) != b["tree_sha256"]
 
 
 def current_reviews(task):

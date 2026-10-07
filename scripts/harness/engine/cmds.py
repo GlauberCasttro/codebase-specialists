@@ -539,8 +539,13 @@ def verify(root, actor, tid):
         lesson_failures = ["lição %s violada: %s (check: %s)" % (f["id"], f["rule"], f.get("check")) for f in chk["failed"]]
     except ImportError:
         pass
-    tree_files = sorted(set(files_changed) | set(engine.files_in_scope(root, t0["allowed_paths"])))
-    build_run.update({"attempt": t0["attempts"], "tree_sha256": engine.tree_sha(root, tree_files), "tree_files": tree_files})
+    tree_files = set(files_changed) | set(engine.files_in_scope(root, t0["allowed_paths"]))
+    # R1 (iter18): ignorado pelo git (saída de build de qualquer task) não entra no tree_sha256
+    tree_files = sorted(tree_files - engine.git_ignored(root, sorted(tree_files)))
+    dirty_now = engine.git_dirty(root) or {}
+    build_run.update({"attempt": t0["attempts"], "tree_sha256": engine.tree_sha(root, tree_files), "tree_files": tree_files,
+                      "changed_sha256": engine.tree_sha(root, files_changed),
+                      "dirty_in_scope": {p: dirty_now[p] for p in tree_files if p in dirty_now}})
     import envfail
     fkind, ftools = envfail.classify(root, [build_run] + ac_runs, diff_problems + lesson_failures)
     gate = {"build": build_run, "ac_tests": ac_runs, "diff_problems": diff_problems, "lesson_failures": lesson_failures}
@@ -553,7 +558,8 @@ def verify(root, actor, tid):
 
         def extra(to, probs):
             gr = {"build": {k: build_run[k] for k in ("exit_code", "at", "tree_sha256", "command_sha256", "output_sha256",
-                                                      "duration_s", "cmd", "attempt", "tree_files", "timed_out")},
+                                                      "duration_s", "cmd", "attempt", "tree_files", "timed_out",
+                                                      "changed_sha256", "dirty_in_scope")},
                   "ac_tests": ac_runs, "verdict": None, "by": None, "at": None}
             gr["build"]["tail"] = (build_run.get("tail") or "")[-600:]
             if to == "REJECTED" and fkind:
@@ -576,15 +582,53 @@ def verify(root, actor, tid):
 
 def reverify(root, actor, tid):
     """REJECTED (falha de AMBIENTE) ou ESCALATED → RETURNED e roda o verify de novo (ambiente consertado). Não consome
-    tentativa; o pipeline segue normal (review por gate, accept)."""
+    tentativa; o pipeline segue normal (review por gate, accept).
+    De VERIFIED/REVIEWED (árvore mudou desde o verify — iter18): as reviews da tentativa ficam se o conteúdo dos
+    files_changed é o mesmo do verify; senão vão para `reviews_invalidated` (o accept exige nova review)."""
     def build(ctx):
         t, d = _deleg(ctx, resolve_task_id(ctx, tid), "reverify")
+        was_verified = d["state"] in ("VERIFIED", "REVIEWED")
 
         def extra(to, probs):
-            return [["set", ref("task", t["id"]), "block_reason", None]]
+            ops = [["set", ref("task", t["id"]), "block_reason", None]]
+            if was_verified:
+                ops += _invalidate_reviews_if_changed(ctx, t)
+                ops += _post_verify_changes(ctx, t, d)
+            return ops
         return [transition(ctx, "deleg", d["id"], "reverify", {}, extra)]
     engine.commit(root, actor, build)
     return verify(root, actor, tid)
+
+
+def _invalidate_reviews_if_changed(ctx, t):
+    """Reviews da tentativa julgaram o conteúdo dos files_changed do verify: mesmo conteúdo → ficam; mudou (ou verify
+    antigo sem changed_sha256) → saem de `reviews` para `reviews_invalidated` (registro mantido)."""
+    b = ((t.get("gate_report") or {}).get("build") or {})
+    files = (t.get("submission") or {}).get("files_changed") or []
+    if b.get("changed_sha256") and engine.tree_sha(ctx.root, files) == b["changed_sha256"]:
+        return []
+    cur = [r for r in t.get("reviews") or [] if r.get("attempt") == t["attempts"]]
+    if not cur:
+        return []
+    keep = [r for r in t.get("reviews") or [] if r.get("attempt") != t["attempts"]]
+    gone = list(t.get("reviews_invalidated") or []) + [dict(r, invalidated_at=_now(),
+                                                            invalidated_by="reverify: files_changed mudaram") for r in cur]
+    return [["set", ref("task", t["id"]), "reviews", keep], ["set", ref("task", t["id"]), "reviews_invalidated", gone]]
+
+
+def _post_verify_changes(ctx, t, d):
+    """Arquivos do escopo, fora dos files_changed, que mudaram DEPOIS do verify (outra task, build, humano): o verify
+    do reverify não os cobra desta delegação. Verify antigo sem `dirty_in_scope` → nada tolerado (conservador)."""
+    old = ((t.get("gate_report") or {}).get("build") or {}).get("dirty_in_scope")
+    if old is None:
+        return []
+    files = set((t.get("submission") or {}).get("files_changed") or [])
+    now = engine.git_dirty(ctx.root) or {}
+    post = {p: sha for p, sha in now.items()
+            if p not in files and hcore.matches_any(p, t["allowed_paths"]) and old.get(p, "__absent__") != sha}
+    if not post:
+        return []
+    return [["set", ref("deleg", d["id"]), "post_verify_changes", dict(d.get("post_verify_changes") or {}, **post)]]
 
 
 def waive_verify(root, actor, tid, reason, by, evidence):
@@ -649,6 +693,9 @@ def diff_check(ctx, task, deleg, files_changed):
                 if auto.mandate_shared_file(ctx.board, task, f):
                     continue
             P.append("declarado em files_changed mas não alterado segundo git: %s" % f)
+    # R2 (iter18): mudança no escopo DEPOIS do verify (gravada pelo reverify de VERIFIED/REVIEWED) não é desta delegação
+    tol = deleg.get("post_verify_changes") or {}
+    changed = {f for f in changed if f in files_changed or f not in tol or dirty.get(f) != tol[f]}
     prot = task.get("protected_paths") or []
     for f in sorted(changed):
         if f.startswith(hcore.STATE_DIR + "/") or hcore.matches_any(f, lead_ok):

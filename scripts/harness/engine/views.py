@@ -104,6 +104,9 @@ def next_for(ctx, kind, ent):
         if st == "RETURNED":
             return "cs-state verify --task %s" % tid
         if st in ("VERIFIED", "REVIEWED"):
+            if engine.tree_changed(ctx.root, t):
+                return ("árvore mudou desde o verify (accept recusaria) → cs-state reverify --task %s (reviews valem se os "
+                        "files_changed não mudaram)" % tid)
             probs = engine.GUARDS["reviews_satisfy_class"](ctx, "deleg", ent, {})
             wl = waiver_line(t)
             pre = "[%s] " % wl if wl else ""

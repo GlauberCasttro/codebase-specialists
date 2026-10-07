@@ -27,7 +27,8 @@ READONLY = {"ls", "cat", "head", "tail", "grep", "egrep", "fgrep", "rg", "ag", "
             "md5", "md5sum", "whoami", "id", "uname", "hostname", "printenv", "cd", "git"}
 GIT_READONLY = {"status", "log", "diff", "show", "rev-parse", "ls-files", "blame", "grep", "describe",
                 "branch", "tag", "remote", "config", "shortlog", "cat-file", "ls-tree", "rev-list", "reflog",
-                "show-ref", "merge-base", "name-rev", "for-each-ref", "whatchanged", "version", "help"}
+                "show-ref", "merge-base", "name-rev", "for-each-ref", "whatchanged", "version", "help",
+                "check-ignore", "ls-remote", "count-objects"}
 GIT_LEAD_OK = {"add", "commit", "fetch", "push", "notes"}  # não reescrevem a árvore de trabalho
 SAFE_DEVICES = {"/dev/null", "/dev/stdout", "/dev/stderr", "/dev/tty", "/dev/zero"}
 OPT_WITH_VALUE = {"timeout": 1, "nice": 0, "stdbuf": 0}

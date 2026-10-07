@@ -206,7 +206,14 @@ def verdict_lines(team, agent):
            "",
            "Precedência entre gates sobre os mesmos caminhos: qualquer `FAIL` vence (a entrega volta com os "
            "achados); `NEEDS_SPECIALIST` roteia para o gate especialista citado nos achados e trava o aceite até o "
-           "veredito dele; só sem FAIL e sem NEEDS_SPECIALIST em aberto vale `PASS`."]
+           "veredito dele; só sem FAIL e sem NEEDS_SPECIALIST em aberto vale `PASS`.",
+           "",
+           "Registre você mesmo: `.swarm/bin/cs-state review --task <id> --by %s --verdict <%s> --findings "
+           "'<achados arquivo:linha>'`. 'Só leitura' significa não editar arquivos; os comandos de estado do gate "
+           "são seus (`review`; `abstain` só em delegação que é sua: na entrega de outro agente o guard recusa). "
+           "Fora do seu escopo: `NEEDS_SPECIALIST` citando o gate especialista nos achados. O veredito é seu: não "
+           "espere que o orquestrador o dite nem devolva só texto."
+           % (agent["name"], "|".join(veredito_enum(team)))]
     if agent.get("gate_scope") == "security" or agent["name"] == "security":
         out.append("Escopo: julgue só regras de segurança (segredos, autenticação, injeção, permissões, "
                    "dependências vulneráveis); o resto é do outro gate.")

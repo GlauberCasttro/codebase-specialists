@@ -583,7 +583,38 @@ def task_dor(tv, it, run=True):
         P.append("task sem --verify-cmd (prova executável)")
     if not it.get("allowed_paths"):
         P.append("task sem --allowed-path (território da escrita)")
+    terr = tv.ctx.territory(it["agent"]) if it.get("agent") and tv.ctx.team else []
+    for p in it.get("allowed_paths") or []:
+        if terr and engine.whole_territory(p, terr):  # R7: escopo = território inteiro não inicia
+            P.append(engine.whole_territory_problem(it["id"], p, it["agent"], terr))
     return P
+
+
+TREE_AMENDABLE = ("allowed_paths",)
+
+
+def amend(tv, ident, field, after, reason):
+    """Emenda de task da árvore AINDA NÃO INICIADA (sem M2 em curso): hoje só allowed_paths (a dica do DoR do R7).
+    Iniciada → a emenda vale na task M2 (cs-state amend <id> ... sobre a M2)."""
+    it = tv.need(ident, ("task",))
+    if zone_of(it["path"]) == "archive":
+        raise Refused("%s está fechada: cs-state reopen %s --reason ..." % (it["id"], it["id"]))
+    st, _ = tv.m2_status(it)
+    if st is not None and not (st in M2_DONE and it.get("reaberta")):
+        raise Refused("%s já iniciada (M2 %s): a emenda vale na task M2" % (it["id"], st))
+    if field not in TREE_AMENDABLE:
+        raise Refused("campo não emendável em task da árvore não iniciada: %s (permitidos: %s)"
+                      % (field, ", ".join(TREE_AMENDABLE)))
+    vals = after if isinstance(after, list) else [after]
+    if not vals or not all(isinstance(v, str) and v.strip() for v in vals):
+        raise Refused("--after de allowed_paths: lista JSON de caminhos (ex.: '[\"src/x.py\"]')")
+    new = [hcore.norm_rel(v) for v in vals]
+    before = list(it.get("allowed_paths") or [])
+    it = tv.items[it["id"]]
+    it["allowed_paths"] = new
+    tv.note(it, "amend", reason, field=field, before=before, after=new)
+    tv.put(it)
+    return [tv.event("amend", it["id"], {"field": field, "before": before, "after": new, "reason": reason})]
 
 
 def feature_dor(tv, it, run=True):

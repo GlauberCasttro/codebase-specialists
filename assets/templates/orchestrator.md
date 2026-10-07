@@ -21,15 +21,15 @@ aquele agente, porque brief incompleto é a principal causa de retrabalho medida
 
 1. Explore antes de decompor: leia o código e rode `.swarm/bin/cs-mem search` no assunto até saber quais
    territórios o pedido toca e quais invariantes estão em jogo.
-2. Classifique (pergunta, trivial, pequena, feature, risco) e grave a classe com o porquê. A classe escolhe a
-   FAIXA (seção abaixo); `cs-state next` diz qual é.
+2. Classifique (pergunta, trivial, pequena, feature, risco) e grave a classe com o porquê; ela escolhe a FAIXA (abaixo).
 3. Planeje tasks, dependências e ondas cujos `allowed_paths` não colidem (`collision.json5`).
 4. Despache SÓ pela ferramenta Agent com o id da delegação na `description` (nunca `cs-state dispatch` no Bash:
    muda o estado sem subagente e gasta a tentativa) e o `model` de `.swarm/bin/cs-route recommend <id>`; sem
    model o hook recusa (herdar o da sessão gasta o tier mais caro). Discordou: `.swarm/bin/cs-route override <id> --model X --reason "..."`.
-5. O motor verifica (`verification_command`, diff × `allowed_paths`); um gate diferente do autor
-   revisa, com veredito só de $veredito. Rejeitado: refaça com os achados (até 2 vezes), redirecione
-   ou leve ao usuário.
+5. O motor verifica (`verification_command`, diff × `allowed_paths`); um gate diferente do autor revisa, com
+   veredito só de $veredito. Rejeitado: refaça com os achados (até 2 vezes), redirecione ou leve ao usuário.
+   Nunca escreva o veredito nem o comando de review para o gate; peça "revise e registre o que você decidir". Se
+   o gate não registrar, redespache uma revisão independente com o mesmo id `.dN`; não peça ao usuário para carimbar.
 6. PASS e `accept`: commite os `allowed_paths` (branch da sprint, nunca main) ANTES do `cs-state close` (fechada, o pre-commit barra).
 
 ## Delegação parada → saídas
@@ -41,7 +41,7 @@ ESCALATED/ABSTAINED esperam o usuário e nunca são fim (`cs-state why <task>` d
 | usuário decidiu seguir | `retry --task <id> --decision "<decisão>"` (não gasta tentativa) |
 | é de outro território | `reroute --task <id> --agent <outro> --decision "<decisão>"` |
 | não vale fazer | `drop --task <id> --reason "<motivo>"` (task DROPPED) |
-| verify falhou por AMBIENTE, já consertado | `reverify --task <id>` |
+| verify falhou por AMBIENTE, já consertado; ou VERIFIED/REVIEWED com accept recusado por `tree_unchanged` (a árvore mudou) | `reverify --task <id>` (reviews ficam se os `files_changed` não mudaram; se mudaram, nova review) |
 | AMBIENTE, usuário assume a exceção | só o USUÁRIO, no terminal dele: `waive-verify --task <id> --by <usuário> --reason "…" --evidence "<saída>"`; review de gate segue obrigatória; nunca para teste vermelho |
 | mandato autônomo escalado | só o HUMANO: `.swarm/bin/cs-auto resolve --choice <opção> --by <humano> --decision "…"` (opções em `cs-auto status`) |
 
@@ -67,7 +67,7 @@ desse fluxo pertence a uma Story. DoR e DoD são verificados pelo script; se ele
 ```json5
 {id: "TASK-01-003-BE", story: "US-4", agent: "$example_agent", class: "pequena",
  goal: "o que muda e por quê, citando a decisão ou o fato que sustenta",
- allowed_paths: ["$example_path"],          // arquivos explícitos, dentro do território
+ allowed_paths: ["<arquivo em $example_path>"],  // arquivos explícitos; o território inteiro é recusado no check/start
  protected_paths: ["tests/**"],             // o motor prova no verify que ESTA delegação não os tocou
  acceptance_criteria: [{id: "AC-1", criterion: "comportamento observável",
                         verified_by: "test:<arquivo>::<teste>"}],
@@ -76,8 +76,8 @@ desse fluxo pertence a uma Story. DoR e DoD são verificados pelo script; se ele
  handoff: {to: "<próximo agente>", scenarios: ["cenário derivado dos ACs"]}}
 ```
 
-O especialista aponta erro no próprio brief por `submission.risks`; corrigir brief já despachado é
-`.swarm/bin/cs-state amend`, nunca edição do arquivo.
+O especialista aponta erro no próprio brief por `submission.risks`; brief despachado ou item da árvore não iniciado se
+corrige com `.swarm/bin/cs-state amend <id> --field allowed_paths --after '["arq"]' --reason "..."` (ou outro `--field`), nunca editando o arquivo.
 
 ## Modos
 

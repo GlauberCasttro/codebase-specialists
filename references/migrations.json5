@@ -19,7 +19,7 @@
 // Nunca refeito num upgrade (salvo migração explícita): entrevista, roster aprovado, cartões aprovados,
 // memória de lições, board/eventos.
 {
- version: "0.9.0",
+ version: "0.10.0",
  migrations: [
   {
    to: "0.5.0",
@@ -58,6 +58,14 @@
   {
    to: "0.9.0",
    why: "as skills geradas passam a ter nome em inglês (verbo-objeto): salvar-sessao→save-session, carregar-sessao→load-session, corrigir→correct, planejar-sprint→plan-sprint, new-epico→new-epic, close-epico→close-epic, em todas as plataformas onde já saíam; reinstala o motor e reemite os artefatos: a poda do emit apaga só as SKILL.md antigas que o manifesto gerou (com o marcador) e a pasta delas quando fica vazia; pasta do usuário fora do manifesto e arquivo humano dentro da pasta ficam; sem refazer entrevista, roster, cartões, memória nem board",
+   actions: [
+    {kind: "harness"},
+    {kind: "emit"}
+   ]
+  },
+  {
+   to: "0.10.0",
+   why: "correções de uso real (segunda cobaia .NET, campanha-iter18): o hash da árvore do verify ignora artefato ignorado pelo git (bin/obj) e a build de outra task não trava mais o accept; `cs-state reverify` sai de VERIFIED/REVIEWED quando a árvore mudou depois do verify e o accept foi recusado por tree_unchanged (reviews preservadas se files_changed iguais; se mudaram, nova review); allowed_paths igual ao território inteiro do agente (ou glob que o contém) é recusado no check/start/despacho com a dica de `cs-state amend <id> --field allowed_paths`, que passa a funcionar também em item da árvore ainda não iniciado; o pre-commit (`check-diff --staged`) barra o commit dos allowed_paths antes do accept; git check-ignore/ls-remote/count-objects contam como leitura no guard; o cartão do gate manda registrar o veredito com `cs-state review` (só leitura = não editar arquivos) e o orquestrador nunca dita o veredito ao gate (redespacha a revisão com o mesmo id .dN); reinstala o motor e reemite os artefatos, sem refazer entrevista, roster, cartões, memória nem board",
    actions: [
     {kind: "harness"},
     {kind: "emit"}

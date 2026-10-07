@@ -570,7 +570,15 @@ def _accepted_still_open(board, task):
     return False
 
 
+# Delegação em voo: o diff na árvore de trabalho é dela, mas o COMMIT (pre-commit, --staged) só depois do accept.
+IN_FLIGHT_STATES = ("DISPATCHED", "RETURNED", "VERIFIED", "REVIEWED")
+
+
 def check_diff(root, staged=False):
+    """Diff × allowed_paths. Árvore de trabalho (sem --staged, CI): delegação em voo (IN_FLIGHT_STATES) e ACCEPTED
+    com a task aberta (U5) liberam os allowed_paths. Pre-commit (--staged, iter18 R5): só ACCEPTED com a task aberta
+    libera; allowed_paths de delegação em voo são barrados (commit antes do aceite fura verify/review/accept).
+    Estado do harness (`.swarm/**`) segue as regras próprias (engine_owned/lead_write_allow); task fechada barra."""
     import subprocess
     import validate
     cfg = hcore.load_config(root)
@@ -582,10 +590,15 @@ def check_diff(root, staged=False):
         u = subprocess.run(["git", "ls-files", "--others", "--exclude-standard"], cwd=root, stdout=subprocess.PIPE)
         files += [x for x in u.stdout.decode().splitlines() if x]
     allowed = list(cfg.get("lead_write_allow") or [])
+    in_flight = []  # iter18 R5: (task, estado, allowed_paths) com delegação em voo — o commit (--staged) espera o accept
     for t in board["tasks"]:
         d = (t.get("delegations") or [{}])[-1]
-        if d.get("state") in ("DISPATCHED", "RETURNED", "VERIFIED", "REVIEWED") or \
-                (d.get("state") == "ACCEPTED" and _accepted_still_open(board, t)):
+        if d.get("state") in IN_FLIGHT_STATES:
+            if staged:
+                in_flight.append((t.get("id"), d.get("state"), t.get("allowed_paths") or []))
+            else:
+                allowed += t["allowed_paths"]
+        elif d.get("state") == "ACCEPTED" and _accepted_still_open(board, t):
             allowed += t["allowed_paths"]
     ok_state = validate.run(root, strict=False)[0]
     bad = []
@@ -597,7 +610,11 @@ def check_diff(root, staged=False):
             if not ok_state:
                 bad.append("%s (estado não valida)" % f)
             continue
-        if hcore.matches_any(f, cfg.get("protected") or []):
+        flying = [(tid, st) for tid, st, paths in in_flight
+                  if not f.startswith(hcore.STATE_DIR + "/") and hcore.matches_any(f, paths)]
+        if flying:
+            bad.append("%s (task %s em %s: commite só depois do `cs-state accept`)" % (f, flying[0][0], flying[0][1]))
+        elif hcore.matches_any(f, cfg.get("protected") or []):
             bad.append("%s (área protegida)" % f)
         elif not hcore.matches_any(f, allowed):
             bad.append("%s (fora de qualquer allowed_paths em voo)" % f)

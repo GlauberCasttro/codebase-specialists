@@ -72,7 +72,9 @@
         // verify que falhou por AMBIENTE (ferramenta/módulo ausente; engine/envfail.py): verificar de novo depois de
         // consertar o ambiente (não consome tentativa) ou exceção com portão HUMANO (--by humano, --evidence) — nunca
         // para falha de teste/asserção; review por gate continua obrigatória depois.
-        reverify: {from: ["REJECTED", "ESCALATED"], to: "RETURNED", guards: ["reverify_allowed"]},
+        // De VERIFIED/REVIEWED (iter18): só quando a árvore mudou desde o verify (tree_unchanged falharia); reviews da
+        // tentativa valem se o conteúdo dos files_changed é o mesmo do verify, senão são invalidadas.
+        reverify: {from: ["REJECTED", "ESCALATED", "VERIFIED", "REVIEWED"], to: "RETURNED", guards: ["reverify_allowed"]},
         waive_verify: {from: ["REJECTED", "ESCALATED"], to: "VERIFIED",
                        guards: ["reason_present", "evidence_present", "waiver_by_human", "verify_failed_by_environment",
                                 "tree_unchanged"]},
@@ -99,8 +101,10 @@
         ["VERIFYING", "BLOCKED"], ["BLOCKED", "BLOCKED"],
         // saídas do bloqueio por decisão humana (retry de ESCALATED) e descarte (drop)
         ["BLOCKED", "READY"], ["BLOCKED", "DROPPED"], ["DRAFT", "DROPPED"], ["REJECTED", "DROPPED"],
-        // reverify (→ SUBMITTED) e waive_verify (→ VERIFYING) de delegação REJECTED/ESCALATED
+        // reverify (→ SUBMITTED) e waive_verify (→ VERIFYING) de delegação REJECTED/ESCALATED; reverify de
+        // VERIFIED/REVIEWED com a árvore mudada (→ SUBMITTED)
         ["REJECTED", "SUBMITTED"], ["BLOCKED", "SUBMITTED"], ["REJECTED", "VERIFYING"], ["BLOCKED", "VERIFYING"],
+        ["VERIFYING", "SUBMITTED"],
       ],
     },
     // M4 — consulta (faixa `pergunta`): delegação SÓ LEITURA e descartável; sem task, sem story, sem review.

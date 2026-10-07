@@ -7,7 +7,7 @@ com território, sonda de maestria, harness com estado, gates, guards e memória
 GitHub Copilot e Codex). O que a skill faz e como usá-la num alvo: [`SKILL.md`](SKILL.md),
 [`MODO-DE-USO.md`](MODO-DE-USO.md) e [`docs/`](docs/README.md).
 
-Versão: **0.9.0** (ver [`VERSION`](VERSION)).
+Versão: **0.10.0** (ver [`VERSION`](VERSION)).
 
 **Projeto ≠ pacote.** O projeto tem tudo do desenvolvimento (testes, fixtures de avaliação, campanhas, harness de
 desenvolvimento). O **pacote** — só o que roda — é gerado por `bash .claude/tools/package.sh` em `dist/`

@@ -1014,6 +1014,18 @@ def deleg_reverify_de_rejected_e_escalated(h):
 
 
 @scenario
+def deleg_reverify_de_verified_e_reviewed(h):
+    """iter18 R2: árvore mudou depois do verify → reverify (VERIFIED/REVIEWED → RETURNED → VERIFIED); intacta → recusa."""
+    for origin in ("VERIFIED", "REVIEWED"):
+        root, tid = drive(h, origin)
+        h.no(root, "reverify", "--task", tid, guards=["reverify_allowed"])          # árvore intacta
+        fixture.write(root, "src/billing/discount.py", "RATE = 31\n")
+        h.no(root, "accept", "--task", tid, guards=["tree_unchanged"])
+        h.ok(root, "reverify", "--task", tid)
+        h.expect(root, tid, "VERIFIED")
+
+
+@scenario
 def deleg_waive_verify(h):
     import cmds
     root, tid, _ = env_repo(h)

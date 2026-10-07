@@ -309,6 +309,24 @@ def _tree_m2_ids(root, a):
             setattr(a, attr, it["m2"] + suf)
 
 
+def _tree_amend(root, actor, a):
+    """R7 (iter18): `amend` em task da árvore ainda não iniciada emenda o ITEM (a dica do DoR tem de funcionar ali).
+    None = não é o caso (segue para a task M2)."""
+    import tree
+    try:
+        tv = tree.load_view(root)
+    except (hcore.StateError, hcore.Refused):
+        return None
+    it = tv.get(_tid(a))
+    if it is None or it.get("kind") != "task":
+        return None
+    st, _ = tv.m2_status(it)
+    if st is not None and not (st in tree.M2_DONE and it.get("reaberta")):
+        return None
+    tree.run_build(root, actor, lambda t: tree.amend(t, it["id"], a.field, _value(a.after), a.reason))
+    return ["emendado %s (%s, item da árvore ainda não iniciado): cs-state check %s" % (it["id"], a.field, it["id"])]
+
+
 def _plan_out(plan, verb):
     out = ["criado %s em %s" % (i, p) for i, p in zip(plan["ids"], plan["criar"])]
     out += ["%s %s: %s → %s" % (verb, m.get("id_anterior") or m["id"], m["de"], m["para"]) +
@@ -427,6 +445,10 @@ def run(a):
     tree_mode = hcore.tree_mode(root)
     if c in TREE_CMDS or (tree_mode and (c == "board" or (c == "feature" and a.transition == "drop"))):
         return run_tree(root, actor, a)
+    if tree_mode and c == "amend":
+        r = _tree_amend(root, actor, a)
+        if r is not None:
+            return r
     if tree_mode and c in TREE_M2:
         _tree_m2_ids(root, a)
     if c == "init":
@@ -610,7 +632,7 @@ def run(a):
             out.append("reverify REPROVOU %s (exit %s, falha de %s):" % (_tid(a), g.get("exit_code"), g.get("failure_kind")))
             out += ["  - " + p for p in probs[:8]]
         else:
-            out.append("reverify PASS %s (exit 0) → review por gate" % _tid(a))
+            out.append("reverify PASS %s (exit 0)" % _tid(a))
         ctx = engine.Ctx(root, hcore.load_board(root))
         t = ctx.find("task", cmds.resolve_task_id(ctx, _tid(a)))
         out.append("próximo: " + (views.next_for(ctx, "deleg", engine.latest_deleg(t)) or "cs-state next"))

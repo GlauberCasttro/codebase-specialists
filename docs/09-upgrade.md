@@ -146,3 +146,21 @@ O `emit` da migração gera as pastas novas e poda as antigas pelo manifesto (`.
 Arquivo humano dentro da pasta antiga fica (com a pasta). Pasta de mesmo nome fora do manifesto (do usuário) nunca é
 tocada. O plano (`cs.py upgrade`, sem `--apply`) lista cada `delete` e cada `create` e não escreve nada. Depois do
 `--apply`, `emit validate` sai verde, sem órfão.
+
+## Migração 0.10.0: correções de uso real (segunda cobaia .NET)
+
+A entrada `to: "0.10.0"` do catálogo declara `harness` e `emit`: reinstala o motor e reemite os artefatos, sem
+refazer entrevista, roster, cartões, memória nem board. O que muda no repositório gerado:
+
+| Onde | 0.9.x | 0.10.0 |
+|---|---|---|
+| `verify` / `accept` | o hash da árvore (`tree_sha256`) incluía artefato ignorado pelo git (`bin/`, `obj/`): a build de outra task travava o accept | arquivo ignorado pelo git fica fora do hash; rastreado ou não-rastreado-não-ignorado continua contando |
+| VERIFIED/REVIEWED com a árvore mudada | impasse: `reverify` só saía de REJECTED/ESCALATED | `cs-state reverify --task <id>` (recusado com a árvore intacta); reviews valem se `files_changed` não mudou; se mudou, nova review |
+| DoR / despacho | `allowed_paths` igual ao território inteiro do agente passava | recusado no check/start (também glob que contém o território), com a dica `cs-state amend <id> --field allowed_paths --after '["arquivo"]' --reason …`, que funciona também em item da árvore ainda não iniciado |
+| pre-commit (`guard.py check-diff --staged`) | commit dos `allowed_paths` com a delegação em DISPATCHED/RETURNED/VERIFIED/REVIEWED passava | barrado até o `accept`; ACCEPTED com a task aberta continua liberado; task fechada continua barrando |
+| guard de Bash | `git check-ignore`, `git ls-remote`, `git count-objects` contavam como escrita | contam como leitura |
+| cartão do gate | dizia o enum do veredito, sem o comando | manda registrar com `cs-state review --task <id> --by <gate> --verdict … --findings …`; só leitura = não editar arquivos (os comandos de estado do gate são dele) |
+| orquestrador (passo 5) | — | nunca dita o veredito ao gate; sem registro, redespacha revisão independente com o mesmo id `.dN`; não pede ao usuário para carimbar |
+
+O pre-commit novo muda o ritmo: commite os `allowed_paths` depois do `cs-state accept` e antes do `close` (o
+passo 6 do orquestrador já pedia isso).
