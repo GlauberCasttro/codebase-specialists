@@ -1,5 +1,10 @@
 # WORKFLOW — codebase-specialists
 
+<!-- features:inicio (gerado por .claude/tools/feature.py; não edite à mão) -->
+**Estado:** IN_PROGRESS
+**Features ativas:** win-motor-copia (criar-feature), win-bash (criar-feature)
+<!-- features:fim -->
+
 Frente = campanha no motor embutido, em `campanhas/<frente>/` (oráculo versionado; `.auto-correcao/` local).
 O estado mecânico de cada campanha é o `ac.py status` (o carimbo lista as ativas); aqui fica o porquê e a ordem.
 Atualizado em 2026-10-06 (criação do projeto completo; iter15 e iter16 entregues e fechadas).
