@@ -1,7 +1,7 @@
 <!-- resume-stamp
 FEATURES: —
 BRANCH: release/version-windows
-HEAD: af4df8f
+HEAD: 5c571de
 PRODUTO: 5305e061d87a13267592d05a82b75611670fe01a
 ESTADO: 89b12323386ed0912cc10f6be5ee8f3992a3a2f5
 GATE: —

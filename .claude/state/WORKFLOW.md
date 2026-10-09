@@ -6,42 +6,30 @@
 **Última entrega:** win-motor-copia (2026-10-09T09:25:15-0300) — .claude/state/archive/win-motor-copia/win-motor-copia.md
 <!-- features:fim -->
 
-Frente = campanha no motor embutido, em `campanhas/<frente>/` (oráculo versionado; `.auto-correcao/` local).
-O estado mecânico de cada campanha é o `ac.py status` (o carimbo lista as ativas); aqui fica o porquê e a ordem.
-Atualizado em 2026-10-06 (criação do projeto completo; iter15 e iter16 entregues e fechadas).
+Feature = campanha no motor embutido, em `campanhas/<feature>/` (oráculo versionado; `.auto-correcao/` local). O estado
+mecânico é do `feature.py`/`ac.py status`; aqui ficam o porquê e a ordem. Atualizado em 2026-10-09.
 
-## Frentes ativas
+## Sequência de features (compatibilidade com Windows — D-17, branch `release/version-windows`)
 
-Nenhuma.
-
-(iter17 `/install` ENTREGUE em `4dd7cf2`, 2026-10-06: portão VERDE — test_install 34/34, suítes 3.13/3.9 —,
-harness 53/53, conferir-commit 10 idênticos; campanha fechada GO. `/install` rodado na máquina de origem:
-`~/.claude/skills/codebase-specialists` → `dist/codebase-specialists` (0.9.0, origem 4dd7cf2); o link anterior,
-para o projeto, foi para `~/.claude/skills-backup-<data>/`.)
-
-## Fila
-
-1. Pacote 0.9.0 (BACKLOG B-08): `bash .claude/tools/package.sh` → founder confere e decide a publicação.
-2. Aviso à sessão da cobaia .NET para rodar o upgrade com a 0.9.0 (B-08, parte 2) — ENVIADO em 2026-10-06.
-3. B-03 refino `--fast` gasta o slot.
-4. B-02 upgrade real no repositório-piloto.
-5. B-06 lembrete "comite antes do close"; B-07 senha em amend/resolve/stop/abort.
-6. B-04 limites C#; B-05 U5 no layout plano (depende de D-13).
-7. B-01 medição real iter11 (só com custo confirmado pelo founder).
+- [x] win-motor-copia — motor embutido corrigido para Windows (B-16) · `835dcde`
+- [x] win-bash — fechar feature no Windows com o bash do Git (D-20) · `0bac550`
+      (aberta antes para destravar o fechamento da win-motor-copia, parada no gate pelo bash do WSL)
+- [ ] 1. B-15 — harness de desenvolvimento no Windows nativo (+ B-18 (3)–(8))
+      primeiro porque portão e régua ainda dependem do WSL (~1h30 por rodada) e de `python3`/`/usr/bin/python3`
+- [ ] 2. B-14 — produto no Windows (scan, harness gerado, verify, CRLF, senha do mandato)
+      depois da B-15, para medir o produto com a régua já nativa; custo confirmado antes (D-09)
+- [ ] 3. B-08 — pacote 0.10.x com suporte a Windows, publicação decidida pelo founder
+- [ ] 4. B-13, B-17, B-03, B-02 e o restante do BACKLOG na ordem de prioridade
 
 ## Últimas entregas
 
-Commits do repositório privado de origem (antes deste projeto existir); a tabela completa por campanha está em
-`campanhas/README.md`.
-
 | commit | data | o quê |
 |---|---|---|
-| `da3ea45` | 2026-10-06 11:32 | correções de uso real na cobaia .NET (iter16) |
-| `be1d03c` | 2026-10-06 10:40 | 0.9.0: skills geradas em inglês + guia de cada skill (iter15) |
-| `18e3496` | 2026-10-05 22:54 | senha do humano na aprovação do mandato (iter14) |
-| `9d1ab30` | 2026-10-05 21:18 | medição: pacotes de entrada, caminho único, evals nos 2 layouts, backup fora do repo (iter11, parcial) |
-| `fcb1e6f` | 2026-10-05 19:53 | skills para Cursor/Copilot/Codex, task sincronizada, init em árvore (iter13) |
-| `2c90621` | 2026-10-05 19:19 | upgrade em uso real (iter12) |
-| `1837be7` | 2026-10-05 18:45 | 0.8.0: modo autônomo (mandato, M5) |
+| `835dcde` | 2026-10-09 09:27 | win-motor-copia: motor de campanhas embutido corrigido para Windows |
+| `0bac550` | 2026-10-09 09:24 | win-bash: fechar feature no Windows usa o bash do Git, nunca o do WSL |
+| `b2498c5` | 2026-10-06 22:51 | harness: frente vira feature (criar-feature, fechar-feature, feature.py) |
+| `5e8f6b2` | 2026-10-06 22:02 | 0.10.0: correções de uso real na segunda cobaia .NET (iter18) |
+| `2ad9e03` | 2026-10-06 21:25 | harness de desenvolvimento completo (harness-dev) |
+| `4dd7cf2` | 2026-10-06 16:16 | /install instala o pacote dist validado (iter17) |
 
-Neste repositório: `d3b2576` (pacote 0.7.0), `077fab2` (pacote 0.8.0) e o commit do projeto completo 0.9.0.
+Entregas anteriores (repositório privado de origem): tabela por campanha em `campanhas/README.md`.

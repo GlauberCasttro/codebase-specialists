@@ -10,3 +10,4 @@
 {"evento": "sessao-salva", "data": "2026-10-09T01:05:12-0300", "resumo": "privacidade: termo da máquina redigido na E2 da win-bash (nota no HISTORICO); estado commitado", "branch": "release/version-windows", "head": "e8a9b93", "features": ["win-motor-copia", "win-bash"]}
 {"evento": "sessao-salva", "data": "2026-10-09T09:27:55-0300", "resumo": "win-bash (0bac550) e win-motor-copia (835dcde) entregues; IDLE; próxima feature a escolher (B-15 ou B-14)", "branch": "release/version-windows", "head": "835dcde", "features": []}
 {"evento": "sessao-salva", "data": "2026-10-09T09:28:32-0300", "resumo": "RESUME pós-fechamento (archives e sobras locais)", "branch": "release/version-windows", "head": "af4df8f", "features": []}
+{"evento": "sessao-salva", "data": "2026-10-09T09:31:03-0300", "resumo": "checkpoint IDLE: WORKFLOW atualizado (sequência Windows: B-15, B-14, B-08)", "branch": "release/version-windows", "head": "5c571de", "features": []}
