@@ -1,18 +1,16 @@
 {
  "schema": 1,
- "ativas": [
-  {
-   "id": "win-motor-copia",
-   "origem": "criar-feature",
-   "aberta_em": "2026-10-08T12:42:51-0300",
-   "campanha": "campanhas/win-motor-copia"
-  }
- ],
+ "ativas": [],
  "entregues": [
   {
    "id": "win-bash",
    "fechada_em": "2026-10-09T09:03:31-0300",
    "archive": ".claude/state/archive/win-bash/win-bash.md"
+  },
+  {
+   "id": "win-motor-copia",
+   "fechada_em": "2026-10-09T09:25:15-0300",
+   "archive": ".claude/state/archive/win-motor-copia/win-motor-copia.md"
   }
  ]
 }

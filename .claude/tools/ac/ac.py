@@ -173,7 +173,8 @@ def sha_files(paths):
     for p in sorted(paths):
         h.update(p.encode())
         with open(p, "rb") as fh:
-            h.update(hashlib.sha256(fh.read()).digest())
+            # CRLF->LF antes do hash: o checkout Windows (autocrlf) não muda o oráculo; só-LF = hash de antes
+            h.update(hashlib.sha256(fh.read().replace(b"\r\n", b"\n")).digest())
     return h.hexdigest()
 
 
@@ -307,6 +308,7 @@ def _prefix(glob):
 
 def globs_overlap(a, b):
     """Aproximação conservadora: sobrepõem se um casa o outro ou se um prefixo literal contém o outro."""
+    a, b = a.replace("\\", "/"), b.replace("\\", "/")  # caminho Windows: '\' vale como '/'
     if fnmatch.fnmatch(a, b) or fnmatch.fnmatch(b, a):
         return True
     pa, pb = _prefix(a), _prefix(b)
@@ -1279,6 +1281,14 @@ def build_parser():
 
 
 def main(argv=None):
+    # console/pipe fora de UTF-8 (ex.: cp1252 no Windows): o que não codifica sai escapado, sem traceback
+    for s in (sys.stdout, sys.stderr):
+        enc = (getattr(s, "encoding", None) or "").lower().replace("-", "").replace("_", "")
+        if enc and enc != "utf8" and hasattr(s, "reconfigure"):
+            try:
+                s.reconfigure(errors="backslashreplace")
+            except (ValueError, OSError):
+                pass
     a = build_parser().parse_args(argv)
     if not a.cmd:
         build_parser().print_help(sys.stderr)
