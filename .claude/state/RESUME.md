@@ -1,7 +1,7 @@
 <!-- resume-stamp
 FEATURES: —
 BRANCH: release/version-windows
-HEAD: 835dcde
+HEAD: af4df8f
 PRODUTO: 5305e061d87a13267592d05a82b75611670fe01a
 ESTADO: 89b12323386ed0912cc10f6be5ee8f3992a3a2f5
 GATE: —
@@ -44,7 +44,8 @@ GATE: —
 - Fora do commit: `.claude/tools/_comum.sh` e `.claude/tools/package.sh` (troca para `$PY`, anterior à sessão;
   convertidos para LF); `.vscode/`; `obj/` da fixture .NET (`evals/fixtures/py-billing/…/legacy-dotnet/obj/`, build da
   IDE, recriado por um processo `dotnet`).
-- Cópia de trabalho `local/work/win-motor-copia/`; portão `local/portao-win-motor-copia/` (VERDE).
+- Sobras locais das features fechadas (podem ser apagadas): `local/work/win-motor-copia/`, `local/work/win-bash/`,
+  `local/portao-win-motor-copia/`, `local/portao-win-bash/`.
 - O hook de aprovação NOVO já vale nesta sessão (selftest 135); nega no PowerShell `python -c "…;…"` por "aninhamento
   profundo" (falso positivo) — use script em arquivo.
 - Skill não instalada aqui (`~/.claude/skills/codebase-specialists` ausente): `/install` depende de link (B-15).
@@ -53,4 +54,5 @@ GATE: —
 - Auditoria: `local/auditoria-windows-2026-10-07.md` · motor: projeto `auto-correcao`, `campanhas/win-motor` e
   `campanhas/win-hook` (BACKLOG de lá: AC-24/25/26 pendentes).
 - Decisões: `DECISIONS.md` (D-17..D-20) · fila: `BACKLOG.md` (B-14..B-18).
-- Features: `.claude/state/features/win-motor-copia/`, `.claude/state/features/win-bash/` · custo: `logs/custo.jsonl`.
+- Features entregues: `.claude/state/archive/win-motor-copia/`, `.claude/state/archive/win-bash/` · custo:
+  `logs/custo.jsonl`.
