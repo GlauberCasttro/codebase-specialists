@@ -1,0 +1,11 @@
+--- a/campanhas/win-bash/oraculo/ESPEC.md
++++ b/campanhas/win-bash/oraculo/ESPEC.md
+@@ -111,7 +111,7 @@
+ Por filtro no Git Bash: `-k CA01` 5/5 FAIL · `-k CA02` 7/7 · `-k CA03` 3/3 · `-k CA04` 2/2 · `-k CA05` 1/1.
+ 
+ ¹ `AssertionError: feature.bash_exe() não existe em <raiz>\.claude\tools\feature.py (contrato: bash_exe() -> str; falha = feature.Recusa)` — o defeito: a função não existe.
+-² `'No such file or directory' unexpectedly found in '/bin/bash: C:Users<termo-privado>…conferir-commit.sh: No such file or directory'` — o `["bash", …]` do `feature.py:548` cai no bash do WSL (E2 F1).
++² `'No such file or directory' unexpectedly found in '/bin/bash: C:Users<usuário>…conferir-commit.sh: No such file or directory'` — o `["bash", …]` do `feature.py:548` cai no bash do WSL (E2 F1).
+ 
+ Calibração da frase do CA05 (medição, sem tocar o `feature.py`): no Git Bash,
+ `CS_DEV_SKILL_DIR='C:\…\codebase-specialists' bash .claude/tools/conferir-commit.sh feature-inexistente-win-bash -- x`

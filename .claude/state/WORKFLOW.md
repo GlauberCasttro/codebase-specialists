@@ -2,7 +2,8 @@
 
 <!-- features:inicio (gerado por .claude/tools/feature.py; não edite à mão) -->
 **Estado:** IN_PROGRESS
-**Features ativas:** win-motor-copia (criar-feature), win-bash (criar-feature)
+**Features ativas:** win-motor-copia (criar-feature)
+**Última entrega:** win-bash (2026-10-09T09:03:31-0300) — .claude/state/archive/win-bash/win-bash.md
 <!-- features:fim -->
 
 Frente = campanha no motor embutido, em `campanhas/<frente>/` (oráculo versionado; `.auto-correcao/` local).

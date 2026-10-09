@@ -541,11 +541,46 @@ def portao_verde(fid, r):
     return "RESULTADO: VERDE" in ls and ls[-1] == "FIM"
 
 
+def bash_exe():
+    """Caminho do bash a usar. No Windows nunca o do WSL (System32): o do PATH fora do System32, senão o do Git
+    (bin ou usr/bin sob a raiz do Git, achada a partir do git), senão Recusa. Fora do Windows: "bash"."""
+    if os.name != "nt":
+        return "bash"
+    env = os.environ
+    raiz_win = env.get("SystemRoot") or env.get("SYSTEMROOT") or "C:\\Windows"
+    sys32 = raiz_win.replace("\\", "/").lower().rstrip("/") + "/system32/"
+
+    def dentro_sys32(p):
+        return p.replace("\\", "/").lower().startswith(sys32)
+
+    b = shutil.which("bash")
+    if b and not dentro_sys32(b):
+        return b
+    g = shutil.which("git")
+    if g:
+        d = g.replace("\\", "/").rsplit("/", 1)[0] if "/" in g.replace("\\", "/") else ""
+        partes = d.rsplit("/", 2)
+        if len(partes) == 3 and partes[2].lower() == "bin" and partes[1].lower().startswith(("mingw", "clang")):
+            raiz = partes[0]
+        else:
+            raiz = d.rsplit("/", 1)[0] if "/" in d else d
+        for rel in ("bin/bash.exe", "usr/bin/bash.exe"):
+            c = os.path.normpath(raiz + "/" + rel)
+            if os.path.isfile(c) and not dentro_sys32(c):
+                return c
+    raise Recusa("Git Bash não encontrado: no Windows o fechamento precisa do bash do Git (instale o Git for "
+                 "Windows ou ponha o bash dele no PATH); o bash do WSL (System32) não serve")
+
+
 def conferir_commit(fid, arqs, r):
     if not arqs:
         return False, "sem Arquivos da feature"
+    try:
+        bash = bash_exe()
+    except Recusa as e:
+        return False, str(e)
     env = dict(os.environ, CS_DEV_SKILL_DIR=r)
-    p = subprocess.run(["bash", os.path.join(TOOLS, "conferir-commit.sh"), fid, "--"] + arqs, cwd=r, env=env,
+    p = subprocess.run([bash, os.path.join(TOOLS, "conferir-commit.sh"), fid, "--"] + arqs, cwd=r, env=env,
                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
     return p.returncode == 0, p.stdout.decode("utf-8", "replace").strip()
 

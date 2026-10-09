@@ -213,5 +213,69 @@ class CompatStateAntigo(Base):
         self.assertEqual(j["veredito"], "bate", j)
 
 
+class BashExe(unittest.TestCase):
+    """feature.bash_exe(): bash do Git no Windows (nunca o do WSL), "bash" fora dele. Árvores falsas em mkdtemp."""
+
+    def setUp(self):
+        import importlib.util
+        from unittest import mock
+        self.mock = mock
+        if TOOLS not in sys.path:
+            sys.path.insert(0, TOOLS)
+        spec = importlib.util.spec_from_file_location("feature_bash", os.path.join(TOOLS, "feature.py"))
+        self.f = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.f)
+        self.tmp = os.path.realpath(tempfile.mkdtemp(prefix="tb-"))
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.sysroot = os.path.join(self.tmp, "Windows")
+        self.wsl = escrever(self.tmp, "WINDOWS/system32/bash.exe", "")
+        self.git = os.path.join(self.tmp, "Git")
+
+    def rodar(self, nome_os="nt", bash=None, git=None, env=None):
+        mapa = {"bash": bash, "git": git}
+        env = {"SystemRoot": self.sysroot, "SYSTEMROOT": self.sysroot} if env is None else env
+        with self.mock.patch.dict(self.f.os.environ, env),                 self.mock.patch.object(self.f.shutil, "which", side_effect=lambda c, *a, **k: mapa.get(c)),                 self.mock.patch.object(self.f.os, "name", nome_os):
+            return self.f.bash_exe()
+
+    def igual(self, a, b):
+        self.assertEqual(os.path.normcase(os.path.normpath(a)), os.path.normcase(os.path.normpath(b)))
+
+    def test_bash_do_path_fora_do_system32(self):
+        fora = escrever(self.git, "usr/bin/bash.exe", "")
+        self.igual(self.rodar(bash=fora), fora)
+
+    def test_system32_com_outra_caixa_cai_no_git(self):
+        g = escrever(self.git, "cmd/git.exe", "")
+        b = escrever(self.git, "bin/bash.exe", "")
+        self.igual(self.rodar(bash=self.wsl, git=g), b)
+
+    def test_git_mingw64_e_precedencia_bin(self):
+        g = escrever(self.git, "mingw64/bin/git.exe", "")
+        escrever(self.git, "usr/bin/bash.exe", "")
+        b = escrever(self.git, "bin/bash.exe", "")
+        self.igual(self.rodar(bash=None, git=g), b)
+
+    def test_so_usr_bin_e_raiz_com_espaco(self):
+        self.git = os.path.join(self.tmp, "Arquivos de Programas", "Git")
+        g = escrever(self.git, "cmd/git.exe", "")
+        b = escrever(self.git, "usr/bin/bash.exe", "")
+        self.igual(self.rodar(bash=self.wsl, git=g), b)
+
+    def test_recusa_cita_git_bash(self):
+        g = escrever(self.git, "cmd/git.exe", "")
+        for bash, git in ((self.wsl, None), (None, None), (self.wsl, g)):
+            with self.assertRaises(self.f.Recusa) as cm:
+                self.rodar(bash=bash, git=git)
+            self.assertIn("git bash", str(cm.exception).lower())
+
+    def test_fora_do_windows_devolve_bash(self):
+        g = escrever(self.git, "cmd/git.exe", "")
+        self.assertEqual(self.rodar("posix", bash="/usr/bin/bash", git=g), "bash")
+
+    def test_conferir_commit_devolve_recusa_como_saida(self):
+        with self.mock.patch.object(self.f, "bash_exe", side_effect=self.f.Recusa("Git Bash ausente")):
+            self.assertEqual(self.f.conferir_commit("x", ["a"], self.tmp), (False, "Git Bash ausente"))
+
+
 if __name__ == "__main__":
     unittest.main()

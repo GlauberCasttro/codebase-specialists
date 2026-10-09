@@ -33,3 +33,5 @@ vivo do desenvolvimento está em `.claude/state/`.
 
 Nova campanha: skill `new-front` (cria `campanhas/<frente>/` pelo `ac.py init`); acrescente a linha aqui ao abrir e
 preencha commit/decisão no `close-front`.
+| win-motor-copia | Motor de campanhas embutido corrigido para Windows | — | em andamento |
+| win-bash | Fechar feature no Windows: bash do Git, nunca o do WSL | — | em andamento |
