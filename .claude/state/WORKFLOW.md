@@ -1,8 +1,8 @@
 # WORKFLOW — codebase-specialists
 
 <!-- features:inicio (gerado por .claude/tools/feature.py; não edite à mão) -->
-**Estado:** IDLE
-**Features ativas:** nenhuma
+**Estado:** IN_PROGRESS
+**Features ativas:** win-harness (criar-feature)
 **Última entrega:** win-motor-copia (2026-10-09T09:25:15-0300) — .claude/state/archive/win-motor-copia/win-motor-copia.md
 <!-- features:fim -->
 
@@ -14,8 +14,9 @@ mecânico é do `feature.py`/`ac.py status`; aqui ficam o porquê e a ordem. Atu
 - [x] win-motor-copia — motor embutido corrigido para Windows (B-16) · `835dcde`
 - [x] win-bash — fechar feature no Windows com o bash do Git (D-20) · `0bac550`
       (aberta antes para destravar o fechamento da win-motor-copia, parada no gate pelo bash do WSL)
-- [ ] 1. B-15 — harness de desenvolvimento no Windows nativo (+ B-18 (3)–(8))
-      primeiro porque portão e régua ainda dependem do WSL (~1h30 por rodada) e de `python3`/`/usr/bin/python3`
+- [ ] 1. win-harness (B-15) — harness de desenvolvimento no Windows nativo, sem o atalho `~/bin/python3` · EM CURSO
+      (aberta 2026-10-09, D-21; 5/8 tasks) — primeiro porque portão e régua ainda dependem do WSL (~1h30 por
+      rodada) e de `python3`/`/usr/bin/python3`
 - [ ] 2. B-14 — produto no Windows (scan, harness gerado, verify, CRLF, senha do mandato)
       depois da B-15, para medir o produto com a régua já nativa; custo confirmado antes (D-09)
 - [ ] 3. B-08 — pacote 0.10.x com suporte a Windows, publicação decidida pelo founder

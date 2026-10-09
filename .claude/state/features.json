@@ -1,6 +1,13 @@
 {
  "schema": 1,
- "ativas": [],
+ "ativas": [
+  {
+   "id": "win-harness",
+   "origem": "criar-feature",
+   "aberta_em": "2026-10-09T11:34:49-0300",
+   "campanha": "campanhas/win-harness"
+  }
+ ],
  "entregues": [
   {
    "id": "win-bash",
