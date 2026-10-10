@@ -7,8 +7,8 @@ grupo: G1
 agente: corretor (papel; executor e model reais vão para o Handoff)
 CA: CA-03, CA-04
 depends: 02-TASK-FORMATO-CHAVES (mesmos arquivos tree.py/state.py; o show e o history usam o formato novo)
-status: PENDENTE
-gate: PENDENTE
+status: DONE
+gate: PASS
 complexidade: normal
 
 ## Goal
@@ -53,3 +53,15 @@ cd campanhas/iter19/oraculo && python3 -m unittest test_iter19.TestCA03 test_ite
 ```
 
 ## Handoff
+- Executor: general-purpose · sonnet (ciclo 1). Revisor: general-purpose · opus, instância isolada · APPROVED (snapshot:
+  não escreveu). Independência: instâncias distintas. Ressalva de método: o executor não observou o RED dos testes
+  novos antes de implementar (o RED do oráculo congelado já estava na base: CA-03/CA-04 D falhando).
+- Arquivos: tree.py (mirror_amend, ac_view, criterios_of_ac, AMEND_MIRROR, show_md; acceptance_criteria em
+  TREE_AMENDABLE; validate estrito para .json), cmds.py (task.amend ganha tput do item no MESMO evento), state.py
+  (`show`, `find` terminando no caminho, texto autonomy-report.json), tests/test_iter19_estado.py (13).
+- Oráculo: TestCA01..CA04 23/23 nos 2 Pythons (inclui os 2 do CA-02 que ficaram da task 02).
+- Régua do tech-lead (cópia, 2 Pythons): harness 331 OK (16 skip), upgrade 8 OK (7 skip), memory 14 OK. Privacidade 0.
+- Revisor testou à mão: amend de verification_command/allowed_paths/title/AC pontuado em task iniciada (1 evento,
+  tput por último, arquivo e history corretos), validate verde após amend/close/reopen/restart, show sem escrita.
+- Findings (MENOR): #1 `after` do history não normalizado (≠ `before` do próximo amend; tree.py:669 e :632) → task 04
+  (tree.py); #2 amend em task fechada espelha no arquivo de archive sem reopen → ressalva/decisão de comportamento.

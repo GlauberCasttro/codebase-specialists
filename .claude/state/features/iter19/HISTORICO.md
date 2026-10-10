@@ -276,3 +276,27 @@
 ## [PASS] 01-TASK-ORACULO — 2026-10-07T12:48:13-0300
 - status: DONE · gate: PASS
 - oráculo congelado 1083cc4a985e; base 11/39 nos 2 Pythons
+
+## [NOTA] 02-TASK-FORMATO-CHAVES — 2026-10-08T19:25:51-0300
+- status: IN_PROGRESS · gate: PENDENTE
+
+## [NOTA] 06-TASK-VERSAO-DOCS — 2026-10-08T19:25:51-0300
+- status: IN_PROGRESS · gate: PENDENTE
+
+## [NOTA] 06-TASK-VERSAO-DOCS — 2026-10-08T19:26:16-0300
+- status: PENDENTE · gate: PENDENTE
+- serializada depois da 05: o catálogo valida KINDS (scripts/upgrade/version.py:24); state-format só existe depois da 05
+
+## [PASS] 02-TASK-FORMATO-CHAVES — 2026-10-08T20:23:58-0300
+- status: DONE · gate: PASS
+- régua PASS 2 Pythons (harness 327, upgrade 8, memory 14); revisor APPROVED; ressalva: 2 testes CA-02 fecham na 03 (find)
+
+## [NOTA] 03-TASK-AMEND-SHOW — 2026-10-08T20:23:59-0300
+- status: IN_PROGRESS · gate: PENDENTE
+
+## [PASS] 03-TASK-AMEND-SHOW — 2026-10-08T21:12:48-0300
+- status: DONE · gate: PASS
+- régua PASS 2 Pythons (harness 331); oráculo CA01-04 23/23; revisor APPROVED
+
+## [NOTA] 04-TASK-MIGRAR-ESTADO — 2026-10-08T21:12:49-0300
+- status: IN_PROGRESS · gate: PENDENTE

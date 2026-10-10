@@ -6,6 +6,12 @@
    "origem": "criar-feature",
    "aberta_em": "2026-10-07T12:27:44-0300",
    "campanha": "campanhas/iter19"
+  },
+  {
+   "id": "iter21",
+   "origem": "legado",
+   "aberta_em": "2026-10-08T19:54:07-0300",
+   "campanha": "campanhas/iter21"
   }
  ],
  "entregues": [

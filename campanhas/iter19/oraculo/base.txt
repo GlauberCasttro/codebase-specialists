@@ -1,0 +1,91 @@
+# base do oráculo iter19 (CA-01..CA-06) — 2026-10-07 12:43
+# skill sob teste = raiz do projeto (CS_SKILL_DIR ausente) no HEAD 97a1718 (0.10.1); produto sem diff não commitado
+# skill antiga = git archive 97a1718 (0.10.1). Medição por CA com medir.py. Esperado HOJE: todo D FALHA, todo R PASSA (28 D, 11 R).
+
+## python3 (Python 3.13.3)
+CA01 D FAIL  TestCA01.test_ca01_entidades_e_sessao_sao_json
+CA01 D FAIL  TestCA01.test_ca01_generated_by_e_campo
+CA01 D FAIL  TestCA01.test_ca01_gravacoes_seguintes_sao_json
+CA01 D FAIL  TestCA01.test_ca01_indent_2_um_item_por_linha_mesmos_bytes
+CA01 D FAIL  TestCA01.test_ca01_ordem_de_leitura_history_por_ultimo
+CA01 D FAIL  TestCA01.test_ca01_projecao_json
+CA01 R ok    TestCA01.test_ca01_validate_continua_verde
+CA02 D FAIL  TestCA02.test_ca02_epico_sprint_fechada_reaberta_sessao
+CA02 D FAIL  TestCA02.test_ca02_historico_para_vira_to_por_caminho
+CA02 R ok    TestCA02.test_ca02_le_chaves_pt_brief_continua
+CA02 D FAIL  TestCA02.test_ca02_le_chaves_pt_e_grava_em_ingles
+CA02 D FAIL  TestCA02.test_ca02_nenhuma_chave_pt_nas_entidades
+CA02 D FAIL  TestCA02.test_ca02_task_story_com_chaves_em_ingles
+CA03 R ok    TestCA03.test_ca03_amend_allowed_paths_nao_iniciada_continua
+CA03 R ok    TestCA03.test_ca03_amend_campo_nao_espelhavel_continua
+CA03 D FAIL  TestCA03.test_ca03_amend_iniciada_historico_antes_depois_motivo
+CA03 D FAIL  TestCA03.test_ca03_amend_iniciada_some_do_arquivo
+CA03 D FAIL  TestCA03.test_ca03_amend_nao_iniciada_acceptance_criteria
+CA03 D FAIL  TestCA03.test_ca03_reopen_nao_ressuscita_ac2
+CA04 D FAIL  TestCA04.test_ca04_show_inexistente_sai_com_erro_citando_id
+CA04 D FAIL  TestCA04.test_ca04_show_por_alias
+CA04 D FAIL  TestCA04.test_ca04_show_story_feature_e_arquivada
+CA04 D FAIL  TestCA04.test_ca04_show_task_iniciada
+CA05 R ok    TestCA05.test_ca05_alvo_realista_antes_continua
+CA05 D FAIL  TestCA05.test_ca05_apply_converte_estado_para_json_ingles
+CA05 D FAIL  TestCA05.test_ca05_commit_do_resultado_passa_no_pre_commit
+CA05 D FAIL  TestCA05.test_ca05_json5_orfao_e_acusado
+CA05 D FAIL  TestCA05.test_ca05_motor_opera_depois_da_migracao
+CA05 D FAIL  TestCA05.test_ca05_plano_lista_a_migracao_de_formato
+CA05 R ok    TestCA05.test_ca05_plano_nao_escreve_continua
+CA05 D FAIL  TestCA05.test_ca05_segunda_execucao_nao_muda_nada
+CA05 D FAIL  TestCA05.test_ca05_um_evento_encadeado_novo_sem_reescrever
+CA06 R ok    TestCA06.test_ca06_catalogo_e_config_continuam_json5
+CA06 D FAIL  TestCA06.test_ca06_catalogo_tem_a_0110
+CA06 R ok    TestCA06.test_ca06_eventos_continuam_jsonl_canonico
+CA06 R ok    TestCA06.test_ca06_memoria_e_mandato_novos_continuam
+CA06 R ok    TestCA06.test_ca06_upgrade_config_memoria_mandato_continuam
+CA06 R ok    TestCA06.test_ca06_upgrade_logs_jsonl_continuam_iguais
+CA06 D FAIL  TestCA06.test_ca06_version
+placar: CA01 1/7  CA02 1/6  CA03 2/6  CA04 0/4  CA05 2/9  CA06 5/7
+por tipo (passam/total): CA01 D 0/6 R 1/1  CA02 D 0/5 R 1/1  CA03 D 0/4 R 2/2  CA04 D 0/4 R 0/0  CA05 D 0/7 R 2/2  CA06 D 0/2 R 5/5
+total: 11/39 passam
+
+## /usr/bin/python3 (Python 3.9.6)
+CA01 D FAIL  TestCA01.test_ca01_entidades_e_sessao_sao_json
+CA01 D FAIL  TestCA01.test_ca01_generated_by_e_campo
+CA01 D FAIL  TestCA01.test_ca01_gravacoes_seguintes_sao_json
+CA01 D FAIL  TestCA01.test_ca01_indent_2_um_item_por_linha_mesmos_bytes
+CA01 D FAIL  TestCA01.test_ca01_ordem_de_leitura_history_por_ultimo
+CA01 D FAIL  TestCA01.test_ca01_projecao_json
+CA01 R ok    TestCA01.test_ca01_validate_continua_verde
+CA02 D FAIL  TestCA02.test_ca02_epico_sprint_fechada_reaberta_sessao
+CA02 D FAIL  TestCA02.test_ca02_historico_para_vira_to_por_caminho
+CA02 R ok    TestCA02.test_ca02_le_chaves_pt_brief_continua
+CA02 D FAIL  TestCA02.test_ca02_le_chaves_pt_e_grava_em_ingles
+CA02 D FAIL  TestCA02.test_ca02_nenhuma_chave_pt_nas_entidades
+CA02 D FAIL  TestCA02.test_ca02_task_story_com_chaves_em_ingles
+CA03 R ok    TestCA03.test_ca03_amend_allowed_paths_nao_iniciada_continua
+CA03 R ok    TestCA03.test_ca03_amend_campo_nao_espelhavel_continua
+CA03 D FAIL  TestCA03.test_ca03_amend_iniciada_historico_antes_depois_motivo
+CA03 D FAIL  TestCA03.test_ca03_amend_iniciada_some_do_arquivo
+CA03 D FAIL  TestCA03.test_ca03_amend_nao_iniciada_acceptance_criteria
+CA03 D FAIL  TestCA03.test_ca03_reopen_nao_ressuscita_ac2
+CA04 D FAIL  TestCA04.test_ca04_show_inexistente_sai_com_erro_citando_id
+CA04 D FAIL  TestCA04.test_ca04_show_por_alias
+CA04 D FAIL  TestCA04.test_ca04_show_story_feature_e_arquivada
+CA04 D FAIL  TestCA04.test_ca04_show_task_iniciada
+CA05 R ok    TestCA05.test_ca05_alvo_realista_antes_continua
+CA05 D FAIL  TestCA05.test_ca05_apply_converte_estado_para_json_ingles
+CA05 D FAIL  TestCA05.test_ca05_commit_do_resultado_passa_no_pre_commit
+CA05 D FAIL  TestCA05.test_ca05_json5_orfao_e_acusado
+CA05 D FAIL  TestCA05.test_ca05_motor_opera_depois_da_migracao
+CA05 D FAIL  TestCA05.test_ca05_plano_lista_a_migracao_de_formato
+CA05 R ok    TestCA05.test_ca05_plano_nao_escreve_continua
+CA05 D FAIL  TestCA05.test_ca05_segunda_execucao_nao_muda_nada
+CA05 D FAIL  TestCA05.test_ca05_um_evento_encadeado_novo_sem_reescrever
+CA06 R ok    TestCA06.test_ca06_catalogo_e_config_continuam_json5
+CA06 D FAIL  TestCA06.test_ca06_catalogo_tem_a_0110
+CA06 R ok    TestCA06.test_ca06_eventos_continuam_jsonl_canonico
+CA06 R ok    TestCA06.test_ca06_memoria_e_mandato_novos_continuam
+CA06 R ok    TestCA06.test_ca06_upgrade_config_memoria_mandato_continuam
+CA06 R ok    TestCA06.test_ca06_upgrade_logs_jsonl_continuam_iguais
+CA06 D FAIL  TestCA06.test_ca06_version
+placar: CA01 1/7  CA02 1/6  CA03 2/6  CA04 0/4  CA05 2/9  CA06 5/7
+por tipo (passam/total): CA01 D 0/6 R 1/1  CA02 D 0/5 R 1/1  CA03 D 0/4 R 2/2  CA04 D 0/4 R 0/0  CA05 D 0/7 R 2/2  CA06 D 0/2 R 5/5
+total: 11/39 passam

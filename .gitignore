@@ -4,3 +4,7 @@ __pycache__/
 *.pyc
 .DS_Store
 campanhas/*/.auto-correcao/
+# artefatos de build e cadernos de agentes nunca entram (repo público)
+**/obj/
+**/bin/Debug/
+.claude/agent-memory/

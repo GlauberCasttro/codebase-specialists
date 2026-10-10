@@ -7,7 +7,7 @@ grupo: G1
 agente: corretor (papel; executor e model reais vão para o Handoff)
 CA: CA-05
 depends: 03-TASK-AMEND-SHOW (mesmos arquivos tree.py/state.py; a migração grava no formato final)
-status: PENDENTE
+status: IN_PROGRESS
 gate: PENDENTE
 complexidade: normal
 

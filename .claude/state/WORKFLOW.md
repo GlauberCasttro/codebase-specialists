@@ -2,7 +2,7 @@
 
 <!-- features:inicio (gerado por .claude/tools/feature.py; não edite à mão) -->
 **Estado:** IN_PROGRESS
-**Features ativas:** iter19 (criar-feature)
+**Features ativas:** iter19 (criar-feature), iter21 (legado)
 **Última entrega:** iter20 (?) — 
 <!-- features:fim -->
 

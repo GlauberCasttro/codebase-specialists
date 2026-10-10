@@ -1,0 +1,707 @@
+--- campanhas/iter21/oraculo/prova_real.py
++++ campanhas/iter21/oraculo/prova_real.py
+@@ -109,7 +109,20 @@
+            "refinamento": "refinar-sem-contradicao"}
+ ALLOWED = ["Agent", "Task", "Read", "Grep", "Glob", "Edit", "Write", "MultiEdit",
+            "Bash(.swarm/bin/cs-state *)", "Bash(./.swarm/bin/cs-state *)", "Bash(.swarm/bin/cs-mem *)",
+-           "Bash(./.swarm/bin/cs-mem *)", "Bash(python3 -m unittest *)", "Bash(cat *)", "Bash(ls *)"]
++           "Bash(./.swarm/bin/cs-mem *)", "Bash(python3 *)", "Bash(echo *)", "Bash(cat *)", "Bash(ls *)",
++           "Bash(git status *)", "Bash(git diff *)", "Bash(git log *)", "Bash(git show *)"]
++# Mudança oficial (permission_denied no 1º despacho da base): `python3 -m unittest tests.test_ok; echo "EXIT:$?"` foi
++# negado porque `echo` não estava na lista (comando composto: cada parte precisa casar). As formas com caminho
++# ABSOLUTO dos binários do alvo entram por despacho (allowed_for(root)). Nunca bypassPermissions.
++
++
++def allowed_for(root):
++    """Allow-list do despacho: ALLOWED + os binários do motor pelo caminho absoluto do alvo."""
++    extra = []
++    if root:
++        for b in ("cs-state", "cs-mem"):
++            extra.append("Bash(%s *)" % os.path.join(os.path.realpath(root), T.SD, "bin", b))
++    return ALLOWED + extra
+ OBS_PY = r'''import json, sys, time
+ raw = sys.stdin.read()
+ try:
+@@ -168,8 +181,10 @@
+     return T.run(argv, cwd, extra=extra, timeout=timeout)
+ 
+ 
+-def build_template(dest, skill):
+-    T.build_target(skill, dest, hook=False)
++def build_template(dest, skill, termos=None):
++    """Molde na ESCALA REAL do glossário (padrão: T.BIG_N termos a mais): o brief estoura o orçamento como no alvo
++    real, e o canal brief/check do `sem-caderno` é medido na condição que o M13 corrige."""
++    T.build_target(skill, dest, hook=False, extra_terms=T.BIG_N if termos is None else termos)
+     return dest
+ 
+ 
+@@ -271,14 +286,14 @@
+             "</tarefa>" % (tid, did, AGENT, AGENT, model, did, task_text))
+ 
+ 
+-def claude_argv(prompt, args):
+-    a = [args.claude, "-p", prompt, "--model", args.model, "--output-format", "stream-json", "--verbose",
++def claude_argv(prompt, args, root=None, model=None, budget=None):
++    a = [args.claude, "-p", prompt, "--model", model or args.model, "--output-format", "stream-json", "--verbose",
+          "--permission-mode", "acceptEdits", "--permission-prompts", "none", "--setting-sources", "project,local",
+-         "--strict-mcp-config", "--no-session-persistence", "--allowedTools", " ".join(ALLOWED)]
++         "--strict-mcp-config", "--no-session-persistence", "--allowedTools", " ".join(allowed_for(root))]
+     if args.max_turns:  # não aparece no --help da 2.1.274; só vai se pedido
+         a += ["--max-turns", str(args.max_turns)]
+-    if args.max_budget_usd:
+-        a += ["--max-budget-usd", str(args.max_budget_usd)]
++    if budget or args.max_budget_usd:
++        a += ["--max-budget-usd", str(budget or args.max_budget_usd)]
+     return a
+ 
+ 
+@@ -344,12 +359,37 @@
+ def read_stream(path):
+     msgs = []
+     if os.path.isfile(path):
+-        for ln in T.read_text(path).splitlines():
+-            try:
+-                msgs.append(json.loads(ln))
+-            except ValueError:
+-                pass
++        with open(path, encoding="utf-8", errors="replace") as fh:
++            for ln in fh.read().splitlines():
++                try:
++                    m = json.loads(ln)
++                except ValueError:
++                    continue
++                if isinstance(m, dict):
++                    msgs.append(m)
+     return msgs
++
++
++def permission_denials(msgs):
++    """Negações do despacho, separadas pela ORIGEM: 'permissao' (sistema de permissões do Claude Code: allow-list)
++    ou 'produto' (hook PreToolUse do produto, ex.: cs-guard — dado de produto, nunca contornado pela prova)."""
++    results = {e["id"]: e.get("text", "") for e in tool_events(msgs) if e["kind"] == "result"}
++    out, seen = [], set()
++    for m in msgs:
++        if m.get("type") == "result" and isinstance(m.get("permission_denials"), list):
++            for d in m["permission_denials"]:
++                if not isinstance(d, dict) or d.get("tool_use_id") in seen:
++                    continue
++                seen.add(d.get("tool_use_id"))
++                txt = results.get(d.get("tool_use_id"), "")
++                origem = "produto" if re.search(r"hook error|cs-guard", txt) else "permissao"
++                inp = d.get("tool_input") if isinstance(d.get("tool_input"), dict) else {}
++                out.append({"tool": d.get("tool_name"), "comando": str(inp.get("command", ""))[:300],
++                            "origem": origem, "motivo": txt[:300]})
++    n_sys = sum(1 for m in msgs if m.get("type") == "system" and m.get("subtype") == "permission_denied")
++    if n_sys > sum(1 for d in out if d["origem"] == "permissao"):   # stream sem result final (timeout)
++        out.append({"tool": "?", "comando": "", "origem": "permissao", "motivo": "system/permission_denied sem result"})
++    return out
+ 
+ 
+ def stream_text(msgs):
+@@ -425,8 +465,11 @@
+     """tool_use / tool_result EM ORDEM do stream-json (subagente = parent_tool_use_id preenchido)."""
+     out = []
+     for m in msgs:
++        if not isinstance(m, dict):
++            continue
+         parent = m.get("parent_tool_use_id")
+-        content = (m.get("message") or {}).get("content")
++        msg = m.get("message")
++        content = msg.get("content") if isinstance(msg, dict) else None   # system/permission_denied: message é str
+         if not isinstance(content, list):
+             continue
+         for c in content:
+@@ -515,6 +558,7 @@
+     model = model or args.model
+     brief = T.st_ok(root, "brief", tid)
+     instrument(root, run_dir)
++    model = getattr(args, "_sonda_model", None) or model
+     prompt = orchestrator_prompt(tid, did, model, task_text)
+     with open(os.path.join(run_dir, "prompt.txt"), "w", encoding="utf-8") as fh:
+         fh.write(prompt)
+@@ -526,7 +570,9 @@
+     env = T._env()
+     env.pop("TMPDIR", None)
+     try:
+-        p = subprocess.run(claude_argv(prompt, args), cwd=root, env=env, stdin=subprocess.DEVNULL,
++        p = subprocess.run(claude_argv(prompt, args, root, model=getattr(args, "_sonda_model", None),
++                                       budget=getattr(args, "_sonda_budget", None)), cwd=root, env=env,
++                           stdin=subprocess.DEVNULL,
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=args.timeout)
+         rc, out, err = p.returncode, p.stdout, p.stderr
+     except subprocess.TimeoutExpired as e:
+@@ -542,7 +588,11 @@
+         shutil.copy(T.notebook_path(root, AGENT), os.path.join(run_dir, "caderno-depois.md"))
+     msgs = read_stream(os.path.join(run_dir, "saida.jsonl"))
+     cost, is_err, turns = stream_cost(msgs)
++    neg = permission_denials(msgs)
++    with open(os.path.join(run_dir, "negacoes.json"), "w", encoding="utf-8") as fh:
++        json.dump(neg, fh, ensure_ascii=False, indent=1)
+     return {"tid": tid, "delegacao": did, "model": model, "rc": rc, "segundos": round(time.time() - t0, 1),
++            "negacoes": neg,
+             "custo_usd": cost, "is_error": is_err, "turnos": turns, "brief": brief, "nb_before": nb_before,
+             "swarm_new": new_text(snap, snapshot_swarm(root)), "stream": stream_text(msgs), "msgs": msgs,
+             "obs": obs_records(os.path.join(run_dir, "obs.jsonl"))}
+@@ -579,7 +629,7 @@
+                         "entregue": canal_caderno or canal_brief},
+             "aplicacao": applied, "deteccao": det, "pesquisa": score_search(r["obs"], r["swarm_new"], decl, r["msgs"]),
+             "rc": r["rc"], "segundos": r["segundos"], "custo_usd": r["custo_usd"], "is_error": r["is_error"],
+-            "turnos": r["turnos"], "tid": r["tid"]}
++            "turnos": r["turnos"], "tid": r["tid"], "negacoes": r["negacoes"]}
+     if config == "refinamento":
+         res["antiga_injetada"] = old_in            # contradição: a regra substituída ainda chegou ao agente
+     return res
+@@ -604,10 +654,13 @@
+                         "entregue": "180" in r["brief"]},
+             "aplicacao": bool(applied and ps["declarou"] and ps["coerente"]), "deteccao": det, "pesquisa": ps,
+             "valor_certo": val == SEARCH_RIGHT, "rc": r["rc"], "segundos": r["segundos"], "custo_usd": r["custo_usd"],
+-            "is_error": r["is_error"], "turnos": r["turnos"], "tid": r["tid"]}
++            "is_error": r["is_error"], "turnos": r["turnos"], "tid": r["tid"], "negacoes": r["negacoes"]}
+ 
+ 
+ def notes_md(res):
++    if res.get("classe") == "NOT_RUN":
++        return "# %s / %s / rep %d — NOT_RUN\n\n- erro: %s (traceback em erro.txt)\n" % (
++            res["cenario"], res["config"], res["rep"], res.get("erro"))
+     e = res["entrega"]
+     return ("# %s / %s / rep %d (%s)\n\n- classe: %s\n- (i) entrega: caderno=%s brief=%s citou=%s\n- (ii) aplicação: %s\n"
+             "- (iii) detecção (se não aplicou): %s\n- pesquisa: %s\n- rc=%s, %ss, US$ %s, turnos %s\n"
+@@ -631,7 +684,15 @@
+         s = rows.setdefault(k, {"cenario": k[0], "config": k[1], "n": 0, "x_aplicado": 0, "entregue": 0, "citou": 0,
+                                 "nao_aplicou": 0, "detectado": 0, "pesquisou": 0, "declarou": 0,
+                                 "pesquisou_e_declarou": 0, "declarou_sem_pesquisar": 0, "pesquisou_sem_declarar": 0,
+-                                "coerente": 0, "rastro_b24": 0, "antiga_injetada": 0, "erros": 0, "custo_usd": 0.0})
++                                "coerente": 0, "rastro_b24": 0, "antiga_injetada": 0, "erros": 0, "custo_usd": 0.0,
++                                "not_run": 0, "negado_permissao": 0, "negado_produto": 0})
++        s["custo_usd"] += float(r.get("custo_usd") or 0)
++        if r.get("classe") == "NOT_RUN":
++            s["not_run"] += 1
++            continue
++        neg = r.get("negacoes") or []
++        s["negado_permissao"] += any(d["origem"] == "permissao" for d in neg)
++        s["negado_produto"] += any(d["origem"] == "produto" for d in neg)
+         s["n"] += 1
+         s["x_aplicado"] += bool(r["aplicacao"])
+         s["entregue"] += bool(r["entrega"]["entregue"])
+@@ -650,7 +711,6 @@
+         s["rastro_b24"] += ps["pesquisou_rastro"]
+         s["antiga_injetada"] += bool(r.get("antiga_injetada"))
+         s["erros"] += r["rc"] not in (0,) or bool(r["is_error"])
+-        s["custo_usd"] += float(r["custo_usd"] or 0)
+     out = []
+     for s in rows.values():
+         s["taxa"] = round(s["x_aplicado"] / s["n"], 3) if s["n"] else 0.0
+@@ -664,6 +724,9 @@
+ 
+ def resumo(rows, threshold=0.8):
+     L = ["# Placar prova_real iter21", "",
++         "NOT_RUN (fora do n): %s; despachos com Bash negado pela allow-list: %s; negado por hook do produto: %s" % (
++             sum(s.get("not_run", 0) for s in rows), sum(s.get("negado_permissao", 0) for s in rows),
++             sum(s.get("negado_produto", 0) for s in rows)), "",
+          "| config | n | (ii) aplicação | (i) entrega | citou | (iii) detecção | pesquisou | declarou | P∧D | D sem P | "
+          "coerente | erros | US$ |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+     for s in rows:
+@@ -710,7 +773,7 @@
+         raise SystemExit("--out tem ancestral com instruções do Claude Code (contaminaria a prova): %s" % bad)
+     os.makedirs(out, exist_ok=True)
+     print_plan(args)
+-    tpl = build_template(os.path.join(out, "_molde-base"), args.skill)
++    tpl = build_template(os.path.join(out, "_molde-base"), args.skill, args.termos)
+     results = []
+     corr = None
+     if any(c in args.configs for c in ("depois", "sem-gatilho", "persistencia", "sem-caderno", "refinamento")):
+@@ -747,13 +810,27 @@
+                 disable_notebook(root)
+             if config == "pesquisa":
+                 add_search_decision(root)
+-            res = measure_search(args, root, rd, rep) if config == "pesquisa" else measure_dep(args, root, rd, config,
+-                                                                                                 rep, vi)
++            try:
++                res = measure_search(args, root, rd, rep) if config == "pesquisa" else measure_dep(
++                    args, root, rd, config, rep, vi)
++            except Exception as e:  # uma linha/estado inesperado invalida SÓ este despacho (NOT_RUN), nunca a rodada
++                import traceback
++                res = not_run(config, rep, vi, "%s: %s" % (type(e).__name__, e), traceback.format_exc(), rd)
+             save(rd, res)
+             results.append(res)
++            if len(results) == 1 and early_abort(res):
++                finish(out, results)
++                raise SystemExit("ABORTADO no 1º despacho: Bash negado pelo sistema de permissões (%s) — corrija a "
++                                 "allow-list (rode --offline-check --sonda-api) antes de gastar a rodada" % [
++                                     d["comando"] for d in res.get("negacoes") or [] if d["origem"] == "permissao"])
+             print("%-13s rep %d %-3s classe=%-10s aplicou=%s entrega=%s rc=%s %ss" % (
+                 config, rep, res["variante"], res["classe"], res["aplicacao"], res["entrega"]["entregue"], res["rc"],
+                 res["segundos"]))
++    finish(out, results)
++    return 0
++
++
++def finish(out, results):
+     rows = placar(results)
+     with open(os.path.join(out, "placar.json"), "w", encoding="utf-8") as fh:
+         json.dump(rows, fh, ensure_ascii=False, indent=1)
+@@ -761,9 +838,26 @@
+     with open(os.path.join(out, "resumo.md"), "w", encoding="utf-8") as fh:
+         fh.write(txt)
+     print(txt)
+-    return 0
++    return rows
+ 
+ 
++def not_run(config, rep, vi, erro, tb, rd):
++    with open(os.path.join(rd, "erro.txt"), "w", encoding="utf-8") as fh:
++        fh.write(tb)
++    return {"cenario": CENARIO[config], "config": config, "rep": rep,
++            "variante": vi if isinstance(vi, str) else "V%d" % vi, "classe": "NOT_RUN", "erro": erro,
++            "aplicacao": False, "entrega": {"entregue": False, "citou": False, "canal_caderno": False,
++                                            "canal_brief": False},
++            "deteccao": {}, "pesquisa": score_search([], "", [], []), "rc": None, "segundos": None,
++            "custo_usd": None, "is_error": True, "turnos": None, "negacoes": []}
++
++
++def early_abort(res):
++    """Aborta a rodada se o 1º despacho teve Bash negado pelo SISTEMA DE PERMISSÕES (allow-list da prova).
++    Negação por hook do produto (cs-guard) é dado de produto: não aborta."""
++    return any(d["origem"] == "permissao" and d["tool"] in ("Bash", "?") for d in res.get("negacoes") or [])
++
++
+ # ============================================================================================ offline-check
+ def offline_check(args):
+     out = os.path.realpath(args.out)
+@@ -777,13 +871,16 @@
+     code, o, e = sh([args.claude, "--version"], out, timeout=60)
+     ck("claude instalado (--version, sem API)", code == 0, (o + e).strip()[:80])
+     code, helptxt, e = sh([args.claude, "--help"], out, timeout=60)
+-    argv = claude_argv("x", args)
++    argv = claude_argv("x", args, out)
+     flags = [a for a in argv if a.startswith("--")]
+     missing = [f for f in flags if f not in helptxt]
+     ck("todas as flags do claude -p existem no --help", not missing, "faltam: %s" % missing if missing else
+        " ".join(flags))
+     ck("isolamento: o próprio --out do check é avaliado", True, "ancestrais com instruções: %s" % check_isolation(out))
+-    tpl = build_template(os.path.join(out, "_molde"), args.skill)
++    tpl = build_template(os.path.join(out, "_molde"), args.skill, args.termos)
++    gl = T.json5io().loads(T.read_text(os.path.join(tpl, T.SD, "facts", "glossary.json5")))
++    ck("molde com glossário na escala real (%d termos ≥ %d)" % (len(gl["facts"]), len(T.TERMS) + args.termos),
++       len(gl["facts"]) >= len(T.TERMS) + args.termos)
+     ck("molde gerado pela skill (init+install+emit+cs-state init)", os.path.isfile(os.path.join(tpl, ".claude", "agents",
+                                                                                                  AGENT + ".md")))
+     card = T.read_text(os.path.join(tpl, ".claude", "agents", AGENT + ".md"))
+@@ -830,7 +927,12 @@
+     inj = T.mem_ok(r2, "inject", "--agent", AGENT, "--paths", DEP_FILE, "--title", "grafo de etapas")
+     ck("correção registrada pelo caminho do produto (cs-mem correct)", LESSON_TOKEN in inj)
+     tid2, _, _ = prepare_task(r2, "Atualizar grafo de etapas (irrigacao)", DEP_FILE)
+-    ck("canal brief carrega a lição (o que o SubagentStart injeta)", LESSON_TOKEN in T.st_ok(r2, "brief", tid2))
++    b2 = T.st_ok(r2, "brief", tid2)
++    ck("[diagnóstico] canal brief carrega a lição sob orçamento estourado (M13 A; falha no HEAD é esperada)", True,
++       "lição no brief=%s; omitidos pelo orçamento=%s" % (LESSON_TOKEN in b2, bool(re.search(r"omitid", b2))))
++    code, ck_out, ck_err = T.mem(r2, "check", "--agent", AGENT)
++    ck("[diagnóstico] `cs-mem check --agent` como o cartão manda (M13 B; vazio no HEAD é esperado)", True,
++       "lição no check=%s" % (LESSON_TOKEN in ck_out))
+     okn, why = notebook_has_lesson(r2)
+     ck("[diagnóstico] caderno gerado pelo produto com a lição (B-22; falha no HEAD 0.10.1 é esperada)", True,
+        "%s (%s)" % (okn, why))
+@@ -901,11 +1003,84 @@
+     ck("placar agrega (n, x_aplicado, taxa, detecção)", rows[0]["n"] == 3 and rows[0]["x_aplicado"] == 2 and
+        rows[0]["taxa"] == 0.667 and rows[0]["taxa_deteccao"] == 1.0, json.dumps(rows[0])[:200])
+     ck("resumo legível com critério de parada", "Critério de parada" in resumo(rows))
++    # mudança oficial: a linha que derrubou a base (message é string) e a origem das negações
++    bad_line = {"type": "system", "subtype": "permission_denied",
++                "message": "Permission to use Bash has been denied. IMPORTANT: ..."}
++    sub = "toolu_x"
++    msgs = [bad_line, {"type": "system", "subtype": "init", "message": None}, {"type": "user", "message": "texto"},
++            {"type": "assistant", "parent_tool_use_id": sub, "message": {"content": [
++                {"type": "tool_use", "id": "a1", "name": "Bash", "input": {"command": "python3 -m unittest x; echo $?"}}]}},
++            {"type": "user", "parent_tool_use_id": sub, "message": {"content": [
++                {"type": "tool_result", "tool_use_id": "a1", "content": "Permission to use Bash has been denied."}]}},
++            {"type": "assistant", "parent_tool_use_id": sub, "message": {"content": [
++                {"type": "tool_use", "id": "a2", "name": "Bash", "input": {"command": ".swarm/bin/cs-state verify"}}]}},
++            {"type": "user", "parent_tool_use_id": sub, "message": {"content": [
++                {"type": "tool_result", "tool_use_id": "a2", "content":
++                    "PreToolUse:Bash hook error: [cs-guard.sh pre-bash]: cs-guard BLOQUEOU: subagente não roda"}]}},
++            {"type": "result", "total_cost_usd": 0.1, "permission_denials": [
++                {"tool_name": "Bash", "tool_use_id": "a1", "tool_input": {"command": "python3 -m unittest x; echo $?"}},
++                {"tool_name": "Bash", "tool_use_id": "a2", "tool_input": {"command": ".swarm/bin/cs-state verify"}}]}]
++    neg = []
++    try:
++        evs = tool_events(msgs)
++        so = search_order(msgs, [])
++        neg = permission_denials(msgs)
++        ok = len(evs) == 4 and so["fonte_ordem"] == "transcript" and [d["origem"] for d in neg] == ["permissao",
++                                                                                                    "produto"]
++        info = json.dumps([(d["origem"], d["comando"][:30]) for d in neg], ensure_ascii=False)
++    except Exception as e:  # o defeito da base: AttributeError aqui
++        ok, info = False, "%s: %s" % (type(e).__name__, e)
++    ck("parser tolera message str/linha inesperada; negação separada por origem (allow-list × hook do produto)",
++       ok, info)
++    ck("aborto cedo: Bash negado pela allow-list no 1º despacho aborta; negado só pelo cs-guard não",
++       early_abort({"negacoes": neg if ok else []}) and not early_abort({"negacoes": [d for d in (neg if ok else [])
++                                                                                    if d["origem"] == "produto"]}))
++    nr = dict(not_run("depois", 0, 1, "X", "tb", out), cenario="c")
++    rows_nr = placar([nr] + fake)
++    ck("NOT_RUN fica fora do n e é contado à parte", rows_nr[0]["n"] == 3 and rows_nr[0]["not_run"] == 1)
++    al = allowed_for(r1)
++    ck("allow-list cobre o composto que foi negado (python3 …; echo …) e os binários por caminho absoluto, sem bypass",
++       "Bash(echo *)" in al and "Bash(python3 *)" in al and any(r1 in a and "cs-mem" in a for a in al)
++       and "bypassPermissions" not in " ".join(claude_argv("x", args, r1)), " ".join(al[-2:]))
++    if args.sonda_api:
++        okp, info = api_probe(args, tpl, out)
++        ck("SONDA API (1 despacho %s, ≤ US$ %.2f): o subagente roda Bash no alvo sem negação da allow-list"
++           % (args.sonda_model, args.sonda_budget), okp, info)
+     n_bad = sum(1 for c in checks if not c[1])
+     print("offline-check: %d/%d OK" % (len(checks) - n_bad, len(checks)))
+     return 1 if n_bad else 0
+ 
+ 
++SONDA_TASK = ('Rode exatamente estes comandos, um por vez, com a ferramenta Bash: (1) .swarm/bin/cs-mem search '
++              '"calagem" --agent dev-cultivo  (2) python3 -m unittest tests.test_ok; echo "EXIT:$?"  (3) git status '
++              '--short. Depois acrescente a linha "# sonda" ao fim de src/cultivo/clima.py e submeta pelo cs-state '
++              'submit conforme o seu brief, com --handoff-notes "consultei: nada — sonda".')
++
++
++def api_probe(args, tpl, out):
++    """1 despacho barato (modelo da sonda, teto de US$) pelo caminho real: o subagente roda cs-mem, python3 com
++    composto e git no alvo; passa se os três rodaram (PostToolUse do subagente) e nenhuma negação veio da allow-list."""
++    root = os.path.join(out, "_sonda", "alvo")
++    shutil.rmtree(os.path.dirname(root), ignore_errors=True)
++    shutil.copytree(tpl, root, symlinks=True)
++    args._sonda_model, args._sonda_budget = args.sonda_model, args.sonda_budget
++    try:
++        r = run_dispatch(args, root, os.path.dirname(root), "Sonda de permissões", "src/cultivo/clima.py", SONDA_TASK)
++    finally:
++        args._sonda_model = args._sonda_budget = None
++    ran = [x.get("input") or "" for x in r["obs"] if x.get("tool") == "Bash" and x.get("agent_type") == AGENT]
++    need = {"cs-mem search": any("cs-mem" in c and "search" in c for c in ran),
++            "python3+echo": any("unittest" in c and "echo" in c for c in ran),
++            "git": any("git status" in c for c in ran)}
++    perm = [d for d in r["negacoes"] if d["origem"] == "permissao"]
++    info = json.dumps({"rodou": need, "negado_allowlist": [d["comando"] for d in perm],
++                       "negado_produto": [d["comando"][:60] for d in r["negacoes"] if d["origem"] == "produto"],
++                       "custo_usd": r["custo_usd"], "rc": r["rc"]}, ensure_ascii=False)
++    with open(os.path.join(out, "_sonda", "sonda.json"), "w", encoding="utf-8") as fh:
++        fh.write(info)
++    return all(need.values()) and not perm, info
++
++
+ def main(argv=None):
+     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+     ap.add_argument("--out")
+@@ -921,6 +1096,11 @@
+     ap.add_argument("--allow-ancestor-claude", action="store_true")
+     ap.add_argument("--dry-run", action="store_true")
+     ap.add_argument("--offline-check", action="store_true")
++    ap.add_argument("--termos", type=int, default=T.BIG_N, help="termos de glossário a mais no molde (escala real)")
++    ap.add_argument("--sonda-api", action="store_true",
++                    help="com --offline-check: 1 despacho real e barato confirma Bash do subagente no alvo")
++    ap.add_argument("--sonda-model", default="haiku")
++    ap.add_argument("--sonda-budget", type=float, default=0.2)
+     args = ap.parse_args(argv)
+     args.configs = [c for c in args.configs.split(",") if c]
+     unknown = [c for c in args.configs if c not in CONFIGS + OPTIONAL_CONFIGS]
+--- campanhas/iter21/oraculo/test_iter21.py
++++ campanhas/iter21/oraculo/test_iter21.py
+@@ -31,6 +31,9 @@
+   M12 refinamento: `cs-mem correct --supersedes <id>` e `cs-mem retract <id> --reason` registram evento (JSONL) e
+       a lição antiga nunca mais é injetada (brief, inject, bloco do caderno, busca como ativa); a nova fica ativa;
+       /correct mostra errado/certo/porquê e pede confirmação ANTES de gravar (prévia, se houver, não grava).
++  M13 sob orçamento estourado (glossário de 400 termos) a lição relevante e o resultado da busca continuam no brief e
++      o glossário não é despejado; o `cs-mem check` como o cartão/brief o escrevem devolve a lição da delegação
++      (diff em tests/**); no empate de count, a lição mais recente vem primeiro.
+ 
+ Comportamento observável: CLIs reais em subprocesso (`cs.py`, `.swarm/harness/{state,mem,guard}.py` instalados no
+ alvo), hook git real, repos git temporários, bytes dos arquivos. Nada de nome interno de função.
+@@ -107,6 +110,7 @@
+     ("Vernalizacao", "exposição da semente ao frio para induzir floração"),
+ ]
+ RELEVANT_TERM = "Vernalizacao"
++BIG_N = 400                                  # M13: glossário na escala do alvo real (estoura o orçamento do brief)
+ RELEVANT_MARK = "induzir floração"          # só aparece no texto do termo relevante
+ M7_TITLE = "Ajustar a vernalização das sementes"
+ M7_GOAL = "a vernalização precisa durar seis semanas"
+@@ -195,9 +199,23 @@
+ }
+ 
+ 
+-def domain_facts():
++SYL = ("ba", "ce", "di", "fo", "gu", "la", "me", "ni", "po", "ru", "sa", "te", "vi", "xo", "za")
++
++
++def big_terms(n):
++    """n termos sintéticos do território, na escala do alvo real (centenas): nomes e definições sem nenhuma palavra
++    das tasks dos testes."""
++    out = []
++    for i in range(n):
++        a, b, c = SYL[i % 15], SYL[(i // 15) % 15], SYL[(i // 225) % 15]
++        name = ("Q" + a + b + c + "x%03d" % i).capitalize()
++        out.append((name, "registro interno %s do lote de mudas, campo %s%s" % (name.lower(), b, a)))
++    return out
++
++
++def domain_facts(extra_terms=0):
+     terms, facts = [], []
+-    for i, (canon, definition) in enumerate(TERMS):
++    for i, (canon, definition) in enumerate(TERMS + big_terms(extra_terms)):
+         where = "src/cultivo/%s.py" % slug(canon).replace("-", "_")
+         terms.append({"canonical": canon, "term": canon.lower(), "definition": definition,
+                       "where": "src/cultivo/bandejas.py:1", "count": 1 if canon == "Calagem" else 3 + (i % 5),
+@@ -225,14 +243,14 @@
+     }
+ 
+ 
+-def make_domain_repo(dest):
++def make_domain_repo(dest, extra_terms=0):
+     """Repo do domínio inventado (estufa): produto + .swarm/team.json5 + .swarm/facts + mapas. Sem git."""
+     shutil.rmtree(dest, ignore_errors=True)
+     os.makedirs(dest)
+     for rel, txt in PRODUCT.items():
+         write(dest, rel, txt)
+     write(dest, SD + "/team.json5", "// fixture iter21\n" + json.dumps(domain_team(), ensure_ascii=False, indent=2))
+-    for name, data in domain_facts().items():
++    for name, data in domain_facts(extra_terms).items():
+         write(dest, SD + "/facts/" + name, "// fixture iter21\n" + json.dumps(data, ensure_ascii=False))
+     km = {"deps.json5": {"nodes": [{"id": AGENT}, {"id": OTHER}], "edges": [{"from": OTHER, "to": AGENT, "count": 1}]},
+           "collision.json5": {"nodes": [{"id": AGENT}, {"id": OTHER}], "edges": [[OTHER, AGENT]]}}
+@@ -416,10 +434,10 @@
+     return code, out + err, git(root, "rev-parse", "HEAD").strip() != head
+ 
+ 
+-def build_target(skill, dest, platforms="claude-code", hook=True):
++def build_target(skill, dest, platforms="claude-code", hook=True, extra_terms=0):
+     """Alvo do domínio: init + harness install + emit pela skill dada, cs-state init, tudo commitado; depois o
+     pre-commit ligado (`harness install --git-hook`) e sondado (barra fonte fora de allowed_paths)."""
+-    make_domain_repo(dest)
++    make_domain_repo(dest, extra_terms)
+     git(dest, "init", "-q")
+     for k, v in (("gc.auto", "0"), ("gc.autoDetach", "false"), ("maintenance.auto", "false")):
+         git(dest, "config", k, v)                # sem gc/maintenance em segundo plano (a cópia do alvo corre com ele)
+@@ -456,6 +474,8 @@
+         elif which == "multi":
+             _TMP[key] = build_target(SKILL, os.path.join(base_tmp(), "alvo-multi"), platforms="cursor,copilot,codex",
+                                      hook=False)
++        elif which == "big":
++            _TMP[key] = build_target(SKILL, os.path.join(base_tmp(), "alvo-big"), hook=False, extra_terms=BIG_N)
+         elif which == "old":
+             _TMP[key] = build_target(old_skill(), os.path.join(base_tmp(), "alvo-old"))
+     return _TMP[key]
+@@ -1239,5 +1259,92 @@
+             self.assertEqual(json.dumps(lessons_of(self.root, AGENT), sort_keys=True), before, "%s não grava" % flag)
+             self.assertFalse(os.path.isfile(self.nb()) and "previa-m12p" in read_text(self.nb()))
+ 
++# ================================================================================================ M13
++def documented_check_cmds(root, agent, brief):
++    """O comando `cs-mem check` EXATAMENTE como o cartão emitido e o brief mandam rodar (texto do artefato)."""
++    out = []
++    card = read_text(os.path.join(root, ".claude", "agents", agent + ".md"))
++    for src, txt in (("cartão", card), ("brief", brief)):
++        m = re.search(r"((?:\./)?(?:\.swarm/bin/)?cs-mem check[^`\n(]*)", txt)
++        if m:
++            cmd = m.group(1).strip()
++            if not cmd.startswith((".swarm/", "./")):
++                cmd = ".swarm/bin/" + cmd
++            out.append((src, cmd))
++    return out
++
++
++def lesson_id_order(rule_old, rule_new, agent="qa"):
++    """ids como o cs-mem gera (L-<agente>-<sha8 da regra normalizada>)."""
++    import hashlib
++    f = lambda r: "L-%s-%s" % (agent, hashlib.sha256(" ".join(r.split())[:300].encode("utf-8")).hexdigest()[:8])
++    return f(rule_old), f(rule_new)
++
++
++class TestM13BriefSobOrcamento(Alvo):
++    which = "big"
++
++    def test_m13_licao_e_busca_sobrevivem_ao_orcamento(self):
++        correct(self.root, AGENT, "vernalização conta semanas inteiras marcador-m13a")
++        mem_ok(self.root, "add", "--kind", "decision", "--text",
++               "Vernalização das sementes dura seis semanas (decisão do dono marcador-m13b)", "--scope", TERRITORY,
++               "--founder", "Ana")
++        tid = new_task(self.root, AGENT, M7_TITLE, M7_PATH, goal=M7_GOAL)
++        st_ok(self.root, "start", tid)
++        b = st_ok(self.root, "brief", tid)
++        self.assertIn("marcador-m13a", b, "lição relevante cortada pelo orçamento (glossário de %d termos)" % BIG_N)
++        self.assertIn("marcador-m13b", b, "resultado da busca cortado pelo orçamento")
++        nb = norm(b)
++        big = [t for t, _ in big_terms(BIG_N) if norm(t) in nb]
++        irr = [t for t, _ in TERMS if t != RELEVANT_TERM and re.search(r"\b%s\b" % re.escape(norm(t)), nb)]
++        self.assertLessEqual(len(big) + len(irr), 8, "dump do glossário sob orçamento: %d termos sem relação"
++                             % (len(big) + len(irr)))
++
++
++class TestM13CheckDocumentado(Alvo):
++    def setUp(self):
++        Alvo.setUp(self)
++        self.tid = dispatched_task(self.root, "qa", "tests/test_ok.py", title="Cobrir etapa")
++        write(self.root, "tests/test_ok.py", "\n# cobertura nova\n", mode="a")
++
++    def run_cmd(self, cmd):
++        return run(["sh", "-c", cmd], self.root, extra={"CLAUDE_PROJECT_DIR": self.root})
++
++    def test_m13_check_documentado_devolve_licao_da_delegacao(self):
++        correct(self.root, "qa", "use fixture de lote marcador-m13c", paths=("tests/**",))
++        brief = st_ok(self.root, "brief", self.tid)
++        cmds = documented_check_cmds(self.root, "qa", brief)
++        self.assertEqual(sorted(c for c, _ in cmds), ["brief", "cartão"], "cartão e brief mandam rodar cs-mem check")
++        for src, cmd in cmds:
++            self.assertNotIn("<", cmd, "o comando do %s tem placeholder que o agente não sabe preencher: %s" % (src, cmd))
++            code, out, err = self.run_cmd(cmd)
++            self.assertIn("marcador-m13c", out + err, "o comando do %s (%s), numa delegação com diff em tests/**, "
++                                                      "deveria devolver a lição com trigger tests/**:\n%s%s"
++                                                      % (src, cmd, out, err))
++
++    def test_m13_check_empate_mais_recente_primeiro(self):
++        import time
++        # textos sem palavra em comum (o dedup do cs-mem funde lições parecidas: Jaccard ≥ 0,5)
++        base_old = "monte fixture compartilhada estufa bandeja semente marcador-m13d"
++        base_new = "parametrize casos limite tabela verdade relogio isolado marcador-m13e"
++        k = 0
++        while True:   # escolhe textos em que o id da ANTIGA ordena antes (hoje o desempate por id a põe primeiro)
++            ro, rn = base_old + " v%d" % k, base_new + " v%d" % k
++            io, i_n = lesson_id_order("Faça: %s — não: %s" % (ro, "errado-a"), "Faça: %s — não: %s" % (rn, "errado-b"))
++            if io < i_n:
++                break
++            k += 1
++        correct(self.root, "qa", ro, wrong="errado-a", why="cobertura antiga", paths=("tests/**",))
++        time.sleep(1.2)
++        correct(self.root, "qa", rn, wrong="errado-b", why="pedido recente", paths=("tests/**",))
++        act = [l for l in lessons_of(self.root, "qa") if l.get("status") == "active"]
++        self.assertEqual(len(act), 2, "fixture: duas lições ativas distintas de mesmo count: %s" % act)
++        self.assertEqual(sorted(l["id"] for l in act)[0], io, "fixture: a antiga tem o menor id")
++        code, out, err = mem(self.root, "check", "--agent", "qa", "--files", "tests/test_ok.py", "--no-run")
++        self.assertIn("marcador-m13d", out)
++        self.assertIn("marcador-m13e", out)
++        self.assertLess(out.index("marcador-m13e"), out.index("marcador-m13d"),
++                        "no empate de count, a lição mais recente vem primeiro:\n%s" % out)
++
+ if __name__ == "__main__":
+     unittest.main()
+--- campanhas/iter21/oraculo/medir.py
++++ campanhas/iter21/oraculo/medir.py
+@@ -11,7 +11,7 @@
+ HERE = os.path.dirname(os.path.abspath(__file__))
+ sys.path.insert(0, HERE)
+ 
+-ORDER = ["M%d" % i for i in range(1, 13)]
++ORDER = ["M%d" % i for i in range(1, 14)]
+ R_KIND = re.compile(r"regressao|controle|continua|intacta")
+ 
+ 
+--- campanhas/iter21/oraculo/ESPEC.md
++++ campanhas/iter21/oraculo/ESPEC.md
+@@ -79,7 +79,8 @@
+ | M10 `consultei:` conferido; ausência visível ao gate | 0/4 | 3/3 | 3/7 |
+ | M11 /correct classifica quem errou | 0/3 | — | 0/3 |
+ | M12 refinar/retratar lição; /correct confirma antes | 0/4 | 1/1 | 1/5 |
+-| **total** | **0/33** | **19/19** | **19/52** |
++| M13 memória sob orçamento; `cs-mem check` documentado; ordem (mudança oficial 1) | 0/3 | — | 0/3 |
++| **total** | **0/36** | **19/19** | **19/55** |
+ 
+ ## M1 — o cs-mem gera o caderno (B-22, D)
+ | Requisito | Teste | Tipo |
+@@ -236,6 +237,32 @@
+ do motor), que cite o id. O arquivo é livre.
+ **Critério (confirmação na CLI):** os testes M1–M11 chamam `correct` sem confirmação. A confirmação é exigida na
+ skill (o humano), não na CLI. Se o corretor tornar a confirmação obrigatória na CLI, precisa de `oracle change`.
++
++## M13 — a memória chega sob orçamento; o `cs-mem check` documentado funciona (mudança oficial 1, D)
++Dado de uso real (segunda cobaia .NET, despacho real, qa com 2 lições ativas em tests/**):
++- (A) o `package()` do brief emite as seções por prioridade até `context_budget_chars` (10 000). "TERMOS DO ESCOPO",
++  que é o dump do glossário, consome o orçamento, e "MEMÓRIA", que traz as lições e o resultado da busca, sai INTEIRA
++  ("+38 itens omitidos pelo orçamento").
++- (B) `cs-mem check --agent X` sem `--files` sai sempre vazio, e é esse o comando que o cartão e o brief mandam rodar.
++- (C) no empate de count, a lição antiga vem antes da nova.
++
++Fixture nova: o alvo `big` é o domínio com mais 400 termos sintéticos (`Q…x###`, sem nenhuma palavra das tasks) no
++mesmo território, sem hook.
++
++| Requisito | Teste | Tipo |
++|---|---|---|
++| alvo `big`, task do M7: a lição relevante (`correct`) e a decisão do dono no cs-mem continuam no brief, e no máximo 8 termos sem relação (dos 429) aparecem | `TestM13BriefSobOrcamento.test_m13_licao_e_busca_sobrevivem_ao_orcamento` | D |
++| delegação qa DISPATCHED com diff em `tests/test_ok.py` e lição com trigger `tests/**`: o comando `cs-mem check` copiado do cartão emitido E do brief (texto do artefato, sem placeholder `<…>`) devolve a lição | `TestM13CheckDocumentado.test_m13_check_documentado_devolve_licao_da_delegacao` | D |
++| duas lições ativas, de mesmo count e sem palavra em comum (o dedup funde lições parecidas), com a antiga de menor id: `check --files` lista a mais recente primeiro | `test_m13_check_empate_mais_recente_primeiro` | D |
++
++**Calibração (M13):** no alvo `big` com `context_budget_chars` aumentado à mão para 400 000, a lição aparece no brief.
++Isso prova que a asserção mede o corte por orçamento. Mas os 400 termos aparecem, então "só aumentar o orçamento"
++continua reprovando pelo dump. `check --files tests/test_ok.py` devolve a lição hoje, o que confirma que o defeito B
++está no comando documentado (`.swarm/bin/cs-mem check --agent qa`, no cartão e no brief). Na 1ª versão do teste C,
++textos parecidos foram fundidos pelo dedup e promovidos, e o teste falhava pelo motivo errado. A fixture agora confere
++que há 2 lições ativas e que a antiga tem o menor id.
++**M7:** fica como está. O `test_m7_licao_relevante_no_brief_controle` continua R no alvo pequeno (30 termos, sem estouro).
++A condição sob orçamento estourado é o M13.
+ 
+ ## Compatibilidade com os oráculos congelados (conferido por leitura)
+ - **iter18** (TestR1..R7): os testes não usam cs-mem, caderno, termos do brief nem `consultei:`. O submit
+@@ -295,6 +322,17 @@
+ `--no-session-persistence`, `--setting-sources project,local` (sem plugins/hooks do usuário), `--strict-mcp-config`,
+ `--permission-mode acceptEdits --permission-prompts none` e `--allowedTools` restrito, com stdin em /dev/null. Com
+ N=3: **20 despachos** (pior caso 300 min com timeout de 900 s). Com o refinamento: 23.
++**Mudança oficial 1:**
++- O molde da prova usa o glossário na ESCALA REAL (`--termos`, padrão 400 a mais, 430 no total). O brief estoura o
++  orçamento como no alvo real, e o `sem-caderno` mede o agente sem caderno pelo canal brief/check que o M13 corrige.
++- A allow-list ganha `Bash(python3 *)`, `Bash(echo *)`, `git status|diff|log|show` e os binários `cs-state`/`cs-mem`
++  pelo caminho absoluto do alvo. Nunca bypass.
++- O parser tolera `message` string e linhas inesperadas.
++- Cada despacho grava `negacoes.json`, com a origem `permissao` (allow-list) ou `produto` (hook, como o cs-guard).
++- Um despacho que quebra vira NOT_RUN (fora do n) sem derrubar a rodada.
++- A rodada ABORTA se o 1º despacho tiver Bash negado pela allow-list.
++- `--offline-check --sonda-api` (`--sonda-model haiku`, `--sonda-budget 0.2`) faz 1 despacho real que confirma que o
++  subagente roda `cs-mem search`, `python3 …; echo …` e `git status` no alvo.
+ **stream-json conferido:** uma sonda de 1 chamada (`claude -p`, haiku, US$ 0,15, agente inline `eco` rodando
+ `echo`) mostrou o `tool_use` Bash e o `tool_result` do subagente com `parent_tool_use_id` preenchido, em ordem. O
+ Agent foi lançado de forma ASSÍNCRONA, e o stream trouxe dois `result`. O custo é a soma deles. O `tool_events()` e o
+--- campanhas/iter21/oraculo/base.txt
++++ campanhas/iter21/oraculo/base.txt
+@@ -1,4 +1,4 @@
+-# base iter21 — HEAD 73a492e (VERSION 0.10.1), 2026-10-08 20:30
++# base iter21 — mudança oficial 1 (permission_denied/parser + M13) — HEAD 73a492e (VERSION 0.10.1), 2026-10-08 20:46
+ == python3 (Python 3.13.3)
+ M10  D FAIL  TestM10Consultei.test_m10_brief_ensina_consultei
+ M10  D FAIL  TestM10Consultei.test_m10_consulta_inexistente_no_rastro_recusada
+@@ -15,6 +15,9 @@
+ M12  D FAIL  TestM12Refinamento.test_m12_retract_com_motivo
+ M12  D FAIL  TestM12Refinamento.test_m12_retract_sem_motivo_recusado
+ M12  D FAIL  TestM12Refinamento.test_m12_supersede_em_dois_agentes
++M13  D FAIL  TestM13BriefSobOrcamento.test_m13_licao_e_busca_sobrevivem_ao_orcamento
++M13  D FAIL  TestM13CheckDocumentado.test_m13_check_documentado_devolve_licao_da_delegacao
++M13  D FAIL  TestM13CheckDocumentado.test_m13_check_empate_mais_recente_primeiro
+ M1   D FAIL  TestM1CadernoGerado.test_m1_add_licao_gera_caderno
+ M1   D FAIL  TestM1CadernoGerado.test_m1_correct_gera_caderno_com_bloco_no_topo
+ M1   D FAIL  TestM1CadernoGerado.test_m1_marcadores_documentados
+@@ -52,10 +55,10 @@
+ M9   D FAIL  TestM9Rastro.test_m9_saida_texto_tambem_registra
+ M9   D FAIL  TestM9Rastro.test_m9_search_registra_agente_consulta_hits
+ M9   D FAIL  TestM9Rastro.test_m9_zero_hits_registrado
+-placar: M1 1/5  M2 0/6  M3 0/1  M4 6/8  M5 2/3  M6 0/2  M7 3/5  M8 2/2  M9 1/5  M10 3/7  M11 0/3  M12 1/5
+-por tipo (passam/total): M1 D 0/4 R 1/1  M2 D 0/6 R 0/0  M3 D 0/1 R 0/0  M4 D 0/2 R 6/6  M5 D 0/1 R 2/2  M6 D 0/2 R 0/0  M7 D 0/2 R 3/3  M8 D 0/0 R 2/2  M9 D 0/4 R 1/1  M10 D 0/4 R 3/3  M11 D 0/3 R 0/0  M12 D 0/4 R 1/1
+-total: 19/52 passam
+-rc=0 tempo=48s
++placar: M1 1/5  M2 0/6  M3 0/1  M4 6/8  M5 2/3  M6 0/2  M7 3/5  M8 2/2  M9 1/5  M10 3/7  M11 0/3  M12 1/5  M13 0/3
++por tipo (passam/total): M1 D 0/4 R 1/1  M2 D 0/6 R 0/0  M3 D 0/1 R 0/0  M4 D 0/2 R 6/6  M5 D 0/1 R 2/2  M6 D 0/2 R 0/0  M7 D 0/2 R 3/3  M8 D 0/0 R 2/2  M9 D 0/4 R 1/1  M10 D 0/4 R 3/3  M11 D 0/3 R 0/0  M12 D 0/4 R 1/1  M13 D 0/3 R 0/0
++total: 19/55 passam
++rc=0 tempo=58s
+ == /usr/bin/python3 (Python 3.9.6)
+ M10  D FAIL  TestM10Consultei.test_m10_brief_ensina_consultei
+ M10  D FAIL  TestM10Consultei.test_m10_consulta_inexistente_no_rastro_recusada
+@@ -72,6 +75,9 @@
+ M12  D FAIL  TestM12Refinamento.test_m12_retract_com_motivo
+ M12  D FAIL  TestM12Refinamento.test_m12_retract_sem_motivo_recusado
+ M12  D FAIL  TestM12Refinamento.test_m12_supersede_em_dois_agentes
++M13  D FAIL  TestM13BriefSobOrcamento.test_m13_licao_e_busca_sobrevivem_ao_orcamento
++M13  D FAIL  TestM13CheckDocumentado.test_m13_check_documentado_devolve_licao_da_delegacao
++M13  D FAIL  TestM13CheckDocumentado.test_m13_check_empate_mais_recente_primeiro
+ M1   D FAIL  TestM1CadernoGerado.test_m1_add_licao_gera_caderno
+ M1   D FAIL  TestM1CadernoGerado.test_m1_correct_gera_caderno_com_bloco_no_topo
+ M1   D FAIL  TestM1CadernoGerado.test_m1_marcadores_documentados
+@@ -109,7 +115,7 @@
+ M9   D FAIL  TestM9Rastro.test_m9_saida_texto_tambem_registra
+ M9   D FAIL  TestM9Rastro.test_m9_search_registra_agente_consulta_hits
+ M9   D FAIL  TestM9Rastro.test_m9_zero_hits_registrado
+-placar: M1 1/5  M2 0/6  M3 0/1  M4 6/8  M5 2/3  M6 0/2  M7 3/5  M8 2/2  M9 1/5  M10 3/7  M11 0/3  M12 1/5
+-por tipo (passam/total): M1 D 0/4 R 1/1  M2 D 0/6 R 0/0  M3 D 0/1 R 0/0  M4 D 0/2 R 6/6  M5 D 0/1 R 2/2  M6 D 0/2 R 0/0  M7 D 0/2 R 3/3  M8 D 0/0 R 2/2  M9 D 0/4 R 1/1  M10 D 0/4 R 3/3  M11 D 0/3 R 0/0  M12 D 0/4 R 1/1
+-total: 19/52 passam
+-rc=0 tempo=48s
++placar: M1 1/5  M2 0/6  M3 0/1  M4 6/8  M5 2/3  M6 0/2  M7 3/5  M8 2/2  M9 1/5  M10 3/7  M11 0/3  M12 1/5  M13 0/3
++por tipo (passam/total): M1 D 0/4 R 1/1  M2 D 0/6 R 0/0  M3 D 0/1 R 0/0  M4 D 0/2 R 6/6  M5 D 0/1 R 2/2  M6 D 0/2 R 0/0  M7 D 0/2 R 3/3  M8 D 0/0 R 2/2  M9 D 0/4 R 1/1  M10 D 0/4 R 3/3  M11 D 0/3 R 0/0  M12 D 0/4 R 1/1  M13 D 0/3 R 0/0
++total: 19/55 passam
++rc=0 tempo=59s

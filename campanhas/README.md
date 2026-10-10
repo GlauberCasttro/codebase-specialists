@@ -26,10 +26,12 @@ Commits de entrega: do repositório privado de origem, antes deste projeto exist
 | [iter14](iter14/oraculo/ESPEC.md) | senha do humano na aprovação do mandato | `18e3496` | GO |
 | [iter15](iter15/oraculo/ESPEC.md) | 0.9.0: skills geradas em inglês (verbo-objeto) + guia de cada skill | `be1d03c` | GO |
 | [iter16](iter16/oraculo/ESPEC.md) | correções de uso real na cobaia .NET (BOM, dotfile, refino no `--fast`, history, C# em string, linha da aresta, check-diff pós-aceite) | `da3ea45` | GO |
-| [iter18](iter18/oraculo/ESPEC.md) | 0.10.0: correções de uso real na segunda cobaia .NET (tree_sha sem ignorados, reverify de VERIFIED/REVIEWED, gate registra veredito, orquestrador não dita, pre-commit × task não aceita, bashscan, allowed_paths = território) | — | em curso |
+| [iter18](iter18/oraculo/ESPEC.md) | 0.10.0: correções de uso real na segunda cobaia .NET (tree_sha sem ignorados, reverify de VERIFIED/REVIEWED, gate registra veredito, orquestrador não dita, pre-commit × task não aceita, bashscan, allowed_paths = território) | `5e8f6b2` | GO |
+| [iter20](iter20/oraculo/ESPEC.md) | 0.10.1: pre-commit aceita o resultado do próprio upgrade/emit/install por atestado (B-13), remoção via renomeação barrada | `97a1718` | GO |
 
 `historico/`: notas de retomada e planos de rodada da época (limpos), para contexto — não são estado vivo; o estado
 vivo do desenvolvimento está em `.claude/state/`.
 
 Nova campanha: skill `new-front` (cria `campanhas/<frente>/` pelo `ac.py init`); acrescente a linha aqui ao abrir e
 preencha commit/decisão no `close-front`.
+| iter19 | Estado legível em JSON, chaves em inglês, amend refletido no arquivo, cs-state show e migração automática | — | em andamento |
