@@ -13,6 +13,10 @@ AC="$TOOLS/ac/ac.py"
 REPO="$(git -C "$SKILL" rev-parse --show-toplevel 2>/dev/null)"
 PFX="$(git -C "$SKILL" rev-parse --show-prefix 2>/dev/null)"
 die() { echo "ERRO: $*" >&2; exit 1; }
+# PY = interpretador Python desta máquina: python3; sem ele (Git Bash no Windows), python. CS_DEV_PY força outro.
+PY="${CS_DEV_PY:-$(command -v python3 || command -v python)}"
+# UTF-8 em stdio e arquivos (no Windows o padrão é cp1252 e quebra nos acentos); vale para os subprocessos.
+export PYTHONUTF8=1
 feature_ok() { case "$1" in ''|*/*|.*|-*) die "nome de feature inválido: '$1' (use ex.: iter17)";; esac; }
 # archive_head <destino>: `git archive` do HEAD da skill (só o commitado) extraído em <destino> (sem o prefixo)
 archive_head() { mkdir -p "$1" && git -C "$REPO" archive "HEAD:$PFX" | tar -x -C "$1"; }
@@ -27,7 +31,7 @@ INST="$HOME/.claude/skills/$NOME"
 PKDIST="$SKILL/dist/$NOME"
 PRODUTO="SKILL.md MODO-DE-USO.md VERSION LICENSE scripts assets references docs .claude/package"
 LINHA_TRAVA='exec sh "$(git rev-parse --show-toplevel)/.claude/tools/pre-commit.sh" "$@"'
-realp() { python3 -c 'import os,sys;print(os.path.realpath(sys.argv[1]))' "$1"; }
+realp() { "$PY" -c 'import os,sys;print(os.path.realpath(sys.argv[1]))' "$1"; }
 # travas_dir: diretório de hooks do git do repo (o de `git rev-parse --git-path hooks`), absoluto
 travas_dir() {
   [ -n "$REPO" ] && [ -d "$REPO" ] || return 1

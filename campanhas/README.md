@@ -35,3 +35,5 @@ Nova campanha: skill `new-front` (cria `campanhas/<frente>/` pelo `ac.py init`);
 preencha commit/decisão no `close-front`.
 | win-motor-copia | Motor de campanhas embutido corrigido para Windows | — | em andamento |
 | win-bash | Fechar feature no Windows: bash do Git, nunca o do WSL | — | em andamento |
+| win-harness | Harness de desenvolvimento no Windows nativo, sem atalho | — | em andamento |
+| harness-evolucao | Evolução do harness do produto — classificação, ciclo de vida, JSON, memória e aprendizado por correção | — | em andamento |
