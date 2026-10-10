@@ -6,6 +6,12 @@
    "origem": "criar-feature",
    "aberta_em": "2026-10-09T11:34:49-0300",
    "campanha": "campanhas/win-harness"
+  },
+  {
+   "id": "harness-evolucao",
+   "origem": "criar-feature",
+   "aberta_em": "2026-10-09T20:29:18-0300",
+   "campanha": "campanhas/harness-evolucao"
   }
  ],
  "entregues": [

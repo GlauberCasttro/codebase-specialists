@@ -7,8 +7,8 @@ grupo: G1
 agente: corretor (papel; o executor real e o model passado vão para o Handoff)
 CA: CA-08, CA-09, CA-10
 depends: 01-TASK-ORACULO (o oráculo congelado é a régua da correção), 02-TASK-LANCADOR-HOOKS (usa o `_py.sh` e o `PY` do `_comum.sh`, e edita o mesmo `_comum.sh`)
-status: DONE
-gate: PASS
+status: IN_PROGRESS
+gate: FAIL
 complexidade: normal
 
 ## Goal

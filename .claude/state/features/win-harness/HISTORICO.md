@@ -182,3 +182,67 @@
   que só o guard novo (task 02) detecta — tratar antes do commit da feature.
 - Complemento: a forma "drive + barra normal + Users" é termo da lista local de privacidade mesmo com nome de
   exemplo; o trecho foi reescrito por extenso (sem a forma literal) na E2, aqui e no rascunho. Guard: 0 achados.
+
+## [PASS] 06-TASK-SUITE-HARNESS-DEV — 2026-10-09T16:07:04-0300
+- status: DONE · gate: PASS
+- régua PASS (harness-dev 108 Windows sem atalho e WSL 2 Pythons; oráculo 14/14 CAs Windows e WSL); revisor APPROVED
+
+## [NOTA] 07-TASK-QA — 2026-10-09T16:09:33-0300
+- status: IN_PROGRESS · gate: PENDENTE
+
+## [PASS] 07-TASK-QA — 2026-10-09T20:09:23-0300
+- status: DONE · gate: PASS
+- QA ACCEPT: portão Windows nativo VERDE e portão completo WSL VERDE; CA-01..CA-14 PASS
+
+## [NOTA] 08-TASK-REVIEW — 2026-10-09T20:10:07-0300
+- status: IN_PROGRESS · gate: PENDENTE
+
+## [PASS] 08-TASK-REVIEW — 2026-10-09T20:28:33-0300
+- status: DONE · gate: PASS
+- REVIEW APPROVED (opus, isolada): 14/14 CAs; 9 MENOR registrados
+
+## [NOTA] 2026-10-09T21:35:35-0300 — Founder: corrigir antes do aceite (D-23)
+- Pacote de aceite apresentado (8/8, QA ACCEPT, REVIEW APPROVED com 9 MENOR). Founder: "ok" à recomendação de corrigir
+  antes: reabrir 03 (`qp()`), 05 (`e2e.py regua`, `CLAUDE.md:56,63`, `e2e-loop/SKILL.md:19`) e 06 (`sh -n` no teste +
+  testes de regressão dos 2 itens); QA seletiva; depois aceite e `/fechar-feature`.
+
+## [REJECT] 03-TASK-SCRIPTS-SHELL — 2026-10-09T21:35:36-0300
+- status: IN_PROGRESS · gate: FAIL
+- reaberta (D-23): correção dos MENOR de regressão da REVIEW antes do aceite
+
+## [REJECT] 05-TASK-REGUA-PORTAO — 2026-10-09T21:35:37-0300
+- status: IN_PROGRESS · gate: FAIL
+- reaberta (D-23): correção dos MENOR de regressão da REVIEW antes do aceite
+
+## [REJECT] 06-TASK-SUITE-HARNESS-DEV — 2026-10-09T21:35:38-0300
+- status: IN_PROGRESS · gate: FAIL
+- reaberta (D-23): correção dos MENOR de regressão da REVIEW antes do aceite
+
+## [REJECT] 07-TASK-QA — 2026-10-09T21:35:41-0300
+- status: IN_PROGRESS · gate: FAIL
+- reaberta (D-23): correção dos MENOR de regressão da REVIEW antes do aceite
+
+## [REJECT] 08-TASK-REVIEW — 2026-10-09T21:35:42-0300
+- status: IN_PROGRESS · gate: FAIL
+- reaberta (D-23): correção dos MENOR de regressão da REVIEW antes do aceite
+
+## [NOTA] 2026-10-09T21:47:38-0300 — PAUSA da win-harness por decisão do founder (retomar depois das tasks da harness-evolucao)
+- Founder: deixar o resto da win-harness para o fim da harness-evolucao e rodar o portão longo uma vez só no fim.
+- Feito no ciclo D-23 (na cópia `local/work/win-harness/codebase-specialists/`, nada portado):
+  - 03 ciclo 2 (opus): `qp()` do `script-aprovacao.sh` dobra também as aspas tipográficas U+2018..U+201B; prova por
+    parser do PS 5.1 (RED 1 erro e literais partidos → GREEN 0 erros, valores intactos); oráculo CA09 ok; WSL harness-dev
+    108/108 nos 2 Pythons. Conferência do tech-lead: escopo só o `script-aprovacao.sh`; `bash -n` ok; privacidade 0.
+  - 05 ciclo 2 (opus): `e2e.py regua` com `pythons_da_maquina()` (WSL volta a "× python3 e /usr/bin/python3"; Windows
+    "× python"); `.claude/CLAUDE.md` (passos 3 e 5: `.ps1` no Windows; Pythons da máquina) e `e2e-loop/SKILL.md`
+    (pré-condição 2); oráculo CA06/CA12 Windows e CA06/CA14 WSL ok; WSL harness-dev 108/108. Conferência: escopo só os 3;
+    nenhum `def` removido vs HEAD; CLAUDE.md vivo intacto; privacidade 0.
+- RETOMAR (nesta ordem): (1) revisor isolado do ciclo 2 da 03 e da 05 (sonnet; retornos em
+  `local/tech-lead/win-harness/0{3,5}-*/`) → Handoff e `task marcar DONE`; (2) 06 ciclo 2 (opus): `test_harness_dev.py:537`
+  volta a `sh -n` fora do Windows + testes de regressão de `e2e.py regua` e das aspas tipográficas no `.ps1`; revisor;
+  (3) QA seletiva (harness-dev + oráculos, Windows nativo e WSL) e REVIEW do delta; (4) pacote de aceite ao founder;
+  (5) `/fechar-feature` com portão ENXUTO (harness-dev + oráculos; o completo no WSL fica para o fechamento da
+  harness-evolucao, sobre o HEAD já com a win-harness) — decisão a confirmar com o founder; `portar.sh` vai dar CONFLITO
+  no `_comum.sh` (tomar a cópia, que já absorve a F15); `campanha.py fechar … --qualidade 14/14`; redigir o nome de
+  exemplo do FEATURE.md antes do commit.
+- Estado das tasks: 01, 02, 04 DONE/PASS; 03, 05, 06, 07, 08 reabertas (IN_PROGRESS/FAIL, D-23). Nada commitado nesta
+  pausa (a outra sessão escreve o estado da harness-evolucao em paralelo; um `/salvar-sessao` agora commitaria o estado dela).

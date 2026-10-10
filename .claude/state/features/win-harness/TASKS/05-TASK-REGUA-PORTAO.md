@@ -7,8 +7,8 @@ grupo: G2
 agente: corretor (papel; o executor real e o model passado vão para o Handoff)
 CA: CA-06, CA-12
 depends: 01-TASK-ORACULO (o oráculo congelado é a régua da correção), 02-TASK-LANCADOR-HOOKS (o portao.sh usa o PY do _comum.sh), 04-TASK-ESTADO-ENCODING (e2e.py e campanha.py dependem do stdio UTF-8 e da gravação em LF do estado_lib)
-status: DONE
-gate: PASS
+status: IN_PROGRESS
+gate: FAIL
 complexidade: normal
 
 ## Goal

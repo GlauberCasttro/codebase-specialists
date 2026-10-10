@@ -8,7 +8,7 @@ agente: corretor (papel; o executor real e o model passado vão para o Handoff)
 CA: CA-13, CA-14
 depends: 02-TASK-LANCADOR-HOOKS (os testes chamam os hooks e guards novos), 03-TASK-SCRIPTS-SHELL (testam carimbo, aprovação e install), 04-TASK-ESTADO-ENCODING (usam o bash_exe e o stdio UTF-8), 05-TASK-REGUA-PORTAO (testam portão e régua)
 status: IN_PROGRESS
-gate: PENDENTE
+gate: FAIL
 complexidade: normal
 
 ## Goal
@@ -53,3 +53,19 @@ python -m unittest discover -s campanhas/win-harness/oraculo -p "test_*.py" -k C
 ```
 
 ## Handoff
+- Executor: general-purpose · sonnet (64 turnos), ciclo 1. Revisor isolado: general-purpose · sonnet, instância
+  distinta → APPROVED. Independência: executor e revisor instâncias distintas.
+- Arquivos: `test_harness_dev.py` (13 chamadas de shell pelo bash de `estado_lib.bash_exe()`; `run()` com
+  `PYTHONUTF8=1`; escritas em LF; skip com motivo só no `WinError 1314` do symlink; caminhos normalizados; ScriptAprovacao
+  confere o `.ps1` no Windows e o `.sh` no POSIX como hoje; novos LancadorPy 6, GuardGitPowerShell 4,
+  PrivacidadeCaminhoWindows 2); `test_orquestracao.py` (bash resolvido no portão; UTF-8; novos ReguaPythons 7,
+  CampanhaQualidade 3); `test_feature.py` (UTF-8, `HOME` + `USERPROFILE`; novos ConferirCommitArgv 3).
+- Régua do tech-lead (cópia): Windows sem atalho harness-dev 108 OK (1 skip: symlink sem privilégio) — antes 20/83 no
+  HEAD; oráculo win-harness INTEIRO no Windows 55 OK (5 skips só-POSIX) e no WSL 55 OK (17 skips só-Windows);
+  win-bash e win-motor-copia (cópia) OK; WSL harness-dev 108/108 em python3 e /usr/bin/python3. Nenhum `def` removido;
+  `self.assert` HEAD→cópia 134→165, 51→59, 32→48; privacidade 0; escopo só nos 3 testes.
+- Ressalvas (MENOR, revisor): fallback `BASH="bash"` em `ImportError` do `estado_lib` (para o clone parcial do oráculo
+  win-motor-copia) poderia usar o bash do WSL num Windows sem `estado_lib`; `CampanhaQualidade` só assere rc ≠ 0 sem
+  checar a mensagem de `--qualidade`; o `.ps1` no teste não passa por parser (o tech-lead conferiu o parse no PS 5.1 na
+  task 03). Candidatos ao BACKLOG (PRÉ-EXISTENTE do tool, contornados nos testes): `portao.sh --pythons` com caminho com
+  espaço; `copia.sh`/`tar` com `CS_DEV_SKILL_DIR` em barra invertida.

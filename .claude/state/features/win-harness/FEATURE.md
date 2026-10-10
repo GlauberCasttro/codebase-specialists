@@ -180,5 +180,14 @@ Suíte harness-dev no Windows nativo sem atalho: de 20/83 para 83/83 (ou mais te
 Hooks Python que falham fechados sem `python3`: de 0/4 para 4/4. Tools com saída UTF-8 em pipe: de 6/16 para 16/16.
 
 ## Aceite da Feature
-### Aceite QA — PENDENTE
-### Aceite Review — PENDENTE
+### Aceite QA — ACCEPT
+QA isolado (general-purpose · sonnet), 2026-10-09. Portão Windows nativo VERDE (Python 3.12.7: harness-dev 108 OK, 1 skip
+de symlink; oráculo win-harness 55 OK; win-bash 18; win-motor-copia 21) e portão completo WSL VERDE (16 suítes do produto
++ evals + harness-dev 108 + 3 oráculos em python3 e /usr/bin/python3). Matriz: CA-01..CA-14 PASS (CA-01..05, 07, 08,
+10..12 no Windows; CA-06, CA-09 nos dois; CA-13 Windows; CA-14 WSL). `oracle verify` intacto; 0 `def` removido.
+Saídas: `local/qa-win-harness/portao-windows.out`, `local/qa-win-harness/portao-wsl.out`.
+### Aceite Review — APPROVED
+Revisão por instância isolada (general-purpose · opus), não humana, 2026-10-09: CA-01..CA-14 PASS; nenhum
+BLOQUEANTE·REGRESSÃO·CONFIRMADO; 9 findings MENOR registrados no Handoff da 08-TASK-REVIEW (3 regressões no escopo:
+`e2e.py regua`, `qp()` do `.ps1`, `sh -n` no teste; hook de aprovação para `.ps1` no motor; skills sem `--qualidade`;
+docs desatualizadas; conflito previsto do `_comum.sh` no portar).
