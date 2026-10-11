@@ -7,3 +7,7 @@
 ## 2026-10-07T12:50:56-0300 — sessão salva
 - Resumo: 0.10.0/0.10.1 entregues e validadas em uso real; iter19 aberta, oráculo congelado, aguardando aprovação do founder
 - Feito: criação E1–E5 aprovada; oráculo 39 testes congelado 1083cc4a985e; script de aprovação gerado
+
+## 2026-10-11T11:11:13-0300 — sessão salva
+- Resumo: iter19 4/8; iter21 base real (0% aplicação) e frente memoria; vazamento limpo
+- Feito: tasks 02-04 DONE; 05 em curso

@@ -7,7 +7,7 @@ grupo: G2
 agente: corretor (papel; executor e model reais vão para o Handoff)
 CA: CA-05
 depends: 04-TASK-MIGRAR-ESTADO (o upgrade chama o comando de migração do motor)
-status: PENDENTE
+status: IN_PROGRESS
 gate: PENDENTE
 complexidade: normal
 

@@ -5,3 +5,4 @@
 {"data": "2026-10-06T16:17:28-03:00", "evento": "sessao-salva", "resumo": "iter17 entregue (4dd7cf2); /install rodado: skill instalada = dist 0.9.0", "head": "4dd7cf2"}
 {"data": "2026-10-06T18:49:22-03:00", "evento": "achado", "resumo": "B-13: pre-commit barra o resultado do upgrade/emit/install (relato da sessao da cobaia)", "head": "ce45bb3"}
 {"evento": "sessao-salva", "data": "2026-10-07T12:50:56-0300", "resumo": "0.10.0/0.10.1 entregues e validadas em uso real; iter19 aberta, oráculo congelado, aguardando aprovação do founder", "branch": "master", "head": "97a1718", "features": ["iter19"], "feature": "iter19"}
+{"evento": "sessao-salva", "data": "2026-10-11T11:11:13-0300", "resumo": "iter19 4/8; iter21 base real (0% aplicação) e frente memoria; vazamento limpo", "branch": "release/desenv-mac", "head": "bacfc07", "features": ["iter19", "iter21"], "feature": "iter19"}

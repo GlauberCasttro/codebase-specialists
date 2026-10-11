@@ -1,9 +1,9 @@
 <!-- resume-stamp
-FEATURES: iter19
-BRANCH: master
-HEAD: 97a1718
+FEATURES: iter19,iter21
+BRANCH: release/desenv-mac
+HEAD: bacfc07
 PRODUTO: 5e08335652440fa31bbba2ce63b205ef2970580c
-ESTADO: 25d84dd29a6091848b4e2f84f005b4e42f708c46
+ESTADO: ff0ac8249589c37a94c295319f0bd56ce260fa08
 GATE: PENDENTE
 -->
 
@@ -20,36 +20,32 @@ arquivos sujos da skill: 4
 # RESUME — codebase-specialists (desenvolvimento)
 
 ## Escopo autorizado e limites
-- Autorizado: feature iter19 (B-14, 0.11.0) aberta pelo /criar-feature com E1–E5 aprovadas pelo founder ("ok" em
-  cada etapa, 2026-10-07); chaves em inglês (D-19); mandato M5 e memória fora; migração por evento novo (D-20).
-- NÃO autorizado: começar a correção antes de o founder rodar no terminal dele o script de aprovação da iter19
-  (gerado em local/); traduzir chaves do mandato (B-21); mexer em memória do cs-mem, logs JSONL ou config JSON5;
-  publicar/push do pacote; corrigir B-19 ou os defeitos de harness B-15..B-18 junto com a iter19.
-- Aguardando decisão: aprovação da iter19 (com a senha); publicação do pacote 0.10.1.
+- Autorizado: iter19 (0.11.0, estado em JSON) em /tech-lead modo AUTÔNOMO; iter21 (memória dos agentes) no método
+  auto-correção — founder: "provar que o agente fez Y, foi corrigido, a memória foi atualizada e ele não esquece mais";
+  decisões técnicas são do tech-lead (provar com números); DEC-1 (caderno = bloco gerado + área livre) aprovada no
+  portão plan:DEC-1.
+- NÃO autorizado: push (só o founder); mudar git config sem "pode" (e-mail noreply pendente); correção das frentes
+  motor/emissao da iter21 antes do commit da iter19 (colisão); B-19/B-28/B-26/B-27 junto destas features.
+- Aguardando decisão: configurar `git config user.email` noreply neste repo.
 
 ## Onde paramos
-- 0.10.0 (iter18, `5e8f6b2`) e 0.10.1 (iter20, `97a1718`) entregues, campanhas concluídas, pacote 0.10.1 validado e
-  instalado nesta máquina; a segunda cobaia .NET fez o upgrade 0.9.0→0.10.1 (commit do upgrade sem --no-verify) e
-  validou R2/R3 em uso real.
-- iter19 aberta: oráculo congelado `1083cc4a985e` (39 testes; base 11/39 nos 2 Pythons); task 01 DONE (1/8).
+- iter19: tasks 01–04 DONE (4/8); 05 (upgrade chama `migrate state-format`) IN_PROGRESS — executor parou com a
+  sessão anterior (verificar cópia local/work/iter19 antes de retomar); 06 (versão/docs) depois da 05.
+- iter21: intake→plano fechados; base real = aplicação 0/9 depois da correção (brief corta a memória, sem caderno);
+  frente memoria ciclo 1 (oráculo 19→41/55); revisor achou F1 (corrigir 2× faz a lição sumir) — ciclo 2 e a mudança
+  oficial M14 do oráculo pararam com a sessão anterior (retomar; cópia local/work/iter21 tem trabalho parcial).
+- Vazamento do commit 44baf58 limpo: release/desenv-mac reescrita (bacfc07) e publicada pelo founder.
 
 ## Próximos passos
-1. Founder: rodar no terminal dele o script de aprovação da iter19 que está em local/ (com a senha).
-2. `/tech-lead` da iter19: cópia de trabalho (`bash .claude/tools/copia.sh iter19`), G1 02→03→04, G2 05, G3 06 em
-   paralelo ao G1; depois QA (portão com oráculos iter19, iter16, iter18 R1–R7 — caminhos literais, nunca `$VAR:t…`
-   no zsh — e iter20) e REVIEW.
-3. `/fechar-feature iter19` → `/package` → `/install` → avisar a segunda cobaia .NET do upgrade para 0.11.0.
+1. Retomar os 3 agentes parados: memoria ciclo 2 (local/work/iter21), oráculo mo2 (patch em
+   campanhas/iter21/oraculo/mudanca-oficial/), task 05 (local/work/iter19) — conferir o parcial antes.
+2. iter19: 05 → 06 → QA (portão) → REVIEW → aceite do founder → /fechar-feature → PORTE-WINDOWS.
+3. iter21: depois do commit da iter19, frentes motor e emissao → integração → remedição real (claude -p) → decisão.
 
 ## Estado do ambiente
-- Fora do commit do estado: `campanhas/iter19/` e `campanhas/README.md` (vão no commit da feature);
-  `campanhas/iter17|iter18|iter20/{base,remedicao}.json` e `campanhas/harness-dev/*.json` (notas de medição locais,
-  não versionadas); `evals/fixtures/py-billing/repo/tests/fixtures/legacy-dotnet/obj/` (artefato de build
-  pré-existente).
-- `features.json`: iter18 e iter20 (legado) movidas à mão para entregues com autorização do founder (backups em
-  `local/features-antes-*.json`) — B-15.
-- Cópias de trabalho e portões em `local/work/` e `local/portao-*`.
+- Fora do commit do estado: obj/ da fixture em evals (gitignored agora); local/work/iter19 e iter21 (cópias); prova real
+  em ~/cs-prova-iter21/.
+- Branch remota release/version-windows existe (outra sessão; números de decisão conflitam com D-21+ daqui).
 
 ## Ponteiros
-- Feature: `.claude/state/features/iter19/` (FEATURE.md, TASKS/, propostas/E1–E5) · investigação: `propostas/E2.md` ·
-  campanha: `campanhas/iter19/`
-- BACKLOG: B-14 (em feature), B-15..B-21 · DECISIONS: D-17..D-20
+- PORTE-WINDOWS.md (D-21) · BACKLOG B-19..B-29 · DECISIONS D-17..D-21 · campanhas/iter21/.auto-correcao (local)
