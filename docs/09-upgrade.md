@@ -230,3 +230,14 @@ O primeiro `cs-state reverify` de um `verify` feito **antes** da 0.10.0 sempre i
 guardou o `changed_sha256`, e o `reverify` é conservador sem ele. Resultado esperado, não defeito: a task pede
 **revisão nova** (`cs-state review`) antes do `accept`. Os verifies feitos já na 0.10.0 ou depois guardam o hash e
 preservam as reviews quando os `files_changed` não mudaram.
+
+## Migração 0.12.0: memória que não esquece
+
+A entrada `to: "0.12.0"` do catálogo declara `harness` e `emit`. O que ela faz:
+
+- reinstala o motor (com o `cs-mem` novo: `--fault`, `--supersedes`, `retract`, `--dry-run`, `notebook`, rastro de
+  busca) e reemite os artefatos: o cartão passa a ensinar a linha `consultei:` e o `/correct` passa a perguntar quem
+  errou e a confirmar a lição antes de gravar;
+- o upgrade regenera os cadernos `.claude/agent-memory/<agente>/MEMORY.md` a partir das lições que já existem (ação do
+  motor; `cs-mem notebook` faz o mesmo à mão). A área livre do agente, abaixo do bloco gerado, é preservada;
+- não refaz entrevista, roster, cartões, memória nem board. Detalhes do caderno em `docs/03-memoria-e-licoes.md`.

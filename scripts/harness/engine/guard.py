@@ -99,7 +99,82 @@ def task_hint(board, rel, agent=None):
             "--verify-cmd '<prova>' --teste <test-id>; depois cs-state start <id>" % (MIN_TASK_HINT, agent or "<agente>", rel))
 
 
-def decide_write(root, board, cfg, actor, path, base=None):
+# ================================================================ caderno do agente (DEC-1, iter21)
+def notebook_text_problems(root, agent, text):
+    """Problemas do caderno `text` de `agent` contra o que o cs-mem gera: [] = bloco íntegro (CRLF/BOM não contam;
+    bloco desatualizado mas com selo íntegro também não — não é adulteração). Sem o cs-mem: fail-closed."""
+    rel = ".claude/agent-memory/%s/MEMORY.md" % agent
+    try:
+        import mem
+    except ImportError:
+        return ["%s: cs-mem indisponível para conferir o bloco (fail-closed)" % rel]
+    txt = (text or "").replace("\r\n", "\n")
+    if txt.startswith("\ufeff"):
+        txt = txt[1:]
+    blk, free = mem.split_notebook(txt)
+    regen = "o bloco só muda por cs-mem correct/add/retract/notebook (cs-mem notebook --agent %s regenera)" % agent
+    if blk is None:
+        return ["%s: bloco gerado pelo cs-mem ausente ou com marcador apagado — %s" % (rel, regen)]
+    probs = []
+    first = txt.splitlines()[0] if txt else ""
+    if "cs-mem" not in first or not first.lstrip().startswith("<!--"):
+        probs.append("%s: o bloco gerado tem de ficar no topo — %s" % (rel, regen))
+    if any(l.lstrip().startswith("<!--") and "cs-mem" in l for l in free.splitlines()):
+        probs.append("%s: marcador cs-mem na área livre (bloco duplicado) — %s" % (rel, regen))
+    # O selo é sha256 SEM chave, gravado no próprio arquivo: qualquer um recalcula (forja) ou reapresenta um selo
+    # antigo (ressuscita lição retratada). Ele NÃO é critério de aceite: só o bloco igual ao render atual passa.
+    if blk != mem.render_notebook(root, agent):
+        if mem.block_seal_state(blk) == "ok":
+            probs.append("%s: bloco gerado desatualizado ou forjado (difere do que o cs-mem gera agora) — rode "
+                         "cs-mem notebook --agent %s e não edite o bloco" % (rel, agent))
+        else:
+            probs.append("%s: bloco gerado adulterado — %s" % (rel, regen))
+    return probs
+
+
+def _read_text(path):
+    try:
+        with open(path, "rb") as fh:
+            return fh.read().decode("utf-8", "surrogateescape")
+    except OSError:
+        return None
+
+
+def notebook_after_write(root, rel, tool_name, ti):
+    """Texto do caderno DEPOIS da escrita pedida (Write/Edit/MultiEdit), ou None se não dá para prever."""
+    cur = _read_text(os.path.join(root, rel))
+    if tool_name == "Write" or ("content" in ti and "old_string" not in ti and "edits" not in ti):
+        return ti.get("content") if isinstance(ti.get("content"), str) else None
+    if cur is None:
+        return None
+    edits = ti.get("edits") if isinstance(ti.get("edits"), list) else [ti]
+    for e in edits:
+        old, new = e.get("old_string"), e.get("new_string")
+        if not isinstance(old, str) or not isinstance(new, str) or not old or old not in cur:
+            return None
+        cur = cur.replace(old, new) if e.get("replace_all") else cur.replace(old, new, 1)
+    return cur
+
+
+def decide_notebook(root, actor, rel, tool_name, ti):
+    """None = escrita do caderno liberada; senão o motivo. Só o subagente DONO, só fora do bloco gerado."""
+    owner = hcore.notebook_owner(rel)
+    at = actor.get("agent_type")
+    if actor["main"] or not at:
+        return ("%s é o caderno de %s: o bloco é do cs-mem e a área livre é do agente — o agente principal não "
+                "escreve aqui (registre a correção: cs-mem correct --agent %s ...)" % (rel, owner, owner))
+    if at != owner:
+        return "%s é o caderno de %s: %s não escreve no caderno alheio" % (rel, owner, at)
+    after = notebook_after_write(root, rel, tool_name, ti or {})
+    if after is None:
+        return "%s: escrita do caderno não verificável (old_string ausente/inexistente) — fail-closed" % rel
+    probs = notebook_text_problems(root, owner, after)
+    if probs:
+        return "%s: escreva só FORA do bloco gerado (abaixo de <!-- cs-mem:fim -->): %s" % (rel, "; ".join(probs))
+    return None
+
+
+def decide_write(root, board, cfg, actor, path, base=None, tool_name=None, tool_input=None):
     """None = permitido; senão o motivo. realpath sempre (X-01); lexical E real precisam passar."""
     if not isinstance(path, str) or not path:
         return "path ausente no payload"
@@ -130,6 +205,16 @@ def decide_write(root, board, cfg, actor, path, base=None):
             pw = auto.protected_write(root, board, rel)
             if pw:
                 return pw
+    nbs = [r for r in rels if hcore.notebook_owner(r)]
+    if nbs and (len(nbs) != len(rels) or len({hcore.notebook_owner(r) for r in nbs}) != 1):
+        return ("%s: caminho lexical e real divergem quanto ao caderno (symlink?) — escrita bloqueada (fail-closed)"
+                % " / ".join(rels))
+    if actor["main"] and nbs:
+        for r in nbs:  # todos os cadernos da lista passam pela regra, não só o 1º
+            why = decide_notebook(root, actor, r, tool_name, tool_input)
+            if why:
+                return why
+        return None
     if actor["main"]:
         for rel in rels:
             if not hcore.matches_any(rel, cfg.get("lead_write_allow") or []):
@@ -142,6 +227,12 @@ def decide_write(root, board, cfg, actor, path, base=None):
     if cs:
         return "%s está em consulta %s (faixa pergunta, SÓ LEITURA): escrita bloqueada — responda e encerre" % (
             at, ", ".join(c["id"] for c in cs))
+    if nbs:
+        for r in nbs:
+            why = decide_notebook(root, actor, r, tool_name, tool_input)
+            if why:
+                return why
+        return None
     ds = dispatched_for(board, at)
     if not ds:
         return "%s não tem delegação DISPATCHED: escrita bloqueada — %s" % (at, task_hint(board, rels[-1], at))
@@ -386,7 +477,7 @@ def mode_pre(mode, root, payload):
     ti = payload.get("tool_input") or {}
     if mode == "pre-write":
         path = ti.get("file_path") or ti.get("notebook_path") or ti.get("path")
-        r = decide_write(root, board, cfg, actor, path, payload.get("cwd") or root)
+        r = decide_write(root, board, cfg, actor, path, payload.get("cwd") or root, payload.get("tool_name"), ti)
         return r, path
     if mode == "pre-bash":
         cmd = ti.get("command")
@@ -574,6 +665,13 @@ def _accepted_still_open(board, task):
 IN_FLIGHT_STATES = ("DISPATCHED", "RETURNED", "VERIFIED", "REVIEWED")
 
 
+def _staged_text(root, rel):
+    """Conteúdo do índice (o que vai ser commitado); None se removido/ausente."""
+    import subprocess
+    p = subprocess.run(["git", "show", ":" + rel], cwd=root, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return p.stdout.decode("utf-8", "surrogateescape") if p.returncode == 0 else None
+
+
 def check_diff(root, staged=False):
     """Diff × allowed_paths. Árvore de trabalho (sem --staged, CI): delegação em voo (IN_FLIGHT_STATES) e ACCEPTED
     com a task aberta (U5) liberam os allowed_paths. Pre-commit (--staged, iter18 R5): só ACCEPTED com a task aberta
@@ -607,6 +705,15 @@ def check_diff(root, staged=False):
     ok_state = validate.run(root, strict=False)[0]
     verdicts = []  # (arquivo, motivo | None, liberável pelo atestado), na ordem do diff
     for f in files:
+        owner = hcore.notebook_owner(f)
+        if owner:  # DEC-1: caderno passa se o bloco bate com o que o cs-mem gera (CRLF/BOM não contam)
+            txt = _staged_text(root, f) if staged else _read_text(os.path.join(root, f))
+            if txt is not None:
+                nb = notebook_text_problems(root, owner, txt)
+                if not nb:
+                    continue
+                verdicts.append((f, "; ".join(nb), False))
+                continue
         engine_owned = (hcore.STATE_DIR + "/state/", hcore.STATE_DIR + "/memory/")
         if hcore.tree_mode(root):
             engine_owned += tuple(hcore.TREE_PROTECTED)

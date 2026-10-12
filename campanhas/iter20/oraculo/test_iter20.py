@@ -95,6 +95,26 @@ def cs_ok(skill, target, *args):
     return out
 
 
+
+def vtuple(v):
+    """'0.10.1' -> (0, 10, 1): comparação de versão relativa (mo1, B-32)."""
+    return tuple(int(x) for x in str(v).strip().split("."))
+
+
+def current_version():
+    return read_text(os.path.join(SKILL, "VERSION")).strip()
+
+
+def expected_from_090():
+    """As migrações do catálogo em (0.9.0, VERSION corrente], em ordem: começa por 0.10.0, 0.10.1 (mo1, B-32)."""
+    if SCRIPTS not in sys.path:
+        sys.path.insert(0, SCRIPTS)
+    from cslib import json5io
+    m = json5io.read(os.path.join(SKILL, "references", "migrations.json5"))
+    cur = vtuple(current_version())
+    return [x["to"] for x in m["migrations"] if vtuple(OLD_VERSION) < vtuple(x["to"]) <= cur]
+
+
 def read_text(path):
     with open(path, encoding="utf-8") as fh:
         return fh.read()
@@ -441,23 +461,28 @@ class TestU5Versao(unittest.TestCase):
         from cslib import json5io
         return json5io.read(os.path.join(SKILL, "references", "migrations.json5"))
 
+    # mo1 (B-32): versão RELATIVA — VERSION >= 0.10.1, a migração 0.10.1 no catálogo, README cita a VERSION corrente.
     def test_u5_version(self):
-        self.assertEqual(read_text(os.path.join(SKILL, "VERSION")).strip(), self.V)
+        self.assertGreaterEqual(vtuple(current_version()), vtuple(self.V))
 
     def test_u5_migrations(self):
         m = self.catalog()
-        self.assertEqual(m["version"], self.V)
+        cur = current_version()
+        self.assertGreaterEqual(vtuple(cur), vtuple(self.V))
+        self.assertEqual(m["version"], cur, "o catálogo está na VERSION corrente")
         mig = [x for x in m["migrations"] if x.get("to") == self.V]
         self.assertEqual(len(mig), 1, "uma migração to: %s" % self.V)
         kinds = {a.get("kind") for a in mig[0].get("actions") or []}
         self.assertIn("harness", kinds, "o pre-commit/motor muda ⇒ o alvo reinstala o harness: %s" % kinds)
-        self.assertEqual(m["migrations"][-1]["to"], self.V, "a última migração é a da versão")
+        self.assertEqual(m["migrations"][-1]["to"], cur, "a última migração é a da VERSION corrente")
         tos = [x["to"] for x in m["migrations"]]
         self.assertIn("0.10.0", tos)
         self.assertEqual(tos.index(self.V), tos.index("0.10.0") + 1, "0.10.1 vem logo depois da 0.10.0")
 
     def test_u5_readme(self):
-        self.assertIn(self.V, read_text(os.path.join(SKILL, "README.md")))
+        cur = current_version()
+        self.assertGreaterEqual(vtuple(cur), vtuple(self.V))
+        self.assertIn(cur, read_text(os.path.join(SKILL, "README.md")))
 
     def test_u5_docs_upgrade(self):
         t = read_text(os.path.join(SKILL, "docs", "09-upgrade.md"))
@@ -472,8 +497,10 @@ class TestU5DeZeroNoveDireto(Alvo):
         self.assertEqual(git(self.root, "status", "--porcelain", "--untracked-files=all"), before,
                          "o plano (sem --apply) não escreve nada")
         self.assertIn("versão do alvo:  %s" % OLD_VERSION, out)
-        self.assertIn("versão da skill: %s" % NEW_VERSION, out)
-        self.assertRegex(out, r"migrações no intervalo \(2\)")
+        cur = current_version()
+        self.assertGreaterEqual(vtuple(cur), vtuple(NEW_VERSION))
+        self.assertIn("versão da skill: %s" % cur, out)
+        self.assertRegex(out, r"migrações no intervalo \(%d\)" % len(expected_from_090()))
         self.assertRegex(out, r"(?m)^\s+0\.10\.0 — ")
         self.assertRegex(out, r"(?m)^\s+0\.10\.1 — ")
 
@@ -483,10 +510,13 @@ class TestU5DeZeroNoveDireto(Alvo):
             sys.path.insert(0, SCRIPTS)
         from cslib import json5io
         run = json5io.read(os.path.join(self.root, ".swarm", "run.json5"))
-        self.assertEqual(run.get("skill_version"), NEW_VERSION)
+        cur = current_version()
+        self.assertGreaterEqual(vtuple(cur), vtuple(NEW_VERSION))
+        self.assertEqual(run.get("skill_version"), cur)
         last = (run.get("upgrade_history") or [{}])[-1]
         self.assertEqual(last.get("from"), OLD_VERSION)
-        self.assertEqual(last.get("migrations"), ["0.10.0", NEW_VERSION])
+        self.assertEqual(last.get("migrations")[:2], ["0.10.0", NEW_VERSION], "o caminho passa pela 0.10.0 e 0.10.1")
+        self.assertEqual(last.get("migrations"), expected_from_090())
 
 
 if __name__ == "__main__":

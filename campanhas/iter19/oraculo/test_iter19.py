@@ -128,6 +128,12 @@ def st_ok(root, *args, actor=None):
     return out
 
 
+
+def vtuple(v):
+    """'0.10.1' -> (0, 10, 1): comparação de versão relativa (mo1, B-32)."""
+    return tuple(int(x) for x in str(v).strip().split("."))
+
+
 def read_text(path):
     with open(path, encoding="utf-8") as fh:
         return fh.read()
@@ -972,17 +978,23 @@ class TestCA06(Base):
     def catalog(self):
         return json5io().read(os.path.join(SKILL, "references", "migrations.json5"))
 
+    # mo1 (B-32): versão RELATIVA — VERSION >= 0.11.0 e a migração 0.11.0 no catálogo (o resto do CA-06 não muda).
+    def current(self):
+        return read_text(os.path.join(SKILL, "VERSION")).strip()
+
     def test_ca06_version(self):
-        self.assertEqual(read_text(os.path.join(SKILL, "VERSION")).strip(), NEW_VERSION)
+        self.assertGreaterEqual(vtuple(self.current()), vtuple(NEW_VERSION))
 
     def test_ca06_catalogo_tem_a_0110(self):
         m = self.catalog()
-        self.assertEqual(m["version"], NEW_VERSION)
+        cur = self.current()
+        self.assertGreaterEqual(vtuple(cur), vtuple(NEW_VERSION))
+        self.assertEqual(m["version"], cur, "o catálogo está na VERSION corrente")
         tos = [x["to"] for x in m["migrations"]]
-        self.assertEqual(tos[-1], NEW_VERSION, "a última migração é a 0.11.0")
+        self.assertEqual(tos[-1], cur, "a última migração é a da VERSION corrente")
         self.assertEqual(tos.count(NEW_VERSION), 1)
         self.assertEqual(tos.index(NEW_VERSION), tos.index(OLD_VERSION) + 1, "0.11.0 vem logo depois da 0.10.1")
-        self.assertTrue(m["migrations"][-1].get("actions"), "a 0.11.0 tem ações")
+        self.assertTrue(m["migrations"][tos.index(NEW_VERSION)].get("actions"), "a 0.11.0 tem ações")
 
     def test_ca06_catalogo_e_config_continuam_json5(self):
         self.assertTrue(os.path.isfile(os.path.join(SKILL, "references", "migrations.json5")))

@@ -117,12 +117,12 @@ commit, ou ele fica fora da árvore versionada.
 ## U5 — versão 0.10.1 (D)
 | Requisito | Teste | Tipo |
 |---|---|---|
-| `VERSION` = 0.10.1 | `TestU5Versao.test_u5_version` | D |
-| `migrations.json5`: `version: "0.10.1"`; uma entrada `to: "0.10.1"`, logo depois da 0.10.0 e a última; actions ⊇ {harness} | `test_u5_migrations` | D |
-| README cita 0.10.1 | `test_u5_readme` | D |
+| `VERSION` ≥ 0.10.1 (mo1, B-32: relativa) | `TestU5Versao.test_u5_version` | D |
+| `migrations.json5`: `version` = VERSION corrente e a última entrada é a dela; uma entrada `to: "0.10.1"`, logo depois da 0.10.0; actions ⊇ {harness} | `test_u5_migrations` | D |
+| README cita a VERSION corrente (≥ 0.10.1) | `test_u5_readme` | D |
 | `docs/09-upgrade.md` tem o título `## Migração 0.10.1…` | `test_u5_docs_upgrade` | D |
-| alvo 0.9.0: o plano (`cs.py upgrade`, sem escrever nada) mostra a skill 0.10.1, "migrações no intervalo (2)", as linhas 0.10.0 e 0.10.1 | `TestU5DeZeroNoveDireto.test_u5_plano_de_090_lista_0100_e_0101` | D |
-| alvo 0.9.0: `upgrade --apply` deixa `skill_version` 0.10.1 e `upgrade_history[-1]` com `from` 0.9.0 e `migrations` [0.10.0, 0.10.1] | `test_u5_apply_de_090_registra_as_duas_migracoes` | D |
+| alvo 0.9.0: o plano (`cs.py upgrade`, sem escrever nada) mostra a skill na VERSION corrente (≥ 0.10.1), "migrações no intervalo (N)" com N = entradas do catálogo em (0.9.0, VERSION], as linhas 0.10.0 e 0.10.1 | `TestU5DeZeroNoveDireto.test_u5_plano_de_090_lista_0100_e_0101` | D |
+| alvo 0.9.0: `upgrade --apply` deixa `skill_version` = VERSION corrente e `upgrade_history[-1]` com `from` 0.9.0 e `migrations` = catálogo em (0.9.0, VERSION], começando por [0.10.0, 0.10.1] | `test_u5_apply_de_090_registra_as_duas_migracoes` | D |
 
 **Critério (migração):** o pre-commit e o motor mudam, então o alvo precisa reinstalar o harness. Por isso
 `{kind: "harness"}` é obrigatório. `{kind: "emit"}` fica a critério do corretor e só é necessário se algum emitido

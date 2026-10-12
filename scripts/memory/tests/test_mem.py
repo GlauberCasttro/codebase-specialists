@@ -128,6 +128,15 @@ class TestLessons(unittest.TestCase):
         l3, _ = mem.add_lesson(self.root, "dev-users", "x y z regra única", "w", [], source="review", evidence=[{"task": "T-2", "attempt": 1}])
         l4, _ = mem.add_lesson(self.root, "dev-users", "x y z regra única", "w", [], source="reject", evidence=[{"task": "T-2", "attempt": 1}])
         self.assertEqual((l4["count"], l4["status"]), (1, "active"))
+        # iter21 F1: promovida com proposta PENDENTE continua entregue (reincidência visível) até virar regra do cartão
+        inj = mem.inject_lessons(self.root, "dev-billing", ["src/billing/a.py"], "desconto")
+        self.assertEqual([(l["id"], l["count"]) for l in inj], [(l2["id"], 2)])
+        p = mem.mem_paths(self.root)["promotions"]
+        data = j5.load(p)
+        for it in data["promotions"]:
+            it["applied"] = True
+        with open(p, "w", encoding="utf-8") as f:
+            f.write(j5.dumps(data))
         self.assertEqual(mem.inject_lessons(self.root, "dev-billing", ["src/billing/a.py"], "desconto"), [])
 
     def test_200_lessons_cap_and_budget(self):

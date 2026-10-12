@@ -39,6 +39,18 @@ RESERVED_PREFIXES = (STATE_DIR + "/", LEGACY_STATE_DIR + "/", ".claude/", ".git/
 class StateError(Exception):
     """Estado ausente/ilegível/incoerente. Sempre fail-closed."""
 
+# DEC-1 (iter21): o caderno do agente (Claude Code, memory: project) fica sob .claude/ — que continua RESERVADO para
+# allowed_paths (is_reserved) — e tem regra própria no guard/pre-commit: só o dono escreve, e só fora do bloco gerado.
+# IGNORECASE: em FS sem distinção de caixa (macOS/Windows) `.Claude/Agent-Memory/x/memory.md` é o MESMO arquivo e
+# realpath não normaliza a caixa — sem isso o caminho escaparia da regra do caderno. `\` vira `/` em norm_rel.
+NOTEBOOK_RE = re.compile(r"^\.claude/agent-memory/([A-Za-z0-9][A-Za-z0-9._-]*)/MEMORY\.md$", re.IGNORECASE)
+
+
+def notebook_owner(rel):
+    """Agente dono do caderno `.claude/agent-memory/<agente>/MEMORY.md`, ou None se `rel` não é um caderno."""
+    m = NOTEBOOK_RE.match(norm_rel(rel or "")) if rel else None
+    return m.group(1) if m else None
+
 
 class Refused(Exception):
     """Transição recusada por guarda. .problems = lista de mensagens acionáveis."""

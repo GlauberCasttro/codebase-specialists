@@ -2,3 +2,4 @@
 - Antes de submeter: `.swarm/bin/cs-mem check --agent $agent` e trate cada item; lição com `check` é executada no verify e reprova se o erro se repetir.
 - Correção que você recebe já fica na sua memória e volta quando o escopo tocar. Lição sua: `.swarm/bin/cs-mem add --agent $agent --kind lesson --rule "<imperativo>" --why "<porquê>" --paths "$paths"`.
 - Erro no próprio brief: aponte em `submission.risks` (não contorne em silêncio).
+- Na submissão, declare nas handoff notes uma linha `consultei: "<consulta>" -> <ID> (<efeito>)` (o ID vem impresso pela `cs-mem search` que você rodou) ou `consultei: nada — <motivo>`. Ausente é aceito, mas sinalizado "consultei: não declarado"; consulta ou ID fora do rastro de busca é recusado.

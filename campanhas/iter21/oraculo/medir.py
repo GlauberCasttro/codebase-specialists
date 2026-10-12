@@ -11,7 +11,7 @@ sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-ORDER = ["M%d" % i for i in range(1, 14)]
+ORDER = ["M%d" % i for i in range(1, 16)]
 R_KIND = re.compile(r"regressao|controle|continua|intacta")
 
 

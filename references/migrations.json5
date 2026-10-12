@@ -22,7 +22,7 @@
 // Nunca refeito num upgrade (salvo migração explícita): entrevista, roster aprovado, cartões aprovados,
 // memória de lições, board/eventos.
 {
- version: "0.11.0",
+ version: "0.12.0",
  migrations: [
   {
    to: "0.5.0",
@@ -88,6 +88,14 @@
    actions: [
     {kind: "harness"},
     {kind: "state-format"},
+    {kind: "emit"}
+   ]
+  },
+  {
+   to: "0.12.0",
+   why: "memória dos agentes que não esquece (campanha-iter21): cada agente do Claude Code ganha o caderno `.claude/agent-memory/<agente>/MEMORY.md` com um bloco gerado no topo (correções recebidas, armadilhas do território, quando pesquisar no cs-mem) e a área livre do agente abaixo; `cs-mem correct --fault brief|agent` separa o erro do brief (lição do lead) do erro do agente (lição e caderno), `--dry-run` mostra a lição formulada sem gravar, `--supersedes <id>` refina e `cs-mem retract <id> --reason` retrata; `cs-mem search` deixa rastro e a submissão declara `consultei:` nas handoff notes (ausente é sinalizado, consulta fora do rastro é recusada); o /correct emitido pergunta quem errou e confirma a lição antes de gravar. Reinstala o motor, reemite os artefatos e o upgrade regenera os cadernos a partir das lições existentes (ação do motor; `cs-mem notebook` faz o mesmo à mão), sem refazer entrevista, roster, cartões, memória nem board",
+   actions: [
+    {kind: "harness"},
     {kind: "emit"}
    ]
   }

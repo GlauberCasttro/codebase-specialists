@@ -1044,6 +1044,23 @@ def verify(target, say, run=None, hook_before=None):
     return True, ""
 
 
+def regenerate_notebooks(target, say):
+    """iter21 (0.12.0, DEC-1): depois de reinstalar o motor, gera/regenera os cadernos
+    `.claude/agent-memory/<agente>/MEMORY.md` a partir das lições EXISTENTES pelo cs-mem instalado (`cs-mem notebook`):
+    o bloco no topo é o do cs-mem (o pre-commit aceita), a área livre do agente é preservada byte a byte. Sem o cs-mem
+    instalado (layout antigo) não há o que gerar. Idempotente: mesmo bloco ⇒ mesmos bytes."""
+    mem = os.path.join(state_root(target), "harness", "mem.py")
+    if not os.path.isfile(mem):
+        return True, ""
+    env = dict(os.environ, CLAUDE_PROJECT_DIR=target)
+    p = subprocess.run([sys.executable, mem, "--root", target, "notebook"], cwd=target, env=env,
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=CMD_TIMEOUT)
+    if p.returncode != 0:
+        return False, "cs-mem notebook exit %d\n%s" % (p.returncode, _tail(p.stderr.decode("utf-8", "replace")))
+    say("    cadernos dos agentes regenerados a partir das lições (cs-mem notebook): ok")
+    return True, ""
+
+
 def apply(target, allow_outside=False, out=None):
     """→ exit code. 0 aplicado (ou nada a fazer) · 1 falhou e restaurou · 3 recusado sem escrever."""
     out = out or sys.stdout
@@ -1094,6 +1111,8 @@ def apply(target, allow_outside=False, out=None):
             ok, why = _reemit_if_legacy(target, plan, allow_outside, say)
         except Exception as exc:
             ok, why = False, "rename-dir (resíduo): %s" % exc
+    if ok and "harness" in kinds_now:
+        ok, why = regenerate_notebooks(target, say)
     if ok:
         say("verificando:")
         ok, why = verify(target, say, run=plan["run"], hook_before=hook_before)

@@ -120,9 +120,10 @@ SESSION_SKILLS = (
 # Demais skills de comando do Claude Code (todas só humanas): (nome, kind, camada, template, descrição, frontmatter).
 COMMAND_SKILLS = (
     ("correct", "claude.session", "SESSION", "correct.md",
-     "Registra a correção do usuário como lição do agente que errou (`.swarm/bin/cs-mem correct`).",
+     "Registra a correção do usuário como lição de quem errou (agente ou brief), com prévia e confirmação (`.swarm/bin/cs-mem correct`).",
      [("argument-hint", yq("<agente> <o que estava errado> -> <o certo>, porque <porquê>")),
-      ("allowed-tools", yq("Bash(.swarm/bin/cs-mem correct *)"))]),
+      ("allowed-tools", yq("Bash(.swarm/bin/cs-mem correct *) Bash(.swarm/bin/cs-mem retract *) "
+                           "Bash(.swarm/bin/cs-mem notebook *)"))]),
     ("plan-sprint", "claude.command", "CMD", "plan-sprint.md",
      "Planeja a próxima sprint com stories que passam no DoR, via `.swarm/bin/cs-state sprint plan`.",
      [("argument-hint", yq("[--dry-run]"))]),

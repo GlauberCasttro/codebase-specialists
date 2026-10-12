@@ -141,7 +141,7 @@ iniciado → "task inexistente").
 ## R8 — versão 0.10.0
 | Requisito | Teste | Tipo |
 |---|---|---|
-| `VERSION` = `0.10.0` | `test_r8_version` | D |
-| `references/migrations.json5`: `version: "0.10.0"`, uma migração `to: "0.10.0"` (a última) com actions ⊇ {harness, emit} | `test_r8_migrations` | D |
-| `README.md` cita 0.10.0 | `test_r8_readme` | D |
+| `VERSION` ≥ `0.10.0` (mo1, B-32: relativa) | `test_r8_version` | D |
+| `references/migrations.json5`: `version` = VERSION corrente; uma migração `to: "0.10.0"` com actions ⊇ {harness, emit}; a última é a da VERSION corrente | `test_r8_migrations` | D |
+| `README.md` cita a VERSION corrente (≥ 0.10.0) | `test_r8_readme` | D |
 | `docs/09-upgrade.md` tem título `Migração 0.10.0` | `test_r8_docs_upgrade` | D |

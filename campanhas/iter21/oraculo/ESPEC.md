@@ -80,7 +80,9 @@ normalizado (sem acento, minúsculas): `correcoes recebidas`, `armadilhas do ter
 | M11 /correct classifica quem errou | 0/3 | — | 0/3 |
 | M12 refinar/retratar lição; /correct confirma antes | 0/4 | 1/1 | 1/5 |
 | M13 memória sob orçamento; `cs-mem check` documentado; ordem (mudança oficial 1) | 0/3 | — | 0/3 |
-| **total** | **0/36** | **19/19** | **19/55** |
+| M14 reincidência não some; certo novo substitui e herda a contagem (mudança oficial 2) | 0/5 | 1/1 | 1/6 |
+| M15 caderno editado de verdade: CRLF, BOM, marcador de fim apagado (mudança oficial 2) | 0/3 | — | 0/3 |
+| **total** | **0/44** | **20/20** | **20/64** |
 
 ## M1 — o cs-mem gera o caderno (B-22, D)
 | Requisito | Teste | Tipo |
@@ -264,6 +266,36 @@ que há 2 lições ativas e que a antiga tem o menor id.
 **M7:** fica como está. O `test_m7_licao_relevante_no_brief_controle` continua R no alvo pequeno (30 termos, sem estouro).
 A condição sob orçamento estourado é o M13.
 
+## M14 — corrigir a mesma lição de novo não a faz sumir (mudança oficial 2, D)
+Achado do ciclo 1 (revisor isolado) e do ciclo 2: na 0.10.1 a 2ª correção igual soma `count` e PROMOVE a lição
+(`status: promoted`, proposta pendente para o team.json5). `inject` e `check` só leem `active`: a lição corrigida duas
+vezes desaparece de todos os canais justamente quando o agente provou que a esquece. O objetivo do dono ("foi
+corrigido, a memória foi atualizada e ele não esquece mais") exige o contrário.
+Contagem visível (contrato mínimo): a linha da lição no bloco do caderno mostra a reincidência N como `N×`, `N x`,
+`N vezes`, `reincidência: N`, `reincidente ×N` ou `corrigida … N` (regex `recur_re(N)` do teste). O formato do resto da
+linha é livre. "Mesmo erro" = mesmo `--wrong`: um certo novo substitui o antigo (supersede automático) e HERDA a
+contagem — a reincidência é do erro, não da redação do certo.
+
+| Requisito | Teste | Tipo |
+|---|---|---|
+| a mesma correção 2× → mesmo id; a lição continua no `inject`, no `check --files`, no brief e no bloco do caderno | `TestM14Reincidencia.test_m14_corrigida_duas_vezes_fica_em_todos_os_canais` | D |
+| 3× → continua no `check` e no bloco | `test_m14_terceira_correcao_fica_no_check` | D |
+| 2× → uma lição com count 2; a linha dela no bloco mostra a reincidência 2 | `test_m14_contagem_de_reincidencia_visivel` | D |
+| mesmo errado, certo novo → a antiga deixa de ser active; bloco e `check` trazem a nova e não a antiga | `test_m14_certo_novo_para_o_mesmo_errado_substitui` | D |
+| mesmo errado 3× com o certo reescrito → a vigente é a última redação e a linha mostra reincidência 3 | `test_m14_reincidencia_sobrevive_ao_certo_reescrito` | D |
+| uma correção só → aparece no `check` | `test_m14_correcao_unica_no_check_controle` | R |
+
+## M15 — o caderno editado de verdade não é barrado nem duplicado (mudança oficial 2, D)
+| Requisito | Teste | Tipo |
+|---|---|---|
+| caderno gerado convertido para CRLF (editor Windows) + nota → commit passa pelo pre-commit | `TestM15CadernoEditadoDeVerdade.test_m15_caderno_crlf_commit_passa` | D |
+| BOM UTF-8 no início + nova correção → um único par de marcadores; as duas lições no bloco; a nota uma vez | `test_m15_bom_nao_duplica_o_bloco` | D |
+| marcador de fim apagado + nota + nova correção → um único par de marcadores; a lição nova no bloco; a nota uma vez | `test_m15_marcador_de_fim_apagado_nao_duplica` | D |
+
+Fora do M14/M15 (justificado no PORQUÊ da mo2): destino da proposta pendente em retract/supersede (F2), a CLI
+`cs-mem notebook --check` (F3), marcador `cs-mem` na área livre (F5, parte), decaimento por nº de tasks (F7), search
+sem rastro e `correct --dry-run` sem mover arquivos (F8).
+
 ## Compatibilidade com os oráculos congelados (conferido por leitura)
 - **iter18** (TestR1..R7): os testes não usam cs-mem, caderno, termos do brief nem `consultei:`. O submit
   `--handoff-notes ok` continua aceito pelo novo M10. O `glossary.json5 = []` da fixture deles não tem termo, então
@@ -309,6 +341,18 @@ Por execução e agregado por cenário/config, com medidas SEPARADAS:
   `.claude/settings.local.json` da cópia). "Declarou" = `consultei:` na submissão ou nos comandos. "Coerente" = o
   tema está no rastro B-24 e o ID está no `tool_result` da busca. O placar cruza pesquisou∧declarou, declarou sem
   pesquisar e pesquisou sem declarar. O rastro B-24 entra só como diagnóstico.
+  **Mudança oficial 3 (leitura do rastro):** o rastro é o ARQUIVO do contrato `.swarm/state/memory/search.jsonl`
+  (linha `{at, agent, query, kinds, paths, hits, ids}`), só as linhas NOVAS entre as fotografias, lidas pelo caminho e
+  parseadas como JSON. Conta só linha com `agent` igual ao agente da tarefa (`agent` null ou de outro agente não
+  conta). `pesquisou_rastro` = há linha do agente; `tema_no_rastro` = cada tema declarado está no `query` de uma dessas
+  linhas. Antes, a prova procurava a palavra "search" no texto novo sob `.swarm/` sem o nome do arquivo: a linha do
+  contrato não tem essa palavra, e `coerente` era 0 por construção.
+  `--recontar DIR [--out OUT]` (sem API) repontua uma rodada gravada (`<config>/<rep>/` com `saida.jsonl`, `obs.jsonl`,
+  `alvo/` e `resultado.json`). A fotografia "antes" é o molde copiado para o alvo (`_molde-base`, `_molde-corrigido`,
+  `_molde-refinado` ou `persistencia/_cadeia`). Recalcula a pesquisa e, só em `pesquisa`, a aplicação que depende de
+  `coerente`; entrega, classe e detecção vêm do `resultado.json` (a detecção não reroda). Grava
+  `placar-recontado.json`, `resumo-recontado.md` e `recontagem.json` (original × recontado por execução) sem
+  sobrescrever o original.
 
 **Critério de parada da campanha:** APLICAÇÃO (ii) ≥ 80% em `depois`, `sem-gatilho` e `persistencia`. (i) e (iii)
 são diagnóstico e também entram no placar. Saída: `placar.json` (`{cenario, config, n, x_aplicado, taxa, entregue,
@@ -349,6 +393,9 @@ Agent foi lançado de forma ASSÍNCRONA, e o stream trouxe dois `result`. O cust
 - **Pesquisa da prova:** transcript sintético no formato stream-json. Busca antes da edição + ID do resultado =
   coerente. Busca depois da edição NÃO conta. ID inventado NÃO é coerente. Declarar sem pesquisar NÃO é coerente.
   `consultei: nada` = declarou sem consulta.
+  Rastro (mudança oficial 3): linha do contrato do próprio agente = pesquisou_rastro e coerente. `agent` null NÃO
+  conta, outro agente NÃO conta, nome do agente só no texto da linha NÃO conta. Tema fora das queries dá
+  tema_no_rastro false. Só as linhas novas do `search.jsonl` contam, pelo caminho.
 - **Conferido à mão:** (1) o brief da base lista os 30 termos de A a Z (saída de `cs-state brief` lida). (2) O guard
   recusa o subagente no próprio caderno com "fora de allowed_paths" e o orquestrador com "não escreve produto" (sonda
   manual, rc=2). (3) Sem `--founder` ou evidência, o `cs-mem add --kind decision` sai com rc 1 ("entrada sem

@@ -1,4 +1,4 @@
-# base iter21 — mudança oficial 1 (permission_denied/parser + M13) — HEAD 73a492e (VERSION 0.10.1), 2026-10-08 20:46
+# base iter21 — mudança oficial 2 (M14 reincidência + M15 caderno editado) — HEAD 7b490df (VERSION 0.10.1), 2026-10-11 19:46
 == python3 (Python 3.13.3)
 M10  D FAIL  TestM10Consultei.test_m10_brief_ensina_consultei
 M10  D FAIL  TestM10Consultei.test_m10_consulta_inexistente_no_rastro_recusada
@@ -18,6 +18,15 @@ M12  D FAIL  TestM12Refinamento.test_m12_supersede_em_dois_agentes
 M13  D FAIL  TestM13BriefSobOrcamento.test_m13_licao_e_busca_sobrevivem_ao_orcamento
 M13  D FAIL  TestM13CheckDocumentado.test_m13_check_documentado_devolve_licao_da_delegacao
 M13  D FAIL  TestM13CheckDocumentado.test_m13_check_empate_mais_recente_primeiro
+M14  D FAIL  TestM14Reincidencia.test_m14_certo_novo_para_o_mesmo_errado_substitui
+M14  D FAIL  TestM14Reincidencia.test_m14_contagem_de_reincidencia_visivel
+M14  R ok    TestM14Reincidencia.test_m14_correcao_unica_no_check_controle
+M14  D FAIL  TestM14Reincidencia.test_m14_corrigida_duas_vezes_fica_em_todos_os_canais
+M14  D FAIL  TestM14Reincidencia.test_m14_reincidencia_sobrevive_ao_certo_reescrito
+M14  D FAIL  TestM14Reincidencia.test_m14_terceira_correcao_fica_no_check
+M15  D FAIL  TestM15CadernoEditadoDeVerdade.test_m15_bom_nao_duplica_o_bloco
+M15  D FAIL  TestM15CadernoEditadoDeVerdade.test_m15_caderno_crlf_commit_passa
+M15  D FAIL  TestM15CadernoEditadoDeVerdade.test_m15_marcador_de_fim_apagado_nao_duplica
 M1   D FAIL  TestM1CadernoGerado.test_m1_add_licao_gera_caderno
 M1   D FAIL  TestM1CadernoGerado.test_m1_correct_gera_caderno_com_bloco_no_topo
 M1   D FAIL  TestM1CadernoGerado.test_m1_marcadores_documentados
@@ -55,10 +64,10 @@ M9   R ok    TestM9Rastro.test_m9_busca_continua_respondendo_controle
 M9   D FAIL  TestM9Rastro.test_m9_saida_texto_tambem_registra
 M9   D FAIL  TestM9Rastro.test_m9_search_registra_agente_consulta_hits
 M9   D FAIL  TestM9Rastro.test_m9_zero_hits_registrado
-placar: M1 1/5  M2 0/6  M3 0/1  M4 6/8  M5 2/3  M6 0/2  M7 3/5  M8 2/2  M9 1/5  M10 3/7  M11 0/3  M12 1/5  M13 0/3
-por tipo (passam/total): M1 D 0/4 R 1/1  M2 D 0/6 R 0/0  M3 D 0/1 R 0/0  M4 D 0/2 R 6/6  M5 D 0/1 R 2/2  M6 D 0/2 R 0/0  M7 D 0/2 R 3/3  M8 D 0/0 R 2/2  M9 D 0/4 R 1/1  M10 D 0/4 R 3/3  M11 D 0/3 R 0/0  M12 D 0/4 R 1/1  M13 D 0/3 R 0/0
-total: 19/55 passam
-rc=0 tempo=58s
+placar: M1 1/5  M2 0/6  M3 0/1  M4 6/8  M5 2/3  M6 0/2  M7 3/5  M8 2/2  M9 1/5  M10 3/7  M11 0/3  M12 1/5  M13 0/3  M14 1/6  M15 0/3
+por tipo (passam/total): M1 D 0/4 R 1/1  M2 D 0/6 R 0/0  M3 D 0/1 R 0/0  M4 D 0/2 R 6/6  M5 D 0/1 R 2/2  M6 D 0/2 R 0/0  M7 D 0/2 R 3/3  M8 D 0/0 R 2/2  M9 D 0/4 R 1/1  M10 D 0/4 R 3/3  M11 D 0/3 R 0/0  M12 D 0/4 R 1/1  M13 D 0/3 R 0/0  M14 D 0/5 R 1/1  M15 D 0/3 R 0/0
+total: 20/64 passam
+rc=0
 == /usr/bin/python3 (Python 3.9.6)
 M10  D FAIL  TestM10Consultei.test_m10_brief_ensina_consultei
 M10  D FAIL  TestM10Consultei.test_m10_consulta_inexistente_no_rastro_recusada
@@ -78,6 +87,15 @@ M12  D FAIL  TestM12Refinamento.test_m12_supersede_em_dois_agentes
 M13  D FAIL  TestM13BriefSobOrcamento.test_m13_licao_e_busca_sobrevivem_ao_orcamento
 M13  D FAIL  TestM13CheckDocumentado.test_m13_check_documentado_devolve_licao_da_delegacao
 M13  D FAIL  TestM13CheckDocumentado.test_m13_check_empate_mais_recente_primeiro
+M14  D FAIL  TestM14Reincidencia.test_m14_certo_novo_para_o_mesmo_errado_substitui
+M14  D FAIL  TestM14Reincidencia.test_m14_contagem_de_reincidencia_visivel
+M14  R ok    TestM14Reincidencia.test_m14_correcao_unica_no_check_controle
+M14  D FAIL  TestM14Reincidencia.test_m14_corrigida_duas_vezes_fica_em_todos_os_canais
+M14  D FAIL  TestM14Reincidencia.test_m14_reincidencia_sobrevive_ao_certo_reescrito
+M14  D FAIL  TestM14Reincidencia.test_m14_terceira_correcao_fica_no_check
+M15  D FAIL  TestM15CadernoEditadoDeVerdade.test_m15_bom_nao_duplica_o_bloco
+M15  D FAIL  TestM15CadernoEditadoDeVerdade.test_m15_caderno_crlf_commit_passa
+M15  D FAIL  TestM15CadernoEditadoDeVerdade.test_m15_marcador_de_fim_apagado_nao_duplica
 M1   D FAIL  TestM1CadernoGerado.test_m1_add_licao_gera_caderno
 M1   D FAIL  TestM1CadernoGerado.test_m1_correct_gera_caderno_com_bloco_no_topo
 M1   D FAIL  TestM1CadernoGerado.test_m1_marcadores_documentados
@@ -115,7 +133,7 @@ M9   R ok    TestM9Rastro.test_m9_busca_continua_respondendo_controle
 M9   D FAIL  TestM9Rastro.test_m9_saida_texto_tambem_registra
 M9   D FAIL  TestM9Rastro.test_m9_search_registra_agente_consulta_hits
 M9   D FAIL  TestM9Rastro.test_m9_zero_hits_registrado
-placar: M1 1/5  M2 0/6  M3 0/1  M4 6/8  M5 2/3  M6 0/2  M7 3/5  M8 2/2  M9 1/5  M10 3/7  M11 0/3  M12 1/5  M13 0/3
-por tipo (passam/total): M1 D 0/4 R 1/1  M2 D 0/6 R 0/0  M3 D 0/1 R 0/0  M4 D 0/2 R 6/6  M5 D 0/1 R 2/2  M6 D 0/2 R 0/0  M7 D 0/2 R 3/3  M8 D 0/0 R 2/2  M9 D 0/4 R 1/1  M10 D 0/4 R 3/3  M11 D 0/3 R 0/0  M12 D 0/4 R 1/1  M13 D 0/3 R 0/0
-total: 19/55 passam
-rc=0 tempo=59s
+placar: M1 1/5  M2 0/6  M3 0/1  M4 6/8  M5 2/3  M6 0/2  M7 3/5  M8 2/2  M9 1/5  M10 3/7  M11 0/3  M12 1/5  M13 0/3  M14 1/6  M15 0/3
+por tipo (passam/total): M1 D 0/4 R 1/1  M2 D 0/6 R 0/0  M3 D 0/1 R 0/0  M4 D 0/2 R 6/6  M5 D 0/1 R 2/2  M6 D 0/2 R 0/0  M7 D 0/2 R 3/3  M8 D 0/0 R 2/2  M9 D 0/4 R 1/1  M10 D 0/4 R 3/3  M11 D 0/3 R 0/0  M12 D 0/4 R 1/1  M13 D 0/3 R 0/0  M14 D 0/5 R 1/1  M15 D 0/3 R 0/0
+total: 20/64 passam
+rc=0

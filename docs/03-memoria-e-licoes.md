@@ -127,10 +127,36 @@ Métrica: **taxa de recorrência** por agente em `cs-mem stats` (`lessons.<agent
 Comando emitido para o Claude Code (`.claude/skills/correct/SKILL.md`, template `assets/templates/correct.md`):
 
 1. identifica o agente, o que ele fez de errado, o certo e o porquê (1 linha cada);
-2. roda exatamente `.swarm/bin/cs-mem correct --agent <agente> --wrong "<errado>" --right "<certo>" --why "<porquê>" [--paths "<glob>"]`;
-3. mostra a saída (lição nova ou `count+1`) e só então segue o trabalho.
+2. **pergunta quem errou**: a task mandava X e o agente fez Y ⇒ erro do agente (`--fault agent`, o padrão: lição e
+   caderno do agente); a task mandava X e o agente fez X ⇒ erro do brief (`--fault brief`: lição do lead/orquestrador,
+   `source=brief`, fora do caderno do agente);
+3. mostra a lição formulada (errado / certo / porquê / escopo / de quem é) com a prévia
+   `.swarm/bin/cs-mem correct … --dry-run`, que não grava nada;
+4. pede a confirmação do humano e só então roda exatamente
+   `.swarm/bin/cs-mem correct --agent <agente> --fault <agent|brief> --wrong "<errado>" --right "<certo>" --why "<porquê>" [--paths "<glob>"]`;
+5. se a correção refina uma lição existente, acrescenta `--supersedes <id>` (a antiga vira `superseded` e nunca mais é
+   injetada); se a antiga está simplesmente errada, `.swarm/bin/cs-mem retract <id> --reason "<motivo>"` (o motivo é
+   obrigatório). Os dois deixam um evento append-only em `.swarm/state/memory/lesson-events.jsonl`;
+6. mostra a saída (lição nova, `count+1` ou a substituição) e só então segue o trabalho.
 
 Nas outras plataformas, o mesmo comando é citado no núcleo S0 como linha de terminal.
+
+## 5-bis. Caderno do agente (`MEMORY.md`)
+
+No Claude Code o cartão declara `memory: project`, e o `cs-mem` mantém `.claude/agent-memory/<agente>/MEMORY.md`: um
+**bloco gerado no topo**, entre `<!-- cs-mem:inicio (gerado pelo cs-mem; não edite este bloco) -->` e
+`<!-- cs-mem:fim -->`, com as seções `## Correções recebidas`, `## Armadilhas do território` e
+`## Quando pesquisar no cs-mem`. Abaixo do bloco fica a **área livre** do agente: o `cs-mem` nunca a reescreve.
+O bloco é regenerado a cada `add`/`correct`/`archive`/`retract` daquele agente. Lição de erro do brief
+(`--fault brief`) não entra no caderno. `.swarm/bin/cs-mem notebook [--agent <a>] [--check]` regenera o bloco ou, com
+`--check`, só confere. Nas demais plataformas (Cursor, Copilot, Codex) não há caderno: o canal da lição é o brief.
+
+### Declarar o que consultou
+
+Na submissão, o agente declara nas handoff notes uma linha por consulta: `consultei: "<consulta>" -> <ID> (<efeito>)`
+(o ID vem impresso pela `cs-mem search`) ou `consultei: nada — <motivo>`. A linha ausente é aceita e sinalizada
+"consultei: não declarado"; consulta ou ID que não está no rastro das buscas daquele agente é recusada. O cartão
+emitido (seção "Memória e autocorreção") e o brief ensinam o formato.
 
 ## 6. Gate G15
 

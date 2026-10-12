@@ -30,15 +30,19 @@ Medidas SEPARADAS por execução (agregadas por cenário/config):
   (ii)  APLICACAO  aplicou X sem ser cobrado no prompt (o prompt NUNCA cita a convenção)  ← critério de parada
   (iii) DETECCAO   quando NÃO aplicou: verify / cs-mem check / validate acusam (rc≠0 ou citam a lição/consulta)
   pesquisa:        pesquisou DE FATO (ordem no transcript, abaixo) × declarou ('consultei:'), cruzados; coerente =
-                   tema declarado no rastro B-24 e ID declarado saído do tool_result da busca
+                   tema declarado no campo `query` de uma linha do PRÓPRIO agente no rastro B-24
+                   (.swarm/state/memory/search.jsonl, mudança oficial 3) e ID declarado saído do tool_result da busca
 Critério de parada da campanha: APLICACAO (ii) ≥ 80% em `depois`, `sem-gatilho` e `persistencia`.
 "Pesquisou de fato" = no transcript do subagente (stream-json, tool_use em ordem) uma `cs-mem search` ANTES da 1ª
 edição de produto; o ID declarado em 'consultei: "TEMA" -> ID (efeito)' tem de aparecer no tool_result dessa busca.
-Sem o subagente no stream, a ordem vem do obs.jsonl (hook PostToolUse da prova). O rastro B-24 é só diagnóstico aqui.
+Sem o subagente no stream, a ordem vem do obs.jsonl (hook PostToolUse da prova). O rastro B-24 (linhas novas do arquivo
+.swarm/state/memory/search.jsonl, JSON {at, agent, query, kinds, paths, hits, ids}; `agent` null não conta) dá
+pesquisou_rastro e tema_no_rastro.
 
 Uso:
   python3 prova_real.py --dry-run [--n 3] [--model sonnet] [--configs ...]      plano + custo, sem API
   python3 prova_real.py --offline-check --out DIR                               valida o harness da prova, sem API
+  python3 prova_real.py --recontar DIR [--out OUT]                                 recontagem offline, sem API
   python3 prova_real.py --out DIR [--n 3] [--model sonnet] [--timeout 900] [--max-budget-usd X] [--configs ...]
 Saída: DIR/<config>/<rep>/{alvo/, prompt.txt, saida.jsonl, stderr.txt, obs.jsonl, resultado.json, notes.md},
 DIR/placar.json ({cenario, config, n, x_aplicado, taxa, ...}) e DIR/resumo.md. Só stdlib, Python 3.9+.
@@ -325,6 +329,28 @@ def new_text(before, after):
     return "\n".join(parts)
 
 
+TRAIL_REL = os.path.join(".swarm", "state", "memory", "search.jsonl")    # contrato B-24 (PLANO, rastro_busca)
+
+
+def trail_new(before, after):
+    """Linhas novas do rastro B-24 entre duas fotografias, lidas PELO CAMINHO do arquivo (mudança oficial 3)."""
+    return new_text({TRAIL_REL: before[TRAIL_REL]} if TRAIL_REL in before else {},
+                    {TRAIL_REL: after[TRAIL_REL]} if TRAIL_REL in after else {})
+
+
+def trail_records(trail):
+    """Linhas JSON do rastro cujo `agent` é o agente da tarefa (agent null/ausente/outro não conta)."""
+    out = []
+    for ln in (trail or "").splitlines():
+        try:
+            r = json.loads(ln)
+        except ValueError:
+            continue
+        if isinstance(r, dict) and r.get("agent") == AGENT:
+            out.append(r)
+    return out
+
+
 # ============================================================================================ medição
 def _key(s):
     return T.strip_accents(str(s)).lower().strip()
@@ -521,10 +547,11 @@ def search_order(msgs, obs):
 
 def score_search(obs, swarm_new, decl, msgs=()):
     """pesquisou DE FATO (ordem busca → 1ª edição no transcript/obs) × declarou ('consultei:'), cruzados.
-    pesquisou_rastro = o rastro B-24 do produto registrou busca do agente (diagnóstico do requisito mecânico).
+    swarm_new = (mudança oficial 3) as linhas novas de .swarm/state/memory/search.jsonl (trail_new); pesquisou_rastro = há linha do agente da
+    tarefa; tema_no_rastro = cada tema declarado está no `query` de uma linha dele (mudança oficial 3).
     id_saiu_da_busca = todo ID declarado aparece no tool_result de uma busca do subagente (só com o transcript)."""
     order = search_order(msgs, obs)
-    trail = [ln for ln in swarm_new.splitlines() if re.search(r"search", ln, re.I) and AGENT in ln]
+    trail = [str(r.get("query") or "") for r in trail_records(swarm_new)]
     temas = [d for d in decl if not d["nada"]]
     ids_ok = None
     if temas and order["resultados"] is not None:
@@ -587,6 +614,7 @@ def run_dispatch(args, root, run_dir, title, path, task_text, goal=None):
     if os.path.isfile(T.notebook_path(root, AGENT)):
         shutil.copy(T.notebook_path(root, AGENT), os.path.join(run_dir, "caderno-depois.md"))
     msgs = read_stream(os.path.join(run_dir, "saida.jsonl"))
+    snap2 = snapshot_swarm(root)
     cost, is_err, turns = stream_cost(msgs)
     neg = permission_denials(msgs)
     with open(os.path.join(run_dir, "negacoes.json"), "w", encoding="utf-8") as fh:
@@ -594,7 +622,7 @@ def run_dispatch(args, root, run_dir, title, path, task_text, goal=None):
     return {"tid": tid, "delegacao": did, "model": model, "rc": rc, "segundos": round(time.time() - t0, 1),
             "negacoes": neg,
             "custo_usd": cost, "is_error": is_err, "turnos": turns, "brief": brief, "nb_before": nb_before,
-            "swarm_new": new_text(snap, snapshot_swarm(root)), "stream": stream_text(msgs), "msgs": msgs,
+            "swarm_new": new_text(snap, snap2), "trail_new": trail_new(snap, snap2), "stream": stream_text(msgs), "msgs": msgs,
             "obs": obs_records(os.path.join(run_dir, "obs.jsonl"))}
 
 
@@ -627,7 +655,7 @@ def measure_dep(args, root, run_dir, config, rep, vi):
             "variante": vi if isinstance(vi, str) else "V%d" % vi, "classe": cls,
             "entrega": {"canal_caderno": canal_caderno, "canal_brief": canal_brief, "citou": citou,
                         "entregue": canal_caderno or canal_brief},
-            "aplicacao": applied, "deteccao": det, "pesquisa": score_search(r["obs"], r["swarm_new"], decl, r["msgs"]),
+            "aplicacao": applied, "deteccao": det, "pesquisa": score_search(r["obs"], r["trail_new"], decl, r["msgs"]),
             "rc": r["rc"], "segundos": r["segundos"], "custo_usd": r["custo_usd"], "is_error": r["is_error"],
             "turnos": r["turnos"], "tid": r["tid"], "negacoes": r["negacoes"]}
     if config == "refinamento":
@@ -645,7 +673,7 @@ def measure_search(args, root, run_dir, rep):
         m = re.search(r"CALAGEM_PADRAO_G\s*(?::\s*int)?\s*=\s*(\d+)", T.read_text(p))
         val = int(m.group(1)) if m else None
     decl = declared(texts_for_declaration(r["swarm_new"], r["msgs"]))
-    ps = score_search(r["obs"], r["swarm_new"], decl, r["msgs"])
+    ps = score_search(r["obs"], r["trail_new"], decl, r["msgs"])
     applied = ps["pesquisou_de_fato"]
     det = detection(root, r["tid"], applied and ps["coerente"], ["consult", "cs-mem search"])
     return {"cenario": "pesquisa", "config": "pesquisa", "rep": rep, "variante": "S",
@@ -858,6 +886,63 @@ def early_abort(res):
     return any(d["origem"] == "permissao" and d["tool"] in ("Bash", "?") for d in res.get("negacoes") or [])
 
 
+# ============================================================================================ recontagem
+def recount_baseline(d, config):
+    """Raiz copiada para o alvo antes do despacho (a fotografia 'antes' da recontagem)."""
+    if config == "persistencia":
+        return os.path.join(d, config, "_cadeia")
+    return os.path.join(d, {"base": "_molde-base", "pesquisa": "_molde-base",
+                            "refinamento": "_molde-refinado"}.get(config, "_molde-corrigido"))
+
+
+def recount_one(d, config, rd):
+    """Repontua UMA execução gravada sem API: a pesquisa (e, só na config pesquisa, a aplicação que dela depende)
+    é recalculada do saida.jsonl, obs.jsonl e alvo/; o resto vem do resultado.json original (detecção não reroda)."""
+    orig = json.load(open(os.path.join(rd, "resultado.json"), encoding="utf-8"))
+    if orig.get("classe") == "NOT_RUN":
+        return orig, orig
+    before = snapshot_swarm(recount_baseline(d, config))
+    after = snapshot_swarm(os.path.join(rd, "alvo"))
+    msgs = read_stream(os.path.join(rd, "saida.jsonl"))
+    decl = declared(texts_for_declaration(new_text(before, after), msgs))
+    ps = score_search(obs_records(os.path.join(rd, "obs.jsonl")), trail_new(before, after), decl, msgs)
+    res = dict(orig, pesquisa=ps)
+    if config == "pesquisa":
+        res["aplicacao"] = bool(ps["pesquisou_de_fato"] and ps["declarou"] and ps["coerente"])
+    return orig, res
+
+
+def recount(args):
+    d = os.path.realpath(args.recontar)
+    out = os.path.realpath(args.out) if args.out else d
+    os.makedirs(out, exist_ok=True)
+    origs, results, diff = [], [], []
+    for config in CONFIGS + OPTIONAL_CONFIGS:
+        cdir = os.path.join(d, config)
+        if not os.path.isdir(cdir):
+            continue
+        for rep in sorted(x for x in os.listdir(cdir) if re.match(r"^\d+$", x)):
+            rd = os.path.join(cdir, rep)
+            if not os.path.isfile(os.path.join(rd, "resultado.json")):
+                continue
+            o, r = recount_one(d, config, rd)
+            origs.append(o)
+            results.append(r)
+            diff.append({"config": config, "rep": rep, "aplicacao": [o["aplicacao"], r["aplicacao"]],
+                         "pesquisa_original": o["pesquisa"], "pesquisa_recontada": r["pesquisa"]})
+    rows = placar(results)
+    with open(os.path.join(out, "placar-recontado.json"), "w", encoding="utf-8") as fh:
+        json.dump(rows, fh, ensure_ascii=False, indent=1)
+    with open(os.path.join(out, "recontagem.json"), "w", encoding="utf-8") as fh:
+        json.dump(diff, fh, ensure_ascii=False, indent=1)
+    txt = resumo(rows).replace("# Placar prova_real iter21", "# Placar prova_real iter21 — RECONTADO (mudança "
+                               "oficial 3, sem API; detecção do original)", 1)
+    with open(os.path.join(out, "resumo-recontado.md"), "w", encoding="utf-8") as fh:
+        fh.write(txt)
+    print(txt)
+    return 0 if results else 1
+
+
 # ============================================================================================ offline-check
 def offline_check(args):
     out = os.path.realpath(args.out)
@@ -988,6 +1073,27 @@ def offline_check(args):
     s_nada = score_search([], "", declared("consultei: nada — escopo trivial"))
     ck("pesquisa: 'consultei: nada' é declaração sem consulta", s_nada["declarou_nada"] and not s_nada["coerente"])
     s_obs = score_search(obs, "", [])
+    # mudança oficial 3: o rastro é o ARQUIVO B-24 (linha do contrato, sem a palavra "search"), por agente e query
+    line = lambda ag, qq: json.dumps({"agent": ag, "agent_inferred": False, "at": "2026-10-12T14:40:33Z", "hits": 1,
+                                      "ids": ["decision.ab12"], "kinds": [], "paths": ["src/cultivo/**"], "query": qq})
+    t_own = line(AGENT, q)
+    s_c = score_search([], t_own, declared(texts_for_declaration("", m_ok)), m_ok)
+    ck("rastro (mo3): linha do contrato do próprio agente → pesquisou_rastro, tema no rastro, coerente",
+       s_c["pesquisou_rastro"] and s_c["tema_no_rastro"] and s_c["coerente"], json.dumps(s_c, ensure_ascii=False)[:160])
+    s_n = score_search([], line(None, q), declared(texts_for_declaration("", m_ok)), m_ok)
+    ck("rastro (mo3): linha com agent null não conta", not s_n["pesquisou_rastro"] and not s_n["coerente"])
+    s_x = score_search([], line("dev-outro", q), declared(texts_for_declaration("", m_ok)), m_ok)
+    ck("rastro (mo3): linha de outro agente não conta", not s_x["pesquisou_rastro"] and not s_x["coerente"])
+    s_t = score_search([], line(AGENT, "irrigacao"), declared(texts_for_declaration("", m_ok)), m_ok)
+    ck("rastro (mo3): tema declarado ausente das queries → tema_no_rastro false",
+       s_t["pesquisou_rastro"] and not s_t["tema_no_rastro"] and not s_t["coerente"])
+    s_q = score_search([], json.dumps({"agent": "dev-outro", "query": "%s search %s" % (q, AGENT)}),
+                       declared(texts_for_declaration("", m_ok)), m_ok)
+    ck("rastro (mo3): nome do agente só no texto da linha (não no campo agent) não conta", not s_q["pesquisou_rastro"])
+    b0 = {TRAIL_REL: (t_own + "\n").encode()}
+    b1 = {TRAIL_REL: (t_own + "\n" + line(AGENT, "nova") + "\n").encode(), "x/outro.jsonl": t_own.encode()}
+    ck("rastro (mo3): só as linhas NOVAS do arquivo search.jsonl, pelo caminho",
+       [r["query"] for r in trail_records(trail_new(b0, b1))] == ["nova"])
     ck("pesquisa: sem transcript do subagente, a ordem vem do obs.jsonl", s_obs["fonte_ordem"] == "obs" and
        s_obs["pesquisou_de_fato"])
     add_search_decision(r2)
@@ -1101,6 +1207,8 @@ def main(argv=None):
                     help="com --offline-check: 1 despacho real e barato confirma Bash do subagente no alvo")
     ap.add_argument("--sonda-model", default="haiku")
     ap.add_argument("--sonda-budget", type=float, default=0.2)
+    ap.add_argument("--recontar", metavar="DIR",
+                    help="recalcula placar/resumo de uma rodada gravada, sem API (grava *-recontado em --out ou DIR)")
     args = ap.parse_args(argv)
     args.configs = [c for c in args.configs.split(",") if c]
     unknown = [c for c in args.configs if c not in CONFIGS + OPTIONAL_CONFIGS]
@@ -1109,6 +1217,8 @@ def main(argv=None):
     if args.dry_run:
         print_plan(args)
         return 0
+    if args.recontar:
+        return recount(args)
     if not args.out:
         ap.error("--out é obrigatório (fora de qualquer projeto com CLAUDE.md)")
     os.environ.setdefault("CS_ORACLE_TMP", os.path.join(os.path.realpath(args.out), "_tmp"))

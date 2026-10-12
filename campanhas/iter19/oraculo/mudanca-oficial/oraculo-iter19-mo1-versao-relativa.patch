@@ -1,0 +1,56 @@
+--- campanhas/iter19/oraculo/ESPEC.md	2026-10-07 12:45:36
++++ campanhas/iter19/oraculo/ESPEC.md	2026-10-12 11:01:21
+@@ -128,8 +128,8 @@
+ ## CA-06 — o que não muda continua igual; versão
+ | Requisito | Teste | Tipo |
+ |---|---|---|
+-| `VERSION` = 0.11.0 | `TestCA06.test_ca06_version` | D |
+-| `references/migrations.json5`: `version` 0.11.0; a última migração é `to: "0.11.0"`, única, logo depois da 0.10.1, com ações | `test_ca06_catalogo_tem_a_0110` | D |
++| `VERSION` ≥ 0.11.0 (mo1, B-32: relativa) | `TestCA06.test_ca06_version` | D |
++| `references/migrations.json5`: `version` = VERSION corrente e a última migração é a dela; `to: "0.11.0"` única, logo depois da 0.10.1, com ações | `test_ca06_catalogo_tem_a_0110` | D |
+ | catálogo continua `migrations.json5` (sem `.json`); no alvo novo `team.json5`, `run.json5`, `harness/{config,machines,routing}.json5` existem, são JSON5 legível e não ganham gêmeo `.json` | `test_ca06_catalogo_e_config_continuam_json5` | R |
+ | cada linha de `events.jsonl` do alvo novo continua `canonical` (`sort_keys`, separadores compactos) | `test_ca06_eventos_continuam_jsonl_canonico` | R |
+ | alvo novo: lição do cs-mem em `state/memory/agents/dev-billing.json5`; mandato com chaves pt (`alvo, criterios, objetivo, orcamento, regressao`) | `test_ca06_memoria_e_mandato_novos_continuam` | R |
+--- campanhas/iter19/oraculo/test_iter19.py	2026-10-07 12:43:17
++++ campanhas/iter19/oraculo/test_iter19.py	2026-10-12 10:57:55
+@@ -128,6 +128,12 @@
+     return out
+ 
+ 
++
++def vtuple(v):
++    """'0.10.1' -> (0, 10, 1): comparação de versão relativa (mo1, B-32)."""
++    return tuple(int(x) for x in str(v).strip().split("."))
++
++
+ def read_text(path):
+     with open(path, encoding="utf-8") as fh:
+         return fh.read()
+@@ -972,17 +978,23 @@
+     def catalog(self):
+         return json5io().read(os.path.join(SKILL, "references", "migrations.json5"))
+ 
++    # mo1 (B-32): versão RELATIVA — VERSION >= 0.11.0 e a migração 0.11.0 no catálogo (o resto do CA-06 não muda).
++    def current(self):
++        return read_text(os.path.join(SKILL, "VERSION")).strip()
++
+     def test_ca06_version(self):
+-        self.assertEqual(read_text(os.path.join(SKILL, "VERSION")).strip(), NEW_VERSION)
++        self.assertGreaterEqual(vtuple(self.current()), vtuple(NEW_VERSION))
+ 
+     def test_ca06_catalogo_tem_a_0110(self):
+         m = self.catalog()
+-        self.assertEqual(m["version"], NEW_VERSION)
++        cur = self.current()
++        self.assertGreaterEqual(vtuple(cur), vtuple(NEW_VERSION))
++        self.assertEqual(m["version"], cur, "o catálogo está na VERSION corrente")
+         tos = [x["to"] for x in m["migrations"]]
+-        self.assertEqual(tos[-1], NEW_VERSION, "a última migração é a 0.11.0")
++        self.assertEqual(tos[-1], cur, "a última migração é a da VERSION corrente")
+         self.assertEqual(tos.count(NEW_VERSION), 1)
+         self.assertEqual(tos.index(NEW_VERSION), tos.index(OLD_VERSION) + 1, "0.11.0 vem logo depois da 0.10.1")
+-        self.assertTrue(m["migrations"][-1].get("actions"), "a 0.11.0 tem ações")
++        self.assertTrue(m["migrations"][tos.index(NEW_VERSION)].get("actions"), "a 0.11.0 tem ações")
+ 
+     def test_ca06_catalogo_e_config_continuam_json5(self):
+         self.assertTrue(os.path.isfile(os.path.join(SKILL, "references", "migrations.json5")))

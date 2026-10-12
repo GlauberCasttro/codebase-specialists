@@ -128,8 +128,8 @@ conferidos (CA-06).
 ## CA-06 — o que não muda continua igual; versão
 | Requisito | Teste | Tipo |
 |---|---|---|
-| `VERSION` = 0.11.0 | `TestCA06.test_ca06_version` | D |
-| `references/migrations.json5`: `version` 0.11.0; a última migração é `to: "0.11.0"`, única, logo depois da 0.10.1, com ações | `test_ca06_catalogo_tem_a_0110` | D |
+| `VERSION` ≥ 0.11.0 (mo1, B-32: relativa) | `TestCA06.test_ca06_version` | D |
+| `references/migrations.json5`: `version` = VERSION corrente e a última migração é a dela; `to: "0.11.0"` única, logo depois da 0.10.1, com ações | `test_ca06_catalogo_tem_a_0110` | D |
 | catálogo continua `migrations.json5` (sem `.json`); no alvo novo `team.json5`, `run.json5`, `harness/{config,machines,routing}.json5` existem, são JSON5 legível e não ganham gêmeo `.json` | `test_ca06_catalogo_e_config_continuam_json5` | R |
 | cada linha de `events.jsonl` do alvo novo continua `canonical` (`sort_keys`, separadores compactos) | `test_ca06_eventos_continuam_jsonl_canonico` | R |
 | alvo novo: lição do cs-mem em `state/memory/agents/dev-billing.json5`; mandato com chaves pt (`alvo, criterios, objetivo, orcamento, regressao`) | `test_ca06_memoria_e_mandato_novos_continuam` | R |

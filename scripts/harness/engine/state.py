@@ -613,6 +613,13 @@ def run(a):
             out += ["  - " + p for p in probs[:8]]
         else:
             out.append("verify PASS %s (exit 0, output_sha256 %s) → review por gate" % (_tid(a), g.get("output_sha256", "")[:12]))
+        try:  # DEC-2: o gate vê a declaração de consulta à memória (ou a falta dela)
+            _ctx = engine.Ctx(root, hcore.load_board(root))
+            _lbl = cmds.consultei_label(_ctx.find("task", cmds.resolve_task_id(_ctx, _tid(a))))
+            if _lbl:
+                out.append(_lbl)
+        except Exception:
+            pass
     elif c == "review":
         cmds.review(root, actor, _tid(a), a.by, a.verdict, a.findings)
         out.append("review %s registrada" % a.verdict)

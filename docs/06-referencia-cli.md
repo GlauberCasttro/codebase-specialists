@@ -1687,6 +1687,7 @@ options:
 ```text
 usage: cs-mem correct [-h] --agent AGENT --wrong WRONG --right RIGHT --why WHY
                       [--paths PATHS] [--check CHECK] [--evidence EVIDENCE]
+                      [--fault {agent,brief}] [--supersedes ID] [--dry-run]
 
 options:
   --agent AGENT
@@ -1696,7 +1697,28 @@ options:
   --paths PATHS
   --check CHECK
   --evidence EVIDENCE  arquivo:linha (fingerprint p/ obsolescência)
+  --fault {agent,brief}  quem errou: agent (padrão: lição e caderno do agente) | brief (lição do lead, source=brief)
+  --supersedes ID      refina a lição ID (ela vira superseded e nunca mais é injetada)
+  --dry-run            prévia: mostra a lição formulada e NÃO grava nada
 ```
+
+#### `cs-mem retract`
+
+```text
+usage: cs-mem retract [-h] [--reason REASON] [--agent AGENT] id
+```
+
+`--reason` é obrigatório: sem ele a retratação é recusada. A lição retratada nunca mais é injetada, buscada como ativa
+nem escrita no caderno; o evento (com o motivo) é anexado a `lesson-events.jsonl`.
+
+#### `cs-mem notebook`
+
+```text
+usage: cs-mem notebook [-h] [--agent AGENT] [--check] [--json]
+```
+
+Regenera o bloco gerado do caderno `.claude/agent-memory/<agente>/MEMORY.md` (a área livre abaixo é preservada);
+`--check` só confere e não grava.
 
 #### `cs-mem inject`
 

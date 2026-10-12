@@ -239,6 +239,13 @@ def why(ctx, ident):
         wl = waiver_line(ent)
         if wl:
             lines.append(wl)
+        try:
+            import cmds as _cmds
+            cl = _cmds.consultei_label(ent)
+        except Exception:
+            cl = None
+        if cl:
+            lines.append(cl)
         if d:
             lines.append(why(ctx, d["id"]))
         lines.append(_history(ctx, ident))

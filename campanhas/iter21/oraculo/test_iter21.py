@@ -34,6 +34,11 @@ Mapa requisito → teste e critérios em ESPEC.md (mesma pasta). Resumo:
   M13 sob orçamento estourado (glossário de 400 termos) a lição relevante e o resultado da busca continuam no brief e
       o glossário não é despejado; o `cs-mem check` como o cartão/brief o escrevem devolve a lição da delegação
       (diff em tests/**); no empate de count, a lição mais recente vem primeiro.
+  M14 corrigir a mesma lição 2× (ou 3×) não a faz sumir: continua no bloco, inject, check e brief, com a contagem de
+      reincidência visível no bloco; certo novo para o mesmo errado substitui o antigo e herda a contagem (mudança
+      oficial 2).
+  M15 caderno editado de verdade: CRLF não é adulteração (commit passa); BOM ou marcador de fim apagado não duplicam
+      o bloco nem perdem a nota do agente (mudança oficial 2).
 
 Comportamento observável: CLIs reais em subprocesso (`cs.py`, `.swarm/harness/{state,mem,guard}.py` instalados no
 alvo), hook git real, repos git temporários, bytes dos arquivos. Nada de nome interno de função.
@@ -1345,6 +1350,142 @@ class TestM13CheckDocumentado(Alvo):
         self.assertIn("marcador-m13e", out)
         self.assertLess(out.index("marcador-m13e"), out.index("marcador-m13d"),
                         "no empate de count, a lição mais recente vem primeiro:\n%s" % out)
+
+# ================================================================================================ M14 (mudança oficial 2)
+def recur_re(n):
+    """Contagem de reincidência n na linha da lição (ex.: '2×', '2 vezes', 'reincidência: 2', 'reincidente ×2')."""
+    return re.compile(r"(\b%d\s*(x|×|vezes)(?!\w)|reincid\w*\D{0,12}\b%d\b|\b%d\b\D{0,3}reincid|corrigid\w*\D{0,12}\b%d\b)"
+                      % (n, n, n, n), re.I)
+
+
+M14_PATH = "src/cultivo/clima.py"
+
+
+class TestM14Reincidencia(Alvo):
+    """Corrigir a mesma lição de novo não a faz sumir (achado F1 do ciclo 1); certo novo para o mesmo errado
+    substitui o antigo (F6)."""
+    RULE = "use a chave do pré-requisito marcador-m14a"
+
+    def corr(self, right, wrong="fazer do jeito óbvio", why="convenção do dono"):
+        code, out, err = mem(self.root, "correct", "--agent", AGENT, "--wrong", wrong, "--right", right, "--why", why,
+                             "--paths", TERRITORY)
+        self.assertEqual(code, 0, out + err)
+        return json.loads(out.strip().splitlines()[-1])["id"]
+
+    def channels(self):
+        """{canal: texto} por onde a lição chega ao agente: bloco do caderno, inject, check e brief."""
+        inj = mem_ok(self.root, "inject", "--agent", AGENT, "--paths", M14_PATH, "--title", "ajustar etapa")
+        code, chk, err = mem(self.root, "check", "--agent", AGENT, "--files", M14_PATH, "--no-run")
+        tid = new_task(self.root, AGENT, "Ajustar etapa do clima", M14_PATH)
+        st_ok(self.root, "start", tid)
+        brief = st_ok(self.root, "brief", tid)
+        return {"inject": inj, "check": chk + err, "brief": brief}
+
+    def test_m14_corrigida_duas_vezes_fica_em_todos_os_canais(self):
+        i1 = self.corr(self.RULE)
+        i2 = self.corr(self.RULE)
+        self.assertEqual(i1, i2, "a 2ª correção igual é a MESMA lição (reincidência), não uma nova")
+        for ch, txt in self.channels().items():
+            self.assertIn("marcador-m14a", txt, "corrigida 2 vezes, a lição sumiu do %s:\n%s" % (ch, txt[-2000:]))
+        self.assertIn("marcador-m14a", block_of(self.root, AGENT)[2],
+                      "corrigida 2 vezes, a lição continua no bloco do caderno")
+
+    def test_m14_terceira_correcao_fica_no_check(self):
+        for _ in range(3):
+            self.corr(self.RULE)
+        code, out, err = mem(self.root, "check", "--agent", AGENT, "--files", M14_PATH, "--no-run")
+        self.assertIn("marcador-m14a", out + err, "corrigida 3 vezes, a lição fica no check")
+        self.assertIn("marcador-m14a", block_of(self.root, AGENT)[2])
+
+    def test_m14_contagem_de_reincidencia_visivel(self):
+        self.corr(self.RULE)
+        self.corr(self.RULE)
+        mine = [l for l in lessons_of(self.root, AGENT) if "marcador-m14a" in l.get("rule", "")]
+        self.assertEqual(len(mine), 1, mine)
+        self.assertEqual(int(mine[0].get("count") or 1), 2, "a lição registra 2 ocorrências")
+        blk = block_of(self.root, AGENT)[2]
+        lines = [ln for ln in blk.split("\n") if "marcador-m14a" in ln]
+        self.assertTrue(lines)
+        self.assertTrue(any(recur_re(2).search(ln) for ln in lines),
+                        "o bloco mostra a reincidência na linha da lição (ex.: '2×', 'reincidência: 2'):\n%s" % blk)
+
+    def test_m14_correcao_unica_no_check_controle(self):
+        self.corr(self.RULE)
+        code, out, err = mem(self.root, "check", "--agent", AGENT, "--files", M14_PATH, "--no-run")
+        self.assertIn("marcador-m14a", out + err)
+
+    def test_m14_certo_novo_para_o_mesmo_errado_substitui(self):
+        wrong = "gravar a dose de calcário em quilos"
+        self.corr("gravar a dose de calcário em gramas por célula marcador-m14-velho", wrong=wrong)
+        self.corr("gravar a dose de calcário em miligramas por célula marcador-m14-novo", wrong=wrong)
+        act = " ".join(l.get("rule", "") for l in lessons_of(self.root, AGENT) if l.get("status") == "active")
+        self.assertNotIn("m14-velho", act, "o certo antigo deixa de ser active (substituído, não fundido)")
+        blk = block_of(self.root, AGENT)[2]
+        self.assertIn("marcador-m14-novo", blk, "o certo NOVO chega ao caderno")
+        self.assertNotIn("marcador-m14-velho", blk)
+        code, out, err = mem(self.root, "check", "--agent", AGENT, "--files", M14_PATH, "--no-run")
+        self.assertIn("marcador-m14-novo", out + err)
+        self.assertNotIn("marcador-m14-velho", out + err)
+
+
+    def test_m14_reincidencia_sobrevive_ao_certo_reescrito(self):
+        """O MESMO errado corrigido 3× com o certo reescrito: a vigente é a última redação e a reincidência (3) aparece."""
+        wrong = "somar o imposto por item"
+        rights = ("somar o imposto no total marcador-m14r1", "somar o imposto no total da fatura marcador-m14r2",
+                  "somar o imposto no total da fatura sempre marcador-m14r3")
+        for r in rights:
+            self.corr(r, wrong=wrong)
+        blk = block_of(self.root, AGENT)[2]
+        self.assertIn("marcador-m14r3", blk, "a redação mais recente é a vigente no caderno")
+        self.assertNotIn("marcador-m14r1", blk)
+        self.assertNotIn("marcador-m14r2", blk)
+        lines = [ln for ln in blk.split("\n") if "marcador-m14r3" in ln]
+        self.assertTrue(any(recur_re(3).search(ln) for ln in lines),
+                        "o mesmo erro 3× (certo reescrito) aparece como reincidência 3 na linha da lição:\n%s" % blk)
+
+# ================================================================================================ M15 (mudança oficial 2)
+class TestM15CadernoEditadoDeVerdade(Alvo):
+    """O caderno editado como se edita de verdade (CRLF, BOM, marcador apagado) não é barrado nem duplicado."""
+
+    def test_m15_caderno_crlf_commit_passa(self):
+        correct(self.root, AGENT, "use a chave do pré-requisito marcador-m15a")
+        block_of(self.root, AGENT)
+        raw = read_bytes(self.nb()).replace(b"\r\n", b"\n").replace(b"\n", b"\r\n") + b"- nota-m15a\r\n"
+        with open(self.nb(), "wb") as fh:
+            fh.write(raw)
+        git(self.root, "add", "-A")
+        code, out, moved = try_commit(self.root, "caderno crlf")
+        self.assertEqual(code, 0, "caderno com CRLF (editor Windows) não é adulteração:\n%s" % out[-3000:])
+        self.assertTrue(moved)
+
+    def test_m15_bom_nao_duplica_o_bloco(self):
+        correct(self.root, AGENT, "use a chave do pré-requisito marcador-m15b")
+        block_of(self.root, AGENT)
+        with open(self.nb(), "rb") as fh:
+            raw = fh.read()
+        with open(self.nb(), "wb") as fh:
+            fh.write(b"\xef\xbb\xbf" + raw + b"\n- nota-m15b\n")
+        correct(self.root, AGENT, "regue de manhã marcador-m15c sombreamento umidade")
+        txt = read_text(self.nb())
+        self.assertEqual(len(MARK_RE.findall(txt)), 2, "BOM no início: um único bloco:\n%s" % txt[:2000])
+        blk = block_of(self.root, AGENT)[2]
+        self.assertIn("marcador-m15b", blk)
+        self.assertIn("marcador-m15c", blk)
+        self.assertEqual(txt.count("nota-m15b"), 1)
+
+    def test_m15_marcador_de_fim_apagado_nao_duplica(self):
+        correct(self.root, AGENT, "use a chave do pré-requisito marcador-m15d")
+        a, b, blk, before, after = block_of(self.root, AGENT)
+        lines = read_text(self.nb()).split("\n")
+        del lines[b]
+        lines.append("- nota-m15d")
+        write(self.root, notebook_rel(AGENT), "\n".join(lines) + "\n")
+        correct(self.root, AGENT, "regue de manhã marcador-m15e sombreamento umidade")
+        txt = read_text(self.nb())
+        self.assertEqual(len(MARK_RE.findall(txt)), 2, "marcador de fim apagado: um único bloco:\n%s" % txt[:2000])
+        self.assertIn("marcador-m15e", block_of(self.root, AGENT)[2])
+        self.assertEqual(txt.count("nota-m15d"), 1, "a nota do agente não se perde nem se duplica")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -3,11 +3,50 @@
 Fonte ÚNICA: o hook SubagentStart injeta exatamente `package()`; nas plataformas sem hook,
 `cs-state brief <task> [--phase]` imprime o mesmo texto.
 """
+import re
+import unicodedata
+
 import hcore
 import engine
 
 PHASES = ("implement", "verify", "review")
 LESSON_MAX, LESSON_CHARS = 5, 1500
+TERMS_MAX = 8                 # D-0-06: só os termos RELEVANTES (título+goal+allowed_paths), nunca o glossário A–Z
+MEMORY_PRIO = 2               # D-0-01: MEMÓRIA acima de TERMOS (5) e com cota reservada no orçamento
+MEMORY_QUOTA = 0.35           # fração do orçamento reservada à MEMÓRIA enquanto as seções anteriores são montadas
+CONSULTEI_FMT = ('consultei: "<consulta>" -> <ID> (<efeito>)  |  consultei: nada — <motivo>')
+_STOP = {"para", "como", "quero", "colher", "melhor", "precisa", "ajustar", "fazer", "deve", "with", "from", "that",
+         "this", "task", "tarefa", "objetivo", "produtor", "usuario", "quando", "entao", "dado", "sobre", "pelo", "pela",
+         "mais", "menos", "todo", "toda", "cada", "entre", "porque", "durar", "dura", "seja", "ser", "isso", "esse",
+         "essa", "init", "main", "index", "test", "tests", "src", "lib", "app"}
+
+
+def _norm(s):
+    s = unicodedata.normalize("NFKD", str(s or ""))
+    return "".join(c for c in s if not unicodedata.combining(c)).lower()
+
+
+def _stem(w):
+    return w[:6] if len(w) > 6 else w
+
+
+def task_tokens(task):
+    """Tokens da task para relevância: título + goal + nome dos arquivos de allowed_paths (o diretório é o território
+    inteiro: não distingue termo nenhum)."""
+    txt = [task.get("title") or "", task.get("goal") or "", task.get("i_want") or ""]
+    for p in task.get("allowed_paths") or []:
+        base = p.replace("\\", "/").rstrip("/").split("/")[-1]
+        txt.append(re.sub(r"\.[A-Za-z0-9]+$", "", base).replace("*", " "))
+    toks = set()
+    for w in re.findall(r"[a-z0-9]+", _norm(" ".join(txt)).replace("_", " ").replace("-", " ")):
+        if len(w) >= 4 and w not in _STOP:
+            toks.add(_stem(w))
+    return toks
+
+
+def relevance(tokens, *texts):
+    words = set(_stem(w) for w in re.findall(r"[a-z0-9]+", _norm(" ".join(t or "" for t in texts))) if len(w) >= 4)
+    return len(tokens & words)
 
 
 def phase_for(ctx, task, agent=None):
@@ -68,7 +107,15 @@ def sections(ctx, task, phase, agent=None):
     inv = ["%s: %s" % (i["id"], i.get("text", "")[:200]) for i in br.get("invariants") or []
            if not i.get("global") and i.get("category") != "business_rule"]
     rules = [_term_line(f) for f in _facts_in_scope(ctx, ap, ("business_rule",))]
-    terms = [_term_line(f) for f in _facts_in_scope(ctx, ap, ("term",))]
+    toks = task_tokens(task)
+    scored = [(relevance(toks, f.get("id"), hcore.fact_text(f)), f) for f in _facts_in_scope(ctx, ap, ("term",))]
+    rel = sorted([x for x in scored if x[0] > 0], key=lambda x: (-x[0], x[1]["id"]))
+    terms = [_term_line(f) for _, f in rel[:TERMS_MAX]]
+    if len(scored) > len(terms):
+        terms.append("(%d termos do escopo sem relação com título/objetivo/arquivos omitidos: cs-mem search '<termo>' "
+                     "--agent %s)" % (len(scored) - len(terms), task["agent"]))
+    refs = [r for r in br.get("references") or [] if r]
+    out_scope = [o for o in (br.get("scope") or {}).get("out") or [] if o]
     acs = ["%s [%s] %s" % (a["id"], a.get("verified_by"), a["criterion"]) for a in task.get("acceptance_criteria") or []]
     prev = []
     if task.get("reject_reason"):
@@ -82,13 +129,19 @@ def sections(ctx, task, phase, agent=None):
         S.append((1, "ESCOPO (escreva SÓ aqui; o hook bloqueia o resto)", ["allowed_paths: " + ", ".join(ap)] +
                   (["protected_paths (não tocar; o motor prova no verify contra o que ESTA delegação mudou): " + ", ".join(task.get("protected_paths") or [])]
                    if task.get("protected_paths") else []) +
-                  ["fora de escopo: " + "; ".join((br.get("scope") or {}).get("out") or [])]))
+                  ["fora de escopo: " + ("; ".join(out_scope) if out_scope else
+                                         "(a task não declara itens; vale tudo fora de allowed_paths)")]))
         S.append((1, "CHECKLIST", [
-            "1) leia as referências: " + ", ".join(br.get("references") or []),
+            ("1) leia as referências: " + ", ".join(refs)) if refs else
+            ("1) leia (sem referências declaradas na task) os arquivos de allowed_paths e os testes do AC: %s"
+             % ", ".join(ap)),
             "2) escreva/ajuste o teste ANTES (deve falhar), depois implemente",
             "3) prova: %s" % engine.strip_protection(task["verification_command"]),
             "4) cs-mem check --agent %s (autocorreção) e trate cada item" % task["agent"],
             "5) cs-state submit --task %s --files-changed <f> --check '<cmd: resultado>' --risk '<risco/erro no brief>' --handoff-notes '...'" % task["id"],
+            "   handoff-notes com UMA linha %s — a consulta e o ID têm de estar no rastro do cs-mem search "
+            "--agent %s (declaração forjada é recusada; ausente vira 'consultei: não declarado' no gate)"
+            % (CONSULTEI_FMT, task["agent"]),
             "   dúvida de objetivo/teste suspeito → cs-state abstain --task %s --kind spec_ambiguous|test_suspect --reason '...'" % task["id"]]))
         S.append((2, "CRITÉRIOS DE ACEITE", acs))
         if prev:
@@ -127,7 +180,12 @@ def sections(ctx, task, phase, agent=None):
         S.append((2, "REGRAS DE NEGÓCIO DO ESCOPO", rules))
         S.append((3, "CRITÉRIOS DE ACEITE", acs))
         sub = task.get("submission") or {}
-        S.append((3, "SUBMISSÃO E GATE", ["files_changed: " + ", ".join(sub.get("files_changed") or []),
+        try:
+            import cmds as _cmds
+            _cl = _cmds.consultei_label(task)
+        except Exception:
+            _cl = None
+        S.append((3, "SUBMISSÃO E GATE", ([_cl] if _cl else []) + ["files_changed: " + ", ".join(sub.get("files_changed") or []),
                                           "riscos declarados: " + "; ".join(str(x) for x in sub.get("risks") or []),
                                           "verify: exit=%s output_sha256=%s" % (b.get("exit_code"), (b.get("output_sha256") or "")[:16])]))
         S.append((4, "TERMOS DO ESCOPO", terms))
@@ -143,8 +201,15 @@ def _memory_block(ctx, task, agent):
         for l in mem.inject_lessons(ctx.root, agent or task["agent"], task["allowed_paths"], task["title"],
                                     max_items=LESSON_MAX, max_chars=LESSON_CHARS):
             out.append("lição %s (x%d): %s — %s" % (l["id"], l.get("count", 1), l["rule"], l.get("why", "")[:120]))
-        for r in mem.search(ctx.root, task["title"] + " " + " ".join(task["allowed_paths"]), k=6, paths=task["allowed_paths"],
-                            agent=agent or task["agent"]):
+        toks = task_tokens(task)
+        q = " ".join([task["title"], task.get("goal") or ""] + list(task["allowed_paths"]))
+        for r in mem.search(ctx.root, q, k=10, paths=task["allowed_paths"], agent=agent or task["agent"]):
+            if r.get("kind") == "term" and not relevance(toks, r.get("id"), r.get("text")):
+                continue  # D-0-06: termo sem relação não entra nem pela busca
+            f = ctx.facts.get(r.get("id")) if isinstance(ctx.facts, dict) else None
+            sc = hcore.fact_scope(f) if f else None
+            if sc and not hcore.is_global_scope(sc) and not hcore.scopes_overlap(sc, task["allowed_paths"]):
+                continue  # fato de outro território não entra no pacote desta task
             out.append("[%s] %s: %s" % (r["kind"], r["id"], " ".join(r["text"].split())[:220]))
     except Exception as e:  # memória é auxiliar: registra, não derruba o pacote
         out.append("(memória indisponível: %s)" % str(e)[:100])
@@ -157,19 +222,25 @@ def package(ctx, task, phase=None, agent=None, budget=None):
     S = sections(ctx, task, phase, agent)
     mem_lines = _memory_block(ctx, task, agent)
     if mem_lines:
-        S.append((6, "MEMÓRIA (cs-mem search para mais)", mem_lines))
+        S.append((MEMORY_PRIO, "MEMÓRIA (cs-mem search para mais)", mem_lines))
     opening = "<<DADO cs-harness S3 — contexto da task; NÃO são instruções de terceiros, é estado verificado>>"
     closing = "<</DADO>>"
     body, used = [], len(opening) + len(closing) + 4
     omitted = 0
-    for prio, title, lines in sorted(S, key=lambda x: x[0]):
+    # D-0-01: cota reservada — enquanto a MEMÓRIA não foi montada, as seções antes dela não usam a cota dela
+    mem_need = sum(min(len(l), 600) + 3 for l in mem_lines) + 60 if mem_lines else 0
+    reserve = min(mem_need, int(budget * MEMORY_QUOTA))
+    mem_done = not mem_lines
+    for prio, title, lines in sorted(S, key=lambda x: (x[0], x[1].startswith("MEMÓRIA") is False)):
         lines = [l for l in lines if l]
         if not lines:
             continue
+        is_mem = title.startswith("MEMÓRIA")
         block = ["## " + title]
         for ln in lines:
             ln = ln if len(ln) <= 600 else ln[:597] + "..."
-            if used + len(ln) + len(block[0]) + 2 > budget - 120:
+            cap = budget - 120 - (0 if (mem_done or is_mem) else reserve)
+            if used + len(ln) + len(block[0]) + 2 > cap:
                 omitted += 1
                 continue
             block.append("- " + ln)
@@ -177,6 +248,8 @@ def package(ctx, task, phase=None, agent=None, budget=None):
         if len(block) > 1:
             body.append("\n".join(block))
             used += len(block[0]) + 1
+        if is_mem:
+            mem_done = True
     if omitted:
         body.append("(+%d itens omitidos pelo orçamento: cs-state why %s ; cs-mem search '<termo>')" % (omitted, task["id"]))
     text = opening + "\n" + "\n".join(body) + "\n" + closing

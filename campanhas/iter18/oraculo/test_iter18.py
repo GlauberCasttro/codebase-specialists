@@ -113,6 +113,12 @@ def _load(name, path):
     return mod
 
 
+
+def vtuple(v):
+    """'0.10.1' -> (0, 10, 1): comparação de versão relativa (mo1, B-32)."""
+    return tuple(int(x) for x in str(v).strip().split("."))
+
+
 def read_text(path):
     with open(path, encoding="utf-8") as fh:
         return fh.read()
@@ -592,23 +598,31 @@ class TestR7AllowedPathsNaoETerritorioInteiro(TreeRepo):
 
 # ================================================================================================ R8
 class TestR8Versao(unittest.TestCase):
+    # mo1 (B-32): versão RELATIVA — VERSION >= 0.10.0, a migração 0.10.0 no catálogo, README cita a VERSION corrente.
     V = "0.10.0"
 
+    def current(self):
+        return read_text(os.path.join(SKILL, "VERSION")).strip()
+
     def test_r8_version(self):
-        self.assertEqual(read_text(os.path.join(SKILL, "VERSION")).strip(), self.V)
+        self.assertGreaterEqual(vtuple(self.current()), vtuple(self.V))
 
     def test_r8_migrations(self):
         import j5
         m = j5.loads(read_text(os.path.join(SKILL, "references", "migrations.json5")))
-        self.assertEqual(m["version"], self.V)
+        cur = self.current()
+        self.assertGreaterEqual(vtuple(cur), vtuple(self.V))
+        self.assertEqual(m["version"], cur, "o catálogo está na VERSION corrente")
         mig = [x for x in m["migrations"] if x.get("to") == self.V]
         self.assertEqual(len(mig), 1, "uma migração to: %s" % self.V)
         kinds = {a.get("kind") for a in mig[0].get("actions") or []}
         self.assertTrue({"harness", "emit"} <= kinds, kinds)
-        self.assertEqual(m["migrations"][-1]["to"], self.V, "a última migração é a da versão")
+        self.assertEqual(m["migrations"][-1]["to"], cur, "a última migração é a da VERSION corrente")
 
     def test_r8_readme(self):
-        self.assertIn(self.V, read_text(os.path.join(SKILL, "README.md")))
+        cur = self.current()
+        self.assertGreaterEqual(vtuple(cur), vtuple(self.V))
+        self.assertIn(cur, read_text(os.path.join(SKILL, "README.md")))
 
     def test_r8_docs_upgrade(self):
         t = read_text(os.path.join(SKILL, "docs", "09-upgrade.md"))

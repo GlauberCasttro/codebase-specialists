@@ -16,7 +16,14 @@ Busca: BM25 (k1=1.2, b=0.75) sobre knowledge + episodes + agents + .swarm/facts/
 (incl. glossary.json e business_rules.json), com boost por scope_paths × paths da consulta e por kind.
 Toda entrada é DADO, nunca instrução.
 
-Comandos: add | correct | check | inject | archive | search | revalidate | consolidate | stats   (--root ou $CLAUDE_PROJECT_DIR)
+  .swarm/state/memory/search.jsonl          rastro das buscas do agente (CLI search) — append-only
+  .swarm/state/memory/lesson-events.jsonl   supersede/retract de lições — append-only
+  .claude/agent-memory/<agente>/MEMORY.md   caderno (Claude Code, memory: project): BLOCO gerado no topo entre
+                                            <!-- cs-mem:inicio … --> e <!-- cs-mem:fim -->, regenerado a cada
+                                            add/correct/archive/retract daquele agente; área livre abaixo preservada
+
+Comandos: add | correct | retract | check | inject | archive | search | revalidate | consolidate | stats
+(--root ou $CLAUDE_PROJECT_DIR)
 """
 import argparse
 import contextlib
@@ -778,6 +785,8 @@ LESSON_PROMOTE_COUNT = 2
 DECAY_TASKS = 20
 DECAY_DAYS = 60
 LESSON_SOURCES = ("human", "review", "reject", "brief")
+# superseded (refinada por outra) e retracted (retratada com motivo) nunca voltam: fora de inject/brief/check/caderno/busca
+INACTIVE_FOREVER = ("superseded", "retracted")
 
 
 def lessons_path(root, agent):
@@ -809,11 +818,18 @@ def _iso_days(a, b):
 
 
 def _tasks_since(root, agent, since):
-    b = _read_json(mem_paths(root)["board"], {}) or {}
+    """Delegações do agente despachadas depois de `since`, lidas da projeção do motor (modo árvore) ou do board
+    plano (load_board_any decide qual existe)."""
+    b = load_board_any(root)
     n = 0
-    for t in b.get("tasks") or []:
-        for d in t.get("delegations") or []:
-            if d.get("agent") == agent and (d.get("dispatched_at") or "") > (since or ""):
+    for t in _g(b, "tasks", "tarefas") or []:
+        if not isinstance(t, dict):
+            continue
+        for d in _g(t, "delegations", "delegacoes", "delegações") or []:
+            if not isinstance(d, dict):
+                continue
+            when = str(_g(d, "dispatched_at", "despachada_em") or "")
+            if (_g(d, "agent", "agente") or _g(t, "agent", "agente")) == agent and when > (since or ""):
                 n += 1
     return n
 
@@ -862,14 +878,65 @@ def _promote(root, agent, l):
     if l.get("check"):
         prop["check"] = l["check"]
     l["promoted_to"] = to
-    mp = mem_paths(root)
-    cur = _read_json(mp["promotions"], {}) or {}
-    items = [x for x in cur.get("promotions") or [] if x.get("lesson") != l["id"]]
+    items = [x for x in _load_promotions(root) if x.get("lesson") != l["id"]]
     items.append({"lesson": l["id"], "agent": agent, "promoted_to": to, "proposal": prop, "why": l.get("why"),
                   "paths": (l.get("trigger") or {}).get("paths") or [], "count": l.get("count"), "at": l["promoted_at"],
                   "applied": False})
-    atomic_write(mp["promotions"], j5.dumps({"promotions": items},
+    _save_promotions(root, items)
+
+
+def _load_promotions(root):
+    cur = _read_json(mem_paths(root)["promotions"], {}) or {}
+    return [x for x in (cur.get("promotions") or []) if isinstance(x, dict)] if isinstance(cur, dict) else []
+
+
+def _save_promotions(root, items):
+    atomic_write(mem_paths(root)["promotions"], j5.dumps({"promotions": items},
                  header="promotions.json5 — lições promovidas (count>=2 ou humano) aguardando aplicação no team.json5").encode("utf-8"))
+
+
+def pending_promotions(root):
+    """ids das lições cuja proposta de promoção ainda NÃO virou regra do cartão (applied falso e não descartada).
+    Lição promovida e pendente continua entregue (caderno, inject, check): reincidência fica MAIS visível."""
+    return {x.get("lesson") for x in _load_promotions(root) if not x.get("applied") and not x.get("discarded")}
+
+
+def is_delivered(l, pending):
+    """Lição que o agente recebe: active, ou promoted com proposta pendente (ainda não está no cartão)."""
+    st = l.get("status")
+    return st == "active" or (st == "promoted" and l.get("id") in pending)
+
+
+def delivered_lessons(root, agent, lessons=None):
+    lessons = load_lessons(root, agent) if lessons is None else lessons
+    pend = pending_promotions(root) if any(l.get("status") == "promoted" for l in lessons) else set()
+    return [l for l in lessons if is_delivered(l, pend)]
+
+
+def _sync_promotion_count(root, l):
+    """Reincidência de lição já promovida: a proposta (pendente ou aplicada) acompanha a contagem."""
+    items = _load_promotions(root)
+    ch = False
+    for x in items:
+        if x.get("lesson") == l.get("id") and x.get("count") != l.get("count"):
+            x["count"], x["last_recurrence_at"] = l.get("count"), now_iso()
+            ch = True
+    if ch:
+        _save_promotions(root, items)
+    return ch
+
+
+def _discard_promotion(root, lid, reason):
+    """retract/supersede: a proposta pendente da lição deixa de ser aplicável (discarded + motivo)."""
+    items = _load_promotions(root)
+    ch = False
+    for x in items:
+        if x.get("lesson") == lid and not x.get("applied") and not x.get("discarded"):
+            x["discarded"], x["discarded_reason"], x["discarded_at"] = True, " ".join((reason or "").split()), now_iso()
+            ch = True
+    if ch:
+        _save_promotions(root, items)
+    return ch
 
 
 def migrate_old_agents(root):
@@ -886,55 +953,109 @@ def migrate_old_agents(root):
 
 
 def add_lesson(root, agent, rule, why="", paths=None, kinds=None, check=None, source="human", evidence=None,
-               promote=False):
-    """Dedup (Jaccard ≥ limiar sobre regra+porquê) → count+1 (ocorrência distinta); count ≥2 → promoted."""
+               promote=False, supersedes=None, extra=None, correction=None):
+    """Dedup (Jaccard ≥ limiar sobre regra+porquê) → count+1 (ocorrência distinta); count ≥2 → promoted.
+    supersedes=<id>: a lição antiga (do MESMO agente) vira `superseded` (superseded_by = a nova), com evento no
+    ledger de lições; a nova é sempre criada (não é fundida na antiga pelo dedup). Regenera o caderno do agente."""
     if source not in LESSON_SOURCES:
         raise ValueError("source fora de %s" % (LESSON_SOURCES,))
     if not rule or not rule.strip():
         raise ValueError("--rule vazio")
     rule = " ".join(rule.split())[:300]
     evidence = list(evidence or [])
-    now = now_iso()
     mp = mem_paths(root)
     with file_lock(mp["lock"]):
-        lessons = load_lessons(root, agent)
-        text = rule + " " + (why or "")
-        best, bs = None, 0.0
+        auto, merge = False, None
+        if correction and not supersedes:  # F6: mesmo erro com `right` diferente ⇒ lição nova que substitui a antiga
+            m, would = correction_match(load_lessons(root, agent), correction.get("wrong"), correction.get("right"),
+                                        correction.get("why"))
+            if would == "supersede":
+                supersedes, auto = m["id"], True
+            elif would == "recurrence":
+                merge = m["id"]
+        res = _add_lesson_locked(root, agent, rule, why, paths, kinds, check, source, evidence, promote, supersedes,
+                                 extra, auto, merge)
+        _refresh_notebook(root, agent)
+        return res
+
+
+def _add_lesson_locked(root, agent, rule, why, paths, kinds, check, source, evidence, promote, supersedes, extra,
+                       auto=False, merge=None):
+    now = now_iso()
+    lessons = load_lessons(root, agent)
+    old = None
+    if supersedes:
+        old = next((l for l in lessons if l.get("id") == supersedes), None)
+        if old is None:
+            raise ValueError("--supersedes %s: lição inexistente em %s" % (supersedes, agent))
+        if old.get("status") in INACTIVE_FOREVER:
+            raise ValueError("--supersedes %s: lição já está %s" % (supersedes, old.get("status")))
+    text = rule + " " + (why or "")
+    best, bs = None, 0.0
+    if old is None and merge:  # correção humana do mesmo erro com o mesmo right: reincidência dessa lição
+        best = next((l for l in lessons if l.get("id") == merge), None)
+        bs = 1.0 if best is not None else 0.0
+    if old is None and best is None:  # refinamento: a nova é SEMPRE uma lição nova (o dedup a fundiria na antiga)
         for l in lessons:
             if l.get("status") not in ("active", "promoted", "stale"):
                 continue
             s = _similar(text, l["rule"] + " " + (l.get("why") or ""))
             if s > bs:
                 best, bs = l, s
-        occ = _occurrence(evidence)
-        if best is not None and bs >= LESSON_DEDUP_JACCARD:
-            seen = set(best.get("occurrences") or [])
-            if occ is None or occ not in seen:
-                best["count"] = int(best.get("count") or 1) + 1
-                best["recurrences"] = int(best.get("recurrences") or 0) + 1
-                if occ:
-                    best.setdefault("occurrences", []).append(occ)
-                best["evidence"] = (best.get("evidence") or []) + evidence[:2]
-            best["last_hit"] = now
-            if best.get("status") == "stale":
-                best["status"] = "active"
-            if best.get("status") == "active" and (best["count"] >= LESSON_PROMOTE_COUNT or promote):
-                _promote(root, agent, best)
-            save_lessons(root, agent, lessons)
-            return best, False
-        decay_and_cap(root, agent, lessons, now)
-        lid = "L-%s-%s" % (agent, sha256_bytes(rule.encode("utf-8"))[:8])
-        l = {"id": lid, "rule": rule, "why": why or "", "trigger": {"paths": list(paths or []), "kinds": list(kinds or [])},
-             "source": source, "evidence": evidence, "count": 1, "recurrences": 0, "first_seen": now, "last_hit": now,
-             "status": "active", "fingerprint": fingerprint(root, evidence), "occurrences": [occ] if occ else []}
-        if check:
-            l["check"] = check
-        if promote:
-            _promote(root, agent, l)
-        lessons.append(l)
-        decay_and_cap(root, agent, lessons, now)
+    occ = _occurrence(evidence)
+    if best is not None and bs >= LESSON_DEDUP_JACCARD:
+        seen = set(best.get("occurrences") or [])
+        if occ is None or occ not in seen:
+            best["count"] = int(best.get("count") or 1) + 1
+            best["recurrences"] = int(best.get("recurrences") or 0) + 1
+            if occ:
+                best.setdefault("occurrences", []).append(occ)
+            best["evidence"] = (best.get("evidence") or []) + evidence[:2]
+        best["last_hit"] = now
+        if best.get("status") == "stale":
+            best["status"] = "active"
+        if best.get("status") == "active" and (best["count"] >= LESSON_PROMOTE_COUNT or promote):
+            _promote(root, agent, best)
+        elif best.get("status") == "promoted":
+            _sync_promotion_count(root, best)
         save_lessons(root, agent, lessons)
-        return l, True
+        return best, False
+    decay_and_cap(root, agent, lessons, now)
+    lid = "L-%s-%s" % (agent, sha256_bytes(rule.encode("utf-8"))[:8])
+    ids = {l.get("id") for l in lessons}
+    n = 2
+    base = lid
+    while lid in ids:  # mesma regra de uma lição substituída/retratada: id novo (o antigo continua no histórico)
+        lid = "%s-%d" % (base, n)
+        n += 1
+    l = {"id": lid, "rule": rule, "why": why or "", "trigger": {"paths": list(paths or []), "kinds": list(kinds or [])},
+         "source": source, "evidence": evidence, "count": 1, "recurrences": 0, "first_seen": now, "last_hit": now,
+         "status": "active", "fingerprint": fingerprint(root, evidence), "occurrences": [occ] if occ else []}
+    if check:
+        l["check"] = check
+    for k, v in (extra or {}).items():
+        l.setdefault(k, v)
+    if old is not None:
+        l["supersedes"] = old["id"]
+        old["status"], old["superseded_by"], old["superseded_at"] = "superseded", lid, now
+        if auto:  # M14.5: a reincidência é do ERRO (wrong), não da redação do certo — a nova herda a contagem
+            l["count"] = int(old.get("count") or 1) + 1
+            l["recurrences"] = int(old.get("recurrences") or 0) + 1
+            l["occurrences"] = list(dict.fromkeys((old.get("occurrences") or []) + l["occurrences"]))
+    if promote or (old is not None and auto and l["count"] >= LESSON_PROMOTE_COUNT):
+        _promote(root, agent, l)
+    lessons.append(l)
+    decay_and_cap(root, agent, lessons, now)
+    save_lessons(root, agent, lessons)
+    if old is not None:
+        _discard_promotion(root, old["id"], "substituída por %s" % lid)
+        ev = {"type": "supersede", "agent": agent, "id": old["id"], "superseded_by": lid, "rule": old.get("rule"),
+              "new_rule": rule}
+        if auto:
+            ev["auto"] = True
+            ev["reason"] = "correção do mesmo erro com `right` diferente"
+        lesson_event(root, ev)
+    return l, True
 
 
 def parse_evidence(root, items):
@@ -952,10 +1073,156 @@ def parse_evidence(root, items):
     return ev
 
 
-def correct(root, agent, wrong, right, why, paths=None, check=None, evidence=None):
-    rule = "Faça: %s — não: %s" % (" ".join(right.split()), " ".join(wrong.split()))
+FAULTS = ("agent", "brief")
+LEAD = "lead"
+
+
+def correction_rule(wrong, right):
+    return "Faça: %s — não: %s" % (" ".join((right or "").split()), " ".join((wrong or "").split()))
+
+
+def correction_target(agent, fault="agent"):
+    """Quem errou decide quem aprende: `brief` (a task mandou X e o agente fez X) ⇒ a lição é do lead/orquestrador,
+    com source=brief; `agent` (a task mandou X e o agente fez Y) ⇒ a lição (e o caderno) é do agente."""
+    if fault not in FAULTS:
+        raise ValueError("--fault fora de %s" % (FAULTS,))
+    return (LEAD, "brief") if fault == "brief" else (agent, "human")
+
+
+def _norm(s):
+    return " ".join(tokenize(s or ""))
+
+
+_CORR_RE = re.compile(r"^Faça: (.*) — não: (.*)$", re.S)
+
+
+def _lesson_wrong_right(l):
+    """(wrong, right) de uma lição de correção: campos gravados ou, em lição antiga, a regra 'Faça: R — não: W'."""
+    if l.get("wrong") is not None or l.get("right") is not None:
+        return l.get("wrong") or "", l.get("right") or ""
+    m = _CORR_RE.match(l.get("rule") or "")
+    return (m.group(2), m.group(1)) if m else (None, None)
+
+
+def correction_match(lessons, wrong, right, why):
+    """Correção humana × lições vivas do alvo: (lição, 'recurrence'|'supersede') ou (None, 'new').
+    Candidata = a lição que o dedup fundiria (regra+porquê com Jaccard ≥ limiar). Com o MESMO right ⇒ reincidência
+    (soma); com right materialmente diferente ⇒ a nova substitui a antiga (não funde e não perde o texto novo).
+    Rights sem relação (Jaccard baixo) seguem lições independentes, mesmo com o mesmo wrong."""
+    nr = _norm(right)
+    text = correction_rule(wrong, right) + " " + (why or "")
+    best, bs = None, 0.0
+    for l in lessons:
+        if l.get("status") not in ("active", "promoted", "stale"):
+            continue
+        s = _similar(text, (l.get("rule") or "") + " " + (l.get("why") or ""))
+        if s > bs:
+            best, bs = l, s
+    if best is None or bs < LESSON_DEDUP_JACCARD:
+        return None, "new"
+    lw, lr = _lesson_wrong_right(best)
+    if lr is not None and _norm(lr) != nr:
+        return best, "supersede"
+    return best, "recurrence"
+
+
+def correct(root, agent, wrong, right, why, paths=None, check=None, evidence=None, fault="agent", supersedes=None):
+    rule = correction_rule(wrong, right)
+    target, source = correction_target(agent, fault)
     ev = parse_evidence(root, evidence) or [{"founder": "correção humana", "at": now_iso()}]
-    return add_lesson(root, agent, rule, why, paths, check=check, source="human", evidence=ev)
+    extra = {"fault": fault, "about_agent": agent} if fault == "brief" else {}
+    extra.update({"wrong": " ".join((wrong or "").split()), "right": " ".join((right or "").split())})
+    return add_lesson(root, target, rule, why, paths, check=check, source=source, evidence=ev, supersedes=supersedes,
+                      extra=extra, correction={"wrong": wrong, "right": right, "why": why})
+
+
+def correct_preview(root, agent, wrong, right, why, paths=None, check=None, fault="agent", supersedes=None):
+    """Prévia do /correct: a lição como seria gravada (nada é escrito)."""
+    target, source = correction_target(agent, fault)
+    out = {"dry_run": True, "agent": target, "about_agent": agent, "fault": fault, "source": source,
+           "wrong": " ".join((wrong or "").split()), "right": " ".join((right or "").split()), "why": why or "",
+           "rule": " ".join(correction_rule(wrong, right).split())[:300], "paths": list(paths or []),
+           "check": check, "supersedes": supersedes}
+    lessons = load_lessons_ro(root, target)  # prévia: nunca migra/move arquivo
+    if supersedes:
+        if not any(l.get("id") == supersedes for l in lessons):
+            out["warning"] = "--supersedes %s: lição inexistente em %s (o correct real recusa)" % (supersedes, target)
+        out["would"] = "supersede"
+        out["existing"] = supersedes
+        return out
+    m, would = correction_match(lessons, wrong, right, why)
+    out["would"] = would
+    if m is not None:
+        out["existing"] = m["id"]
+        out["existing_count"] = int(m.get("count") or 1)
+    return out
+
+
+def load_lessons_ro(root, agent):
+    """Leitura sem efeito colateral (dry-run): o arquivo novo ou, se ainda não migrado, o do diretório antigo."""
+    p = lessons_path(root, agent)
+    if not os.path.isfile(p):
+        old = os.path.join(mem_paths(root)["old_agents"], agent + ".json5")
+        p = old if os.path.isfile(old) else p
+    d = _read_json(p, None) or {}
+    return list(d.get("lessons") or []) if isinstance(d, dict) else []
+
+
+def lesson_event(root, rec):
+    """Ledger append-only das mudanças de ciclo de vida das lições (supersede, retract)."""
+    rec = dict(rec)
+    rec.setdefault("at", now_iso())
+    p = lesson_events_path(root)
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    with open(p, "ab") as f:
+        f.write((dumps_line(rec) + "\n").encode("utf-8"))
+        f.flush()
+        os.fsync(f.fileno())
+
+
+def lesson_events_path(root):
+    return os.path.join(root, STATE_DIR, "state", "memory", "lesson-events.jsonl")
+
+
+def _agent_of_lesson(root, lid):
+    m = re.match(r"^L-([a-z][a-z0-9-]{1,40})-[0-9a-f]{8}(?:-\d+)?$", lid or "")
+    cands = [m.group(1)] if m else []
+    d = mem_paths(root)["agents"]
+    if os.path.isdir(d):
+        cands += [n[:-6] for n in sorted(os.listdir(d)) if n.endswith(".json5") and n[:-6] not in cands]
+    for ag in cands:
+        try:
+            if any(l.get("id") == lid for l in load_lessons(root, ag)):
+                return ag
+        except ValueError:
+            continue
+    return None
+
+
+def retract(root, lid, reason, agent=None):
+    """Retrata uma lição (status retracted, motivo obrigatório), com evento no ledger; regenera o caderno."""
+    if not (reason or "").strip():
+        raise ValueError("retract %s: falta o motivo — use --reason \"<motivo>\" (fica registrado no evento)" % lid)
+    mp = mem_paths(root)
+    with file_lock(mp["lock"]):
+        agent = agent or _agent_of_lesson(root, lid)
+        if not agent:
+            raise ValueError("retract: lição inexistente: %s" % lid)
+        lessons = load_lessons(root, agent)
+        l = next((x for x in lessons if x.get("id") == lid), None)
+        if l is None:
+            raise ValueError("retract: lição %s inexistente em %s" % (lid, agent))
+        if l.get("status") in INACTIVE_FOREVER:
+            raise ValueError("retract: lição %s já está %s" % (lid, l.get("status")))
+        now = now_iso()
+        prev = l.get("status")
+        l["status"], l["retracted_reason"], l["retracted_at"] = "retracted", " ".join(reason.split()), now
+        save_lessons(root, agent, lessons)
+        _discard_promotion(root, lid, "retratada: %s" % l["retracted_reason"])
+        lesson_event(root, {"type": "retract", "agent": agent, "id": lid, "reason": l["retracted_reason"],
+                            "previous_status": prev, "rule": l.get("rule"), "at": now})
+        _refresh_notebook(root, agent)
+    return agent, l
 
 
 def archive_all(root):
@@ -972,6 +1239,7 @@ def archive_all(root):
                 ch = decay_and_cap(root, n[:-6], ls)
                 if ch:
                     save_lessons(root, n[:-6], ls)
+                _refresh_notebook(root, n[:-6])
             out[n[:-6]] = ch
     return out
 
@@ -1013,11 +1281,11 @@ def _relevant(l, files_or_paths):
 def check(root, agent, files, run=True, timeout=120):
     """Lições × arquivos alterados → checklist ≤5; lições com check são EXECUTADAS (falha = gate)."""
     lessons = load_lessons(root, agent)
-    rel = [l for l in lessons if l.get("status") == "active" and _relevant(l, files)]
-    rel.sort(key=lambda l: (-int(l.get("count") or 1), l.get("id")))
+    rel = sort_recent_first([l for l in delivered_lessons(root, agent, lessons) if _relevant(l, files)], by_count=True)
     out = {"checklist": [], "failed": [], "ran": []}
     for l in rel[:5]:
-        out["checklist"].append({"id": l["id"], "rule": l["rule"], "check": l.get("check")})
+        out["checklist"].append({"id": l["id"], "rule": l["rule"], "check": l.get("check"),
+                                 "count": int(l.get("count") or 1), "status": l.get("status")})
     if run:
         import subprocess
         for l in rel:
@@ -1048,12 +1316,13 @@ def check(root, agent, files, run=True, timeout=120):
 
 
 def inject_lessons(root, agent, paths, title="", max_items=5, max_chars=1500):
-    """Só active (nunca stale/archived/promoted); relevância ao escopo; ≤5 e ≤1.500 chars."""
+    """Só lições entregues (active, ou promoted com proposta ainda não aplicada no cartão; nunca stale/archived/
+    superseded/retracted); relevância ao escopo; ≤5 e ≤1.500 chars."""
     try:
         lessons = load_lessons(root, agent)
     except ValueError:
         return []
-    act = [l for l in lessons if l.get("status") == "active"]
+    act = delivered_lessons(root, agent, lessons)
     scored = []
     for l in act:
         trig = (l.get("trigger") or {}).get("paths") or []
@@ -1099,6 +1368,7 @@ def revalidate_lessons(root):
                 ch = True
             if ch:
                 save_lessons(root, agent, ls)
+                _refresh_notebook(root, agent)
     return res
 
 
@@ -1117,6 +1387,541 @@ def lesson_stats(root):
             out[n[:-6]] = {"by_status": by, "recurrences": rec,
                            "recurrence_rate": round(rec / float(len(ls)), 3) if ls else 0.0}
     return out
+
+
+# ---------------------------------------------------------------- ordem, delegação ativa, rastro da busca
+def sort_recent_first(lessons, by_count=False):
+    """Mais recente primeiro (first_seen/created_at desc; empate: posição no arquivo desc, depois id);
+    by_count=True: count desc antes (no empate de count, a MAIS RECENTE vem primeiro)."""
+    idx = {id(l): i for i, l in enumerate(lessons)}
+    out = sorted(lessons, key=lambda l: str(l.get("id") or ""))
+    out.sort(key=lambda l: (str(l.get("first_seen") or l.get("created_at") or l.get("at") or ""), idx[id(l)]),
+             reverse=True)
+    if by_count:
+        out.sort(key=lambda l: -int(l.get("count") or 1))
+    return out
+
+
+DELEG_ACTIVE = ("BRIEFED", "DISPATCHED", "RETURNED", "VERIFIED", "REVIEWED")
+TASK_ACTIVE = ("IN_PROGRESS", "SUBMITTED", "BRIEFED", "DISPATCHED")
+
+
+def _g(d, *keys):
+    """Primeira chave presente (o estado pode vir com chaves en OU pt)."""
+    for k in keys:
+        if isinstance(d, dict) and d.get(k) not in (None, "", []):
+            return d.get(k)
+    return None
+
+
+def board_candidates(root):
+    sp = os.path.join(root, STATE_DIR)
+    out = []
+    for d, n in ((".engine", "projection"), ("state", "board")):
+        for ext in (".json5", ".json"):
+            out.append(os.path.join(sp, d, n + ext))
+    if not os.path.isfile(os.path.join(sp, "events.jsonl")):  # modo antigo: board antes da projeção
+        out = out[2:] + out[:2]
+    return out
+
+
+def load_board_any(root):
+    """Projeção do motor (o antigo board): .swarm/.engine/projection.json5|.json ou .swarm/state/board.json5|.json."""
+    for p in board_candidates(root):
+        if os.path.isfile(p):
+            b = _read_json(p, None)
+            if isinstance(b, dict):
+                return b
+    return {}
+
+
+def _git_changed(root, paths):
+    import subprocess
+    specs = [(":(glob)" + p) if _has_wild(p) else p for p in paths or [] if p]
+    if not specs:
+        return []
+    out = []
+    for argv in (["git", "-C", root, "diff", "--name-only", "HEAD", "--"] + specs,
+                 ["git", "-C", root, "ls-files", "--others", "--exclude-standard", "--"] + specs):
+        try:
+            p = subprocess.run(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        if p.returncode == 0:
+            out += [x.strip() for x in p.stdout.decode("utf-8", "replace").splitlines() if x.strip()]
+    return sorted(set(out))
+
+
+def delegation_files(root, agent):
+    """Arquivos da delegação ATIVA do agente (para `cs-mem check` sem --files): files_changed da última submissão;
+    senão o diff (git diff + untracked) dentro dos allowed_paths da task em voo; senão os próprios allowed_paths.
+    Retorna (arquivos, de_onde) ou (None, motivo) sem delegação ativa."""
+    board = load_board_any(root)
+    best = None
+    for t in _g(board, "tasks", "tarefas") or []:
+        if not isinstance(t, dict):
+            continue
+        for d in _g(t, "delegations", "delegacoes", "delegações") or []:
+            if not isinstance(d, dict):
+                continue
+            if (_g(d, "agent", "agente") or _g(t, "agent", "agente")) != agent:
+                continue
+            if _g(d, "state", "estado", "status") not in DELEG_ACTIVE:
+                continue
+            key = str(_g(d, "dispatched_at", "despachada_em", "updated_at", "atualizada_em", "created_at") or "")
+            if best is None or key >= best[0]:
+                best = (key, t, d)
+    if best is None:  # board sem delegações: task do agente em andamento
+        for t in _g(board, "tasks", "tarefas") or []:
+            if isinstance(t, dict) and _g(t, "agent", "agente") == agent and \
+                    _g(t, "status", "estado", "state") in TASK_ACTIVE:
+                best = ("", t, {})
+    if best is None:
+        return None, "sem delegação ativa; passe --files"
+    _, t, d = best
+    tid = _g(t, "id") or "?"
+    sub = _g(d, "submission", "submissao", "submissão") or _g(t, "submission", "submissao", "submissão") or {}
+    files = _g(sub, "files_changed", "arquivos_alterados", "arquivos") if isinstance(sub, dict) else None
+    if files:
+        return [str(f) for f in files], "files_changed da submissão de %s" % tid
+    ap = [str(p) for p in (_g(t, "allowed_paths", "caminhos_permitidos", "allowed") or [])]
+    files = _git_changed(root, ap)
+    if files:
+        return files, "diff dos allowed_paths da task %s" % tid
+    return ap, "allowed_paths da task %s (ainda sem diff)" % tid
+
+
+def infer_active_agent(root):
+    """Agente da delegação ATIVA quando há UMA só (mesma noção de `delegation_files`); (None, motivo) se nenhuma ou
+    se houver mais de um agente em voo (ambíguo)."""
+    board = load_board_any(root)
+    found = set()
+    for t in _g(board, "tasks", "tarefas") or []:
+        if not isinstance(t, dict):
+            continue
+        ds = [d for d in _g(t, "delegations", "delegacoes", "delegações") or []
+              if isinstance(d, dict) and _g(d, "state", "estado", "status") in DELEG_ACTIVE]
+        for d in ds:
+            a = _g(d, "agent", "agente") or _g(t, "agent", "agente")
+            if a:
+                found.add(a)
+        if not ds and _g(t, "status", "estado", "state") in TASK_ACTIVE and _g(t, "agent", "agente"):
+            found.add(_g(t, "agent", "agente"))
+    if len(found) == 1:
+        return next(iter(found)), "delegação ativa"
+    return None, ("nenhuma delegação ativa" if not found else "mais de um agente em voo")
+
+
+def search_trail_path(root):
+    return os.path.join(root, STATE_DIR, "state", "memory", "search.jsonl")
+
+
+def record_search(root, query, results, agent=None, kinds=None, paths=None, inferred=False):
+    """Rastro B-24: uma linha JSON por busca do AGENTE (CLI), append-only, também com 0 hits."""
+    rec = {"at": now_iso(), "agent": agent or None, "query": query, "kinds": list(kinds or []),
+           "paths": list(paths or []), "hits": len(results or []), "ids": [r.get("id") for r in results or []],
+           "agent_inferred": bool(inferred and agent)}
+    p = search_trail_path(root)
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    with file_lock(mem_paths(root)["lock"]):
+        with open(p, "ab") as f:
+            f.write((dumps_line(rec) + "\n").encode("utf-8"))
+            f.flush()
+            os.fsync(f.fileno())
+    return rec
+
+
+def read_search_trail(root, agent=None):
+    rows = read_jsonl(search_trail_path(root))
+    return [r for r in rows if agent is None or r.get("agent") == agent]
+
+
+# ---------------------------------------------------------------- caderno .claude/agent-memory/<agente>/MEMORY.md
+NOTEBOOK_START = "<!-- cs-mem:inicio (gerado pelo cs-mem; não edite este bloco) -->"
+NOTEBOOK_END = "<!-- cs-mem:fim -->"
+NOTEBOOK_SECTIONS = ("## Correções recebidas", "## Armadilhas do território", "## Quando pesquisar no cs-mem")
+NOTEBOOK_MAX_LINES = 190     # o Claude Code injeta as 200 primeiras linhas / 25 KB do MEMORY.md
+NOTEBOOK_MAX_BYTES = 24 * 1024
+NOTEBOOK_ITEM_CHARS = 600
+NOTEBOOK_MAX_TRAPS = 12
+NOTEBOOK_MAX_TERMS = 12
+SOURCE_LABEL = {"human": "correção humana", "review": "review", "reject": "rejeição/verify", "brief": "brief"}
+
+
+def notebook_rel(agent):
+    return ".claude/agent-memory/%s/MEMORY.md" % agent
+
+
+def notebook_path(root, agent):
+    lessons_path(root, agent)  # valida o nome
+    return os.path.join(root, ".claude", "agent-memory", agent, "MEMORY.md")
+
+
+def _team_agent(root, agent):
+    team = _read_json(mem_paths(root)["team"], None)
+    if team is None:
+        team = _read_json(os.path.join(root, STATE_DIR, "team.json"), {}) or {}
+    for a in (team or {}).get("agents") or []:
+        if isinstance(a, dict) and a.get("name") == agent:
+            return a
+    return None
+
+
+def notebook_enabled(root, agent):
+    """Só onde a plataforma Claude Code existe: cartão .claude/agents/<agente>.md com `memory: project`; sem cartão,
+    o run (.swarm/run.json5) declara claude-code e o agente é do time."""
+    try:
+        lessons_path(root, agent)
+    except ValueError:
+        return False
+    card = os.path.join(root, ".claude", "agents", agent + ".md")
+    if os.path.isfile(card):
+        try:
+            with open(card, encoding="utf-8") as f:
+                txt = f.read()
+        except (OSError, UnicodeDecodeError):
+            return False
+        m = re.match(r"^---\s*\n(.*?)\n---\s*(\n|$)", txt, re.S)
+        return bool(m and re.search(r"^memory:\s*[\"']?project[\"']?\s*$", m.group(1), re.M))
+    if _team_agent(root, agent) is None:
+        return False
+    run = _read_json(os.path.join(root, STATE_DIR, "run.json5"), None)
+    if run is None:
+        run = _read_json(os.path.join(root, STATE_DIR, "run.json"), {}) or {}
+    return "claude-code" in (run.get("platforms") or []) if isinstance(run, dict) else False
+
+
+def _one_line(s, n=NOTEBOOK_ITEM_CHARS):
+    s = " ".join(str(s or "").split())
+    return s if len(s) <= n else s[: n - 1].rstrip() + "…"
+
+
+def _territory_terms(root, territory):
+    """Termos do glossário (scan) cujo escopo cruza o território: [(nome, count)] por count desc, nome."""
+    if not territory:
+        return []
+    fdir = mem_paths(root)["facts"]
+    counts, out = {}, {}
+    for fn in ("glossary.json5", "glossary.json"):
+        data = _read_json(os.path.join(fdir, fn), None)
+        if data is None:
+            continue
+        for t in (data.get("terms") or []) if isinstance(data, dict) else []:
+            if isinstance(t, dict) and (t.get("canonical") or t.get("term")):
+                counts[str(t.get("canonical") or t.get("term")).lower()] = int(t.get("count") or 0)
+        for it in _walk_items(data):
+            dd = it.get("data") if isinstance(it.get("data"), dict) else {}
+            name = dd.get("canonical") or it.get("canonical") or dd.get("term") or it.get("term")
+            scope = _doc_scope(it)
+            if not isinstance(name, str) or not name.strip() or not scope or not scopes_overlap(scope, territory):
+                continue
+            name = " ".join(name.split())
+            out[name] = counts.get(name.lower(), int(it.get("count") or 0))
+    return sorted(out.items(), key=lambda kv: (-kv[1], kv[0].lower()))
+
+
+def _traps(a):
+    card = (a or {}).get("card") or {}
+    out = []
+    for f in card.get("footguns") or []:
+        t = f.get("text") if isinstance(f, dict) else f
+        if isinstance(t, str) and t.strip():
+            out.append("- %s" % _one_line(t, 300))
+    for r in card.get("refuses") or []:
+        t = r.get("text") if isinstance(r, dict) else r
+        why = r.get("why") if isinstance(r, dict) else None
+        if isinstance(t, str) and t.strip():
+            out.append("- Nunca: %s%s" % (_one_line(t, 240), (" — porque %s" % _one_line(why, 200)) if why else ""))
+    return out[:NOTEBOOK_MAX_TRAPS]
+
+
+def _recur_tag(l, prefix=""):
+    """'reincidente ×N' quando o agente já foi corrigido N≥2 vezes pelo mesmo erro."""
+    n = int(l.get("count") or 1)
+    return ("%sreincidente ×%d" % (prefix, n)) if n >= 2 else ""
+
+
+def _correction_line(l):
+    src = SOURCE_LABEL.get(l.get("source"), l.get("source") or "?")
+    paths = (l.get("trigger") or {}).get("paths") or []
+    txt = "- [%s] (origem: %s%s%s) %s%s" % (l.get("id"), src, _recur_tag(l, "; "),
+                                           ("; escopo %s" % ", ".join(paths[:3])) if paths else "",
+                                         l.get("rule") or "", (" · porquê: %s" % l["why"]) if l.get("why") else "")
+    return _one_line(txt)
+
+
+def render_notebook(root, agent):
+    """Texto do BLOCO gerado (marcadores inclusive, termina em '\n'): função pura das lições ATIVAS do agente, do
+    cartão (team.json5) e do glossário do território. Determinística (sem relógio): o guard e o pre-commit podem
+    comparar o bloco do arquivo com esta saída."""
+    lessons = delivered_lessons(root, agent)
+    a = _team_agent(root, agent) or {}
+    territory = [p for p in (a.get("territory") or []) if isinstance(p, str)]
+    head = [NOTEBOOK_START,
+            "# Memória de %s (cs-mem)" % agent,
+            "Gerado de `.swarm/state/memory/agents/%s.json5`. Correção nova: `cs-mem correct` (escrever aqui não "
+            "registra lição). Suas notas: abaixo do marcador de fim." % agent,
+            ""]
+    traps = _traps(a) or ["—"]
+    glob = territory[0] if territory else None
+    q = []
+    if territory:
+        tq = " ".join('"%s"' % p for p in territory[:3])
+        q.append("- Antes da primeira edição em %s: `.swarm/bin/cs-mem search \"<tema da task>\" --agent %s --paths %s`."
+                 % (", ".join("`%s`" % p for p in territory[:3]), agent, tq))
+    else:
+        q.append("- Antes de opinar sobre área que você não conhece: `.swarm/bin/cs-mem search \"<tema>\" --agent %s`."
+                 % agent)
+    terms = [t for t, _ in _territory_terms(root, territory)[:NOTEBOOK_MAX_TERMS]]
+    if terms:
+        q.append("- Quando a task tocar um destes termos do território (%s): `.swarm/bin/cs-mem search \"<termo>\" "
+                 "--agent %s --kind term --kind rule%s`." % (", ".join(terms), agent,
+                                                              (" --paths \"%s\"" % glob) if glob else ""))
+    if lessons:
+        q.append("- Antes de submeter: `.swarm/bin/cs-mem check --agent %s` (lições × arquivos da sua delegação)."
+                 % agent)
+    else:
+        q.append("- Antes de submeter: `.swarm/bin/cs-mem check --agent %s`." % agent)
+    q.append("- Na submissão (handoff notes), declare: `consultei: \"<consulta>\" -> <ID> (<efeito>)` com o ID "
+             "impresso pela busca, ou `consultei: nada — <motivo>`.")
+    tail = ["", NOTEBOOK_END]
+
+    def build(corr, dropped):
+        body = [NOTEBOOK_SECTIONS[0]] + (corr or ["—"])
+        if dropped:
+            body.append("- (+%d correções mais antigas fora do bloco pelo limite de 200 linhas/25 KB: "
+                        "`.swarm/bin/cs-mem inject --agent %s`)" % (dropped, agent))
+        body += ["", NOTEBOOK_SECTIONS[1]] + traps + ["", NOTEBOOK_SECTIONS[2]] + q
+        return seal_block("\n".join(head + body + tail) + "\n")
+
+    corr = [_correction_line(l) for l in sort_recent_first(lessons)]
+    keep = len(corr)
+    while True:
+        txt = build(corr[:keep], len(corr) - keep)
+        if (txt.count("\n") <= NOTEBOOK_MAX_LINES and len(txt.encode("utf-8")) <= NOTEBOOK_MAX_BYTES) or keep == 0:
+            return txt
+        keep -= 1
+
+
+# Selo do bloco: sha256 do bloco SEM a linha do selo (LF). Vai numa linha própria logo abaixo do marcador de início e
+# não contém "cs-mem" (leitores que delimitam o bloco pelos 2 primeiros comentários com "cs-mem" continuam corretos).
+# Bloco ≠ render atual mas = selo ⇒ desatualizado (cartão/glossário/lições mudaram sem regenerar); ≠ selo ⇒ adulterado.
+NOTEBOOK_SEAL = "<!-- selo sha256:%s (não edite: o bloco é conferido por este selo) -->"
+_SEAL_RE = re.compile(r"^\s*<!-- selo sha256:([0-9a-f]{64})\b[^\n]*-->\s*$")
+_START_TAG = "<!-- cs-mem:inicio"
+_END_TAG = "<!-- cs-mem:fim"
+_ANY_TAG = "<!-- cs-mem:"
+
+
+def _unsealed(block):
+    return "".join(l for l in block.splitlines(True) if not _SEAL_RE.match(l))
+
+
+def seal_block(block):
+    """Insere (ou refaz) o selo logo abaixo do marcador de início."""
+    body = _unsealed(block)
+    lines = body.splitlines(True)
+    seal = NOTEBOOK_SEAL % sha256_bytes(body.encode("utf-8", "surrogateescape")) + "\n"
+    return "".join(lines[:1] + [seal] + lines[1:])
+
+
+def block_seal_state(block):
+    """'ok' (selo confere com o conteúdo), 'broken' (não confere) ou 'none' (sem selo)."""
+    m = next((_SEAL_RE.match(l) for l in block.splitlines() if _SEAL_RE.match(l)), None)
+    if m is None:
+        return "none"
+    return "ok" if sha256_bytes(_unsealed(block).encode("utf-8", "surrogateescape")) == m.group(1) else "broken"
+
+
+def _is_start(line):
+    return line.lstrip().startswith(_START_TAG)
+
+
+def _is_end(line):
+    return line.lstrip().startswith(_END_TAG)
+
+
+def _orphan_end(lines, s):
+    """Fim provável de um bloco cujo marcador de fim foi apagado: a 1ª linha em branco depois do último cabeçalho de
+    seção gerado (as notas do usuário vêm depois dela); sem cabeçalho, só o marcador (e o selo logo abaixo)."""
+    last_h = None
+    for i in range(s + 1, len(lines)):
+        if _is_start(lines[i]):
+            break
+        if lines[i].rstrip("\r\n") in NOTEBOOK_SECTIONS:
+            last_h = i
+    if last_h is None:
+        return s + 1 if s + 1 < len(lines) and _SEAL_RE.match(lines[s + 1]) else s
+    for i in range(last_h + 1, len(lines)):
+        if not lines[i].strip() or _is_start(lines[i]):
+            return i if not lines[i].strip() else i - 1
+    return len(lines) - 1
+
+
+def strip_generated(text):
+    """Remove da ÁREA LIVRE todo resto do bloco gerado: blocos cs-mem inteiros (duplicados), bloco órfão (fim
+    apagado), marcadores soltos e selos. O resto é preservado byte a byte."""
+    lines = text.splitlines(True)
+    out, i = [], 0
+    while i < len(lines):
+        ln = lines[i]
+        if _is_start(ln):
+            j = next((k for k in range(i + 1, len(lines)) if _is_end(lines[k]) or _is_start(lines[k])), None)
+            if j is not None and _is_end(lines[j]):
+                i = j + 1
+            else:
+                i = _orphan_end(lines, i) + 1
+            continue
+        if ln.lstrip().startswith(_ANY_TAG) or _SEAL_RE.match(ln):
+            i += 1
+            continue
+        out.append(ln)
+        i += 1
+    return "".join(out)
+
+
+def split_notebook(text):
+    """(bloco, área_livre) do texto do caderno. bloco = do marcador de início ao de fim (inclusive, com '\n') ou
+    None sem par de marcadores; área livre = o resto, que o cs-mem preserva byte a byte (texto que estava ACIMA do
+    bloco desce para baixo dele). Marcadores reconhecidos com espaço à esquerda; início sem fim ⇒ o bloco órfão
+    inteiro sai da área livre (não sobra bloco velho)."""
+    if text.startswith("﻿"):
+        text = text[1:]
+    lines = text.splitlines(True)
+    s = next((i for i, l in enumerate(lines) if _is_start(l)), None)
+    e = next((i for i, l in enumerate(lines) if s is not None and i > s and _is_end(l)), None)
+    if s is not None and e is not None and any(_is_start(l) for l in lines[s + 1:e]):
+        e = None  # o 1º bloco perdeu o fim; o fim encontrado é de outro bloco
+    if s is None or e is None:
+        if s is not None:  # par quebrado: o bloco órfão some, o resto vira área livre
+            return None, strip_generated(text)
+        return None, text
+    blk = "".join(lines[s:e + 1])
+    if not blk.endswith("\n"):
+        blk += "\n"
+    before, after = "".join(lines[:s]), "".join(lines[e + 1:])
+    free = after + (("\n" if after and not after.endswith("\n") else "") + before if before.strip() else "")
+    return blk, free
+
+
+def compose_notebook(block, current_text=None):
+    """Caderno = bloco no topo + área livre preservada (notas que existiam sem bloco viram área livre; restos de
+    blocos gerados — duplicados, órfãos, marcadores soltos — saem)."""
+    if current_text is None or current_text == "":
+        return block
+    blk, free = split_notebook(current_text)
+    free = strip_generated(free)
+    if blk is None:
+        return block + ("\n" + free if free.strip() else "")
+    return block + free
+
+
+def _read_notebook(p):
+    """(texto normalizado em LF e sem BOM, bruto, usa_crlf)."""
+    with open(p, "rb") as f:
+        raw = f.read().decode("utf-8", "surrogateescape")
+    txt = raw[1:] if raw.startswith("﻿") else raw
+    crlf = "\r\n" in txt
+    return txt.replace("\r\n", "\n"), raw, crlf
+
+
+NOTEBOOK_PROBLEM_KINDS = ("stale", "tampered", "missing", "misplaced", "duplicate")
+
+
+def check_notebook_detail(root, agent):
+    """Problemas do caderno por categoria: [{kind, msg}] com kind em NOTEBOOK_PROBLEM_KINDS; [] = íntegro ou
+    inexistente. stale = selo íntegro mas o render atual mudou (cartão/glossário/lições sem regenerar: AVISO);
+    tampered = conteúdo ≠ selo (editado à mão); missing = sem par de marcadores; misplaced = bloco fora do topo;
+    duplicate = marcador cs-mem na área livre. CRLF e BOM não são problema."""
+    p = notebook_path(root, agent)
+    if not os.path.isfile(p):
+        return []
+    rel = notebook_rel(agent)
+    regen = "rode `cs-mem notebook --agent %s` para regenerar" % agent
+    txt, _, _ = _read_notebook(p)
+    blk, free = split_notebook(txt)
+    if blk is None:
+        why = "marcador de fim apagado" if any(_is_start(l) for l in txt.splitlines()) else "sem os marcadores"
+        return [{"kind": "missing", "msg": "%s: sem o bloco gerado pelo cs-mem (%s) — %s" % (rel, why, regen)}]
+    out = []
+    if not _is_start(txt.splitlines()[0] if txt else ""):
+        out.append({"kind": "misplaced", "msg": "%s: o bloco gerado tem de ficar no topo — %s" % (rel, regen)})
+    if any(l.lstrip().startswith(_ANY_TAG) or _SEAL_RE.match(l) for l in free.splitlines()):
+        out.append({"kind": "duplicate", "msg": "%s: marcador cs-mem na área livre (bloco duplicado ou resto de bloco "
+                                                "velho) — %s" % (rel, regen)})
+    if blk != render_notebook(root, agent):
+        if block_seal_state(blk) == "ok":
+            out.append({"kind": "stale", "msg": "%s: bloco desatualizado (cartão, glossário ou lições mudaram desde a "
+                                                "última geração; não é edição manual) — %s" % (rel, regen)})
+        else:
+            out.append({"kind": "tampered", "msg": "%s: bloco gerado adulterado (difere do selo; o bloco só muda por "
+                                                   "cs-mem correct/add/retract/notebook) — %s" % (rel, regen)})
+    return out
+
+
+def check_notebook(root, agent):
+    """Problemas do caderno contra o que o cs-mem gera (para guard/pre-commit): [] = íntegro ou inexistente.
+    Lista de mensagens (str); as categorias estão em check_notebook_detail."""
+    return [d["msg"] for d in check_notebook_detail(root, agent)]
+
+
+def write_notebook(root, agent, force=False):
+    """Regenera o bloco do caderno do agente preservando a área livre (e o estilo de fim de linha: CRLF continua
+    CRLF; BOM sai). True = gravou; False = mesmos bytes (não reescreve); None = plataforma sem caderno (nada criado).
+    Nunca reescreve o arquivo de lições."""
+    if not force and not notebook_enabled(root, agent):
+        return None
+    p = notebook_path(root, agent)
+    block = render_notebook(root, agent)
+    cur, raw, crlf = None, None, False
+    if os.path.isfile(p):
+        cur, raw, crlf = _read_notebook(p)
+    new = compose_notebook(block, cur)
+    if crlf:
+        new = new.replace("\n", "\r\n")
+    if raw is not None and new == raw:
+        return False
+    atomic_write(p, new.encode("utf-8", "surrogateescape"))
+    return True
+
+
+def notebook_agents(root):
+    """Agentes do time com caderno a gerar/conferir (têm lições ou já têm caderno)."""
+    team = _read_json(mem_paths(root)["team"], {}) or {}
+    out = []
+    for a in team.get("agents") or [] if isinstance(team, dict) else []:
+        if isinstance(a, dict) and isinstance(a.get("name"), str):
+            try:
+                if os.path.isfile(lessons_path(root, a["name"])) or os.path.isfile(notebook_path(root, a["name"])):
+                    out.append(a["name"])
+            except ValueError:
+                continue
+    return out
+
+
+def write_notebooks(root):
+    """Regenera o caderno de todo agente do time com caderno habilitado (upgrade/install). {agente: True|False}."""
+    team = _read_json(mem_paths(root)["team"], {}) or {}
+    out = {}
+    for a in team.get("agents") or []:
+        if isinstance(a, dict) and isinstance(a.get("name"), str):
+            try:
+                if not (os.path.isfile(lessons_path(root, a["name"])) or os.path.isfile(notebook_path(root, a["name"]))):
+                    continue  # sem lição e sem caderno: nada a gerar
+                r = write_notebook(root, a["name"])
+            except ValueError:
+                continue
+            if r is not None:
+                out[a["name"]] = r
+    return out
+
+
+def _refresh_notebook(root, agent):
+    try:
+        return write_notebook(root, agent)
+    except (OSError, ValueError) as e:  # a lição já foi gravada; o caderno falhar não pode perdê-la
+        sys.stderr.write("cs-mem: caderno de %s não regenerado: %s\n" % (agent, e))
+        return None
 
 
 # ---------------------------------------------------------------- CLI
@@ -1158,14 +1963,24 @@ def main(argv=None):
     a.add_argument("--agent", default=None)
     a.add_argument("--source", default="human", choices=LESSON_SOURCES)
     a.add_argument("--promote", action="store_true")
-    c = sub.add_parser("correct", help="correção humana → lição do agente que errou")
-    c.add_argument("--agent", required=True)
+    c = sub.add_parser("correct", help="correção humana → lição de quem errou (--fault agent|brief)")
+    c.add_argument("--agent", required=True, help="o agente que executou a task")
     c.add_argument("--wrong", required=True)
     c.add_argument("--right", required=True)
     c.add_argument("--why", required=True)
     c.add_argument("--paths", action="append", default=[])
     c.add_argument("--check", default=None)
     c.add_argument("--evidence", action="append", default=[], help="arquivo:linha (fingerprint p/ obsolescência)")
+    c.add_argument("--fault", choices=FAULTS, default="agent",
+                   help="quem errou: agent (a task mandou X e o agente fez Y ⇒ lição e caderno do agente; padrão) | "
+                        "brief (a task mandou X e o agente fez X ⇒ lição do lead, source=brief)")
+    c.add_argument("--supersedes", default=None, metavar="ID",
+                   help="refina a lição ID (ela vira superseded e nunca mais é injetada)")
+    c.add_argument("--dry-run", action="store_true", help="prévia: mostra a lição formulada e NÃO grava nada")
+    rt = sub.add_parser("retract", help="retrata uma lição (exige --reason; nunca mais injetada)")
+    rt.add_argument("id")
+    rt.add_argument("--reason", default=None)
+    rt.add_argument("--agent", default=None)
     ij = sub.add_parser("inject", help="lições do agente para o escopo (≤5, ≤1.500 chars; sem archived/stale)")
     ij.add_argument("--agent", required=True)
     ij.add_argument("--paths", action="append", default=[])
@@ -1189,6 +2004,11 @@ def main(argv=None):
     co.add_argument("--task", action="append", default=[])
     co.add_argument("--agent", default=None)
     sub.add_parser("stats")
+    nb = sub.add_parser("notebook", help="regenera o bloco do caderno (.claude/agent-memory/<agente>/MEMORY.md) ou, "
+                                         "com --check, confere (desatualizado = aviso; adulterado/ausente = exit 1)")
+    nb.add_argument("--agent", default=None, help="só este agente (padrão: todo agente do time com lição ou caderno)")
+    nb.add_argument("--check", action="store_true", help="só confere; não grava")
+    nb.add_argument("--json", action="store_true")
     args = ap.parse_args(argv)
     if not args.cmd:
         ap.print_help(sys.stderr)
@@ -1213,8 +2033,45 @@ def main(argv=None):
             e = make_entry(root, args.kind, args.text, _csv(args.scope or args.paths), args.tag, src, ev)
             print(json.dumps({"ok": True, "id": e["id"], "created": add_knowledge(root, e)}))
         elif args.cmd == "correct":
-            l, created = correct(root, args.agent, args.wrong, args.right, args.why, _csv(args.paths), args.check, args.evidence)
-            print(json.dumps({"ok": True, "id": l["id"], "created": created, "count": l["count"], "status": l["status"]}))
+            if args.dry_run:
+                pv = correct_preview(root, args.agent, args.wrong, args.right, args.why, _csv(args.paths), args.check,
+                                     args.fault, args.supersedes)
+                print("PRÉVIA do /correct (nada foi gravado):")
+                print("  agente que executou: %s · fault: %s ⇒ lição de %s (source %s)"
+                      % (args.agent, pv["fault"], pv["agent"], pv["source"]))
+                print("  errado: %s" % pv["wrong"])
+                print("  certo: %s" % pv["right"])
+                print("  porquê: %s" % pv["why"])
+                print("  lição: %s" % pv["rule"])
+                if pv["paths"]:
+                    print("  escopo: %s" % ", ".join(pv["paths"]))
+                if pv["supersedes"]:
+                    print("  substitui: %s" % pv["supersedes"])
+                elif pv.get("would") == "supersede":
+                    print("  SUBSTITUI %s (mesmo erro, `right` diferente: a antiga vira superseded)" % pv["existing"])
+                elif pv.get("would") == "recurrence":
+                    print("  REINCIDÊNCIA de %s (mesmo erro e mesmo right: count %d → %d)"
+                          % (pv["existing"], pv.get("existing_count", 1), pv.get("existing_count", 1) + 1))
+                if pv.get("warning"):
+                    print("  AVISO: %s" % pv["warning"])
+                print(json.dumps(pv, ensure_ascii=False))
+                return 0
+            target, _ = correction_target(args.agent, args.fault)
+            l, created = correct(root, args.agent, args.wrong, args.right, args.why, _csv(args.paths), args.check,
+                                 args.evidence, fault=args.fault, supersedes=args.supersedes)
+            out = {"ok": True, "id": l["id"], "created": created, "count": l["count"], "status": l["status"],
+                   "agent": target, "fault": args.fault}
+            if args.supersedes:
+                out["supersedes"] = args.supersedes
+            print(json.dumps(out))
+        elif args.cmd == "retract":
+            if not (args.reason or "").strip():
+                sys.stderr.write("cs-mem retract: falta o motivo — use `cs-mem retract %s --reason \"<motivo>\"` "
+                                 "(o motivo fica registrado no evento)\n" % args.id)
+                return 1
+            ag, l = retract(root, args.id, args.reason, args.agent)
+            print(json.dumps({"ok": True, "id": l["id"], "agent": ag, "status": l["status"],
+                              "reason": l["retracted_reason"]}, ensure_ascii=False))
         elif args.cmd == "inject":
             ls = inject_lessons(root, args.agent, _csv(args.paths), args.title)
             if args.json:
@@ -1222,29 +2079,44 @@ def main(argv=None):
             else:
                 print("<<DADO lições de %s>>" % args.agent)
                 for l in ls:
-                    print("- %s (x%d): %s — %s" % (l["id"], l.get("count", 1), l["rule"], l.get("why", "")))
+                    print("- %s (x%d%s): %s — %s" % (l["id"], l.get("count", 1), _recur_tag(l, "; "), l["rule"],
+                                                 l.get("why", "")))
                 print("<</DADO>>")
         elif args.cmd == "archive":
             print(json.dumps(archive_all(root)))
         elif args.cmd == "check":
             files = _csv(args.files)
+            origin = None
             if not files:
-                b = _read_json(mem_paths(root)["board"], {}) or {}
-                for t in b.get("tasks") or []:
-                    if t.get("agent") == args.agent and t.get("status") in ("IN_PROGRESS", "SUBMITTED"):
-                        files += (t.get("submission") or {}).get("files_changed") or t.get("allowed_paths") or []
+                files, origin = delegation_files(root, args.agent)
+                files = files or []
             res = check(root, args.agent, files, run=not args.no_run)
+            if origin:
+                print("(%s%s)" % (origin, (": " + ", ".join(files[:10])) if files else ""))
             print("<<DADO autocorreção — lições de %s>>" % args.agent)
             for i, it in enumerate(res["checklist"], 1):
-                print("%d) %s%s" % (i, it["rule"], ("  [check: %s]" % it["check"]) if it.get("check") else ""))
+                print("%d) %s%s%s" % (i, it["rule"], (" (%s)" % _recur_tag(it)) if _recur_tag(it) else "",
+                                      ("  [check: %s]" % it["check"]) if it.get("check") else ""))
             for f in res["failed"]:
                 print("FALHOU %s (exit %s): %s" % (f["id"], f["exit_code"], f["rule"]))
             print("<</DADO>>")
             return 1 if res["failed"] else 0
         elif args.cmd == "search":
             t0 = time.time()
+            inferred, rec_agent = False, args.agent
+            if not args.agent:  # D-1-01: busca sem --agent herda a delegação ativa (única); ambígua/nenhuma ⇒ null
+                try:
+                    rec_agent = infer_active_agent(root)[0]  # só para o rastro: a busca em si não muda
+                    inferred = bool(rec_agent)
+                except Exception:
+                    rec_agent = None
             res = search(root, args.query, k=args.k, paths=_csv(args.paths) or None, kinds=args.kind or None,
                          agent=args.agent, include_stale=args.include_stale)
+            try:
+                record_search(root, args.query, res, agent=rec_agent, kinds=args.kind, paths=_csv(args.paths),
+                              inferred=inferred)
+            except OSError as e:  # o rastro é auditoria: falhar não pode esconder o resultado da busca
+                sys.stderr.write("cs-mem: aviso: rastro da busca não gravado (%s): %s\n" % (search_trail_path(root), e))
             if args.json:
                 print(json.dumps({"results": res, "ms": round((time.time() - t0) * 1000, 1)}, ensure_ascii=False, indent=1))
             else:
@@ -1264,7 +2136,32 @@ def main(argv=None):
                     ls = load_lessons(root, ag)
                     if decay_and_cap(root, ag, ls):
                         save_lessons(root, ag, ls)
+                        _refresh_notebook(root, ag)
             print(json.dumps(r, indent=1))
+        elif args.cmd == "notebook":
+            agents = [args.agent] if args.agent else notebook_agents(root)
+            if args.check:
+                res = {ag: check_notebook_detail(root, ag) for ag in agents}
+                bad = any(d["kind"] != "stale" for v in res.values() for d in v)
+                if args.json:
+                    print(json.dumps(res, ensure_ascii=False, indent=1))
+                else:
+                    for ag in agents:
+                        for d in res[ag]:
+                            print("%s %s" % ("AVISO" if d["kind"] == "stale" else "ERRO", d["msg"]))
+                    if not any(res.values()):
+                        print("cadernos íntegros: %s" % (", ".join(agents) or "(nenhum)"))
+                return 1 if bad else 0
+            res = {}
+            for ag in agents:
+                res[ag] = write_notebook(root, ag)
+            if args.json:
+                print(json.dumps(res))
+            else:
+                for ag in agents:
+                    r = res[ag]
+                    print("%s: %s" % (ag, "regenerado" if r else ("sem mudança" if r is False else
+                                                                  "sem caderno (plataforma sem memory: project)")))
         elif args.cmd == "stats":
             st = stats(root)
             st["lessons"] = lesson_stats(root)

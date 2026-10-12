@@ -7,6 +7,7 @@ entrada 0.11.0) e uma VERSION temporária ($CS_SKILL_VERSION_FILE). Pessoa = "An
 import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -55,9 +56,11 @@ def temp_env():
             cat = os.path.join(_base(), "migrations.json5")
             with open(cat, "w", encoding="utf-8") as fh:
                 fh.write(txt)
+        # a VERSION acompanha o catálogo usado (a skill corrente pode já estar acima da 0.11.0, ex.: 0.12.0)
+        m = re.search(r'^\s*version:\s*"([^"]+)"', txt, re.M)
         ver = os.path.join(_base(), "VERSION")
         with open(ver, "w", encoding="utf-8") as fh:
-            fh.write("0.11.0\n")
+            fh.write((m.group(1) if m else "0.11.0") + "\n")
         _ENV["env"] = {"CS_MIGRATIONS_FILE": cat, "CS_SKILL_VERSION_FILE": ver}
     return _ENV["env"]
 

@@ -1,5 +1,6 @@
 """cmds — comandos de cs-state (cada um monta eventos e passa por engine.commit)."""
 import copy
+import json
 import os
 import re
 
@@ -465,12 +466,99 @@ def dispatch(root, actor, ident, model=None, tool_use_id=None, procedencia=None,
     return engine.commit(root, actor, build)
 
 
+CONSULTEI_UNDECLARED = "consultei: não declarado"
+_CONSULTEI_RE = re.compile(r"^\s*[-*]?\s*consultei\s*:\s*(.*)$", re.I | re.M)
+_CONSULTEI_Q_RE = re.compile(r'^["\u201c\u201d]([^"\u201c\u201d]+)["\u201c\u201d]\s*(?:(?:->|\u2192)\s*([^()]*?))?\s*(?:\((.*)\))?\s*$')
+
+
+def _search_trail(root):
+    p = os.path.join(root, hcore.STATE_DIR, "state", "memory", "search.jsonl")
+    rows = []
+    try:
+        with open(p, encoding="utf-8") as fh:
+            for ln in fh:
+                ln = ln.strip()
+                if not ln:
+                    continue
+                try:
+                    rows.append(json.loads(ln))
+                except ValueError:
+                    continue
+    except OSError:
+        pass
+    return rows
+
+
+def consultei_check(root, agent, notes):
+    """DEC-2: `consultei:` no handoff_notes. Devolve (rótulo, problemas). Ausente → rótulo 'consultei: não declarado'
+    (ACEITO, sinalizado ao gate). `consultei: nada — <motivo>` → aceito. `consultei: "<consulta>" -> <ID>[, <ID>]
+    (<efeito>)` → a consulta tem de estar no rastro `.swarm/state/memory/search.jsonl` (DO PRÓPRIO agente; linha sem agente é recusada) e cada
+    ID tem de ter saído dela; senão RECUSA (declaração forjada)."""
+    decls = _CONSULTEI_RE.findall(notes or "")
+    if not decls:
+        return CONSULTEI_UNDECLARED, []
+    trail = None
+    probs, labels = [], []
+    for raw in decls:
+        raw = raw.strip()
+        if re.match(r"^nada\b", raw, re.I):
+            if not re.match(r"^nada\s*(?:—|–|-{1,2}|:)\s*\S", raw, re.I):
+                probs.append("consultei: nada exige motivo — use consultei: nada — <motivo>")
+                continue
+            labels.append("consultei: " + raw[:200])
+            continue
+        m = _CONSULTEI_Q_RE.match(raw)
+        if not m:
+            probs.append("consultei mal formado: %r — use consultei: \"<consulta>\" -> <ID> (<efeito>) ou "
+                         "consultei: nada — <motivo>" % raw[:160])
+            continue
+        q = " ".join(m.group(1).split())
+        ids = [i.strip() for i in re.split(r"[,\s]+", m.group(2) or "") if i.strip()]
+        if trail is None:
+            trail = _search_trail(root)
+        same = [r for r in trail if " ".join(str(r.get("query") or "").split()) == q]
+        rows = [r for r in same if r.get("agent") == agent]
+        if not rows and any(r.get("agent") in (None, "") for r in same):
+            probs.append("consultei: a busca %r está no rastro sem dono (agent null): rode `cs-mem search %r "
+                         "--agent %s` e cite o que ela devolveu" % (q, q, agent))
+            continue
+        if not rows:
+            probs.append("consultei: a consulta %r não está no rastro de busca (.swarm/state/memory/search.jsonl) de "
+                         "%s — rode cs-mem search %r --agent %s e cite o que ela devolveu" % (q, agent, q, agent))
+            continue
+        seen = set()
+        for r in rows:
+            seen.update(r.get("ids") or [])
+        bad = [i for i in ids if i not in seen]
+        if bad:
+            probs.append("consultei: ID(s) %s não saíram da busca %r registrada no rastro (saíram: %s)"
+                         % (", ".join(bad), q, ", ".join(sorted(seen)[:8]) or "nada"))
+            continue
+        labels.append('consultei: "%s" -> %s' % (q, ", ".join(ids) or "(nada útil)"))
+    return ("; ".join(labels) or CONSULTEI_UNDECLARED), probs
+
+
+def consultei_label(task):
+    """Rótulo para o gate (verify/why/brief de revisão): o gravado na submissão, ou derivado das notas."""
+    sub = (task or {}).get("submission") or {}
+    if sub.get("consultei"):
+        return sub["consultei"]
+    if not sub:
+        return None
+    return CONSULTEI_UNDECLARED if not _CONSULTEI_RE.search(sub.get("handoff_notes") or "") else None
+
+
 def submit(root, actor, tid, submission):
     def build(ctx):
         t, d = _deleg(ctx, resolve_task_id(ctx, tid), "submit")
         sub = dict(submission)
         sub.setdefault("risks", [])
         sub.setdefault("handoff_notes", "")
+        label, cprobs = consultei_check(root, t["agent"], sub.get("handoff_notes") or "")
+        if cprobs:
+            raise Refused(cprobs, hint="declare só o que o rastro prova: consultei: \"<consulta>\" -> <ID> (<efeito>) "
+                                       "| consultei: nada — <motivo> (ausente é aceito e o gate vê 'consultei: não declarado')")
+        sub["consultei"] = label
         sub.setdefault("abstain", None)
         sub["files_changed"] = [hcore.norm_rel(f) for f in sub.get("files_changed") or []]
 
