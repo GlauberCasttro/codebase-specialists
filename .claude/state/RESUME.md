@@ -1,10 +1,10 @@
 <!-- resume-stamp
-FEATURES: iter21
+FEATURES: —
 BRANCH: release/desenv-mac
-HEAD: c2b74ae
-PRODUTO: 0278c8073e381b8177c9807cba69a33ad9c9ae64
-ESTADO: 14ec5d10e375a83d3962f90d16aa7011c390ac23
-GATE: PENDENTE
+HEAD: 7fdb431
+PRODUTO: 35d6171ce3ec09d42ae2ac773183fb923aa56213
+ESTADO: 1a3a8766e8690acdf0cabc80e2a32dea4f02a6d5
+GATE: —
 -->
 
 <!-- carimbo:inicio (gerado por tools/carimbo.sh --write; não edite à mão) -->
@@ -20,34 +20,28 @@ arquivos sujos da skill: 4
 # RESUME — codebase-specialists (desenvolvimento)
 
 ## Escopo autorizado e limites
-- Autorizado: iter21 (memória dos agentes) no método auto-correção — founder: "provar que o agente fez Y, foi
-  corrigido, a memória foi atualizada e ele não esquece mais"; decisões técnicas são do tech-lead (provar com números);
-  DEC-1 aprovada (plan:DEC-1); mo2 do oráculo oficializada (D-23). Founder liberou /orquestrar-subagentes "se precisar".
-- NÃO autorizado: push (só o founder); mudar git config sem "pode"; remedição real com `claude -p` sem confirmar o
-  custo com o founder (D-09); abrir feature nova; B-19/B-28/B-26/B-27/B-30/B-31/B-32 junto da iter21.
-- Aguardando decisão: configurar `git config user.email` noreply neste repo; /install da 0.11.0 (sugerido).
+- Autorizado: nada em execução (IDLE). A próxima feature é escolha do founder (topo do BACKLOG).
+- NÃO autorizado: push (só o founder); abrir feature sem a escolha do founder; mudar git config sem "pode"; nova prova
+  real (`claude -p`) sem confirmar o custo (D-09).
+- Aguardando decisão: `git config user.email` noreply neste repo; qual a próxima feature (candidatos: B-33 task legível
+  com review/submit, B-31 parecer no gate, B-15 fechar legado, B-34 coerência do consultei, B-19, B-28).
 
 ## Onde paramos
-- iter19 ENTREGUE: 0.11.0 commit c2b74ae (portão VERDE nos 2 Pythons, QA ACCEPT, Review APPROVED, campanha GO).
-- iter21: etapa correção (rodada 0). Frente memória ciclos 1–3 revisados e APPROVED na cópia local/work/iter21
-  (F1–F8 + M14.5); oráculo recongelado com mo2 (64 asserções): 49/64 nos 2 Pythons (base 19/55). As 15 falhas
-  restantes são das frentes motor e emissão (brief, guard/pre-commit do caderno, upgrade, consultei, skill /correct),
-  agora desbloqueadas (a colisão com a iter19 acabou).
+- 0.11.0 (iter19, c2b74ae) e 0.12.0 (iter21, 7fdb431) entregues e commitadas; estado IDLE; 4 features entregues.
+- iter21: oráculo 64/64, portão VERDE com oráculos iter16–21 inteiros, prova real com aplicação 100% (base 0%) e
+  pesquisa coerente 3/3; campanha GO conferida pelo founder; B-32 resolvido.
+- /install ainda não rodado: a skill instalada nesta máquina é anterior à 0.11.0.
 
 ## Próximos passos
-1. `/install` (instala a 0.11.0 nesta máquina).
-2. iter21: atualizar a cópia local/work/iter21 com o HEAD c2b74ae (a 0.11.0 mudou o motor) sem perder a frente
-   memória; despachar as frentes motor e emissão (disjuntas; /orquestrar-subagentes) contra as 15 falhas do oráculo.
-3. iter21: integração (suítes 2 Pythons + oráculos) → confirmar custo com o founder → remedição real (prova_real.py,
-   claude -p) → decisão.
+1. `/install` (instala a 0.12.0 nesta máquina).
+2. Escolher a próxima feature no BACKLOG (/criar-feature).
+3. Avisar a sessão da cobaia .NET para rodar `cs.py upgrade --apply` (0.10.1 → 0.12.0) e refazer o piloto da memória.
 
 ## Estado do ambiente
-- Fora do commit: cópias local/work/iter19 (entregue; pode ser apagada) e local/work/iter21 (frente memória, NÃO
-  portada); portões e notas em local/; prova real em ~/cs-prova-iter21/; ledgers .auto-correcao locais.
-- campanhas/iter21 (oráculo mo2, PORQUE, revisoes/) modificados e ainda não commitados (não é estado: entram no commit
-  da iter21).
+- Fora dos commits: local/work/iter19 e iter21 (cópias; podem ser apagadas), portões e notas em local/, prova real
+  em ~/cs-prova-iter21/ (r0, r1), backup do features.json em local/backup-iter21/.
 - Branch remota release/version-windows existe (outra sessão; números de decisão conflitam com D-21+ daqui).
 
 ## Ponteiros
-- archive/iter19/iter19.md · PORTE-WINDOWS.md (0.11.0 com a lista de cherry-pick) · BACKLOG B-17 (2 ocorrências no
-  fechamento da iter19), B-29..B-32 · DECISIONS D-22..D-25 · campanhas/iter21/revisoes/memoria-ciclo2.md
+- archive/iter19/iter19.md · archive/iter21/iter21.md · PORTE-WINDOWS.md (0.11.0 e 0.12.0 com cherry-pick) ·
+  campanhas/iter21/revisoes/memoria-ciclo2.md · DECISIONS D-22..D-28 · BACKLOG B-29..B-34

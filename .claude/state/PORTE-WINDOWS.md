@@ -72,13 +72,20 @@ Riscos Windows: escrita de `.json` com `\n` explícito (conferir que não vira C
 `.json5`→`.json` em disco (arquivo aberto no editor pode travar o rename); oráculos iter18 R8 / iter20 U5 fixam versão
 (B-32) — rodar só R1–R7 e U1–U4.
 
-## 0.12.0 — iter21 · EM ANDAMENTO (memória dos agentes: B-22, B-23, B-24, M12, M13)
+## 0.12.0 — iter21 · commit `7fdb431` (2026-10-12) · B-22, B-23, B-24, B-27
 
-Caderno `.claude/agent-memory/<agente>/MEMORY.md` (bloco gerado pelo cs-mem + área livre), guard/pre-commit do
-caderno, brief com memória reservada e busca relevante, rastro de buscas, `consultei:`, `/correct` com "quem errou",
-supersede/retract, `check` sem `--files`. Riscos Windows previstos: o caderno só existe no Claude Code (igual em
-Windows); `--paths` com globs usa `/`; a prova real (`campanhas/iter21/oraculo/prova_real.py`) chama `claude -p` — no
-Windows conferir o binário e o stream-json.
+Caderno `.claude/agent-memory/<agente>/MEMORY.md` (bloco gerado pelo cs-mem + área livre), guard/pre-commit do caderno
+(só o dono, só fora do bloco; bloco aceito só se igual ao render do cs-mem), brief com memória reservada e termos por
+relevância, rastro de buscas com dono, `consultei:` conferido, `/correct` com "quem errou", prévia e confirmação,
+supersede/retract, upgrade que regenera os cadernos. Oráculos de versão relativos (B-32).
+Arquivos para cherry-pick (24): `scripts/memory/mem.py` + `scripts/memory/tests/{test_iter21_ciclo2,test_iter21_memoria,test_iter21_r1,test_mem}.py`,
+`scripts/harness/engine/{brief,cmds,guard,hcore,state,views}.py`, `scripts/harness/tests/test_iter21_motor.py`,
+`scripts/upgrade/core.py`, `scripts/upgrade/tests/test_iter19_upgrade.py`, `scripts/emit/platforms.py`,
+`scripts/emit/tests/test_iter21_emit.py`, `assets/templates/{correct,memory}.md`, `docs/{03-memoria-e-licoes,06-referencia-cli,09-upgrade}.md`,
+`references/migrations.json5`, `VERSION`, `README.md`; e os oráculos `campanhas/iter18..21`.
+Riscos Windows: CRLF no caderno é normalizado no pre-commit (testado por bytes, não com `core.autocrlf` real);
+NOTEBOOK_RE case-insensitive e symlink divergente recusado (no Windows conferir junction/`\`); `--paths` com globs usa
+`/`; a prova real chama `claude -p` (conferir o binário e o stream-json).
 
 ## Pendentes no BACKLOG que também afetarão o Windows
 

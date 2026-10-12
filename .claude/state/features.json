@@ -1,38 +1,42 @@
 {
- "schema": 1,
- "ativas": [
-  {
-   "id": "iter21",
-   "origem": "legado",
-   "aberta_em": "2026-10-08T19:54:07-0300",
-   "campanha": "campanhas/iter21"
-  }
- ],
- "entregues": [
-  {
-   "id": "iter18",
-   "origem": "legado",
-   "aberta_em": "2026-10-06T21:28:42-0300",
-   "campanha": "campanhas/iter18",
-   "entregue_em": "2026-10-07T10:50:16-0300",
-   "commit": "5e8f6b2",
-   "campanha_estado": "concluida",
-   "nota": "legado: movida à mão com autorização do founder (B-15) — feature.py não fecha legado"
-  },
-  {
-   "id": "iter20",
-   "origem": "legado",
-   "aberta_em": "2026-10-07T09:02:30-0300",
-   "campanha": "campanhas/iter20",
-   "entregue_em": "2026-10-07T10:58:06-0300",
-   "commit": "97a1718",
-   "campanha_estado": "concluida",
-   "nota": "legado: movida à mão com autorização do founder (B-15)"
-  },
-  {
-   "id": "iter19",
-   "fechada_em": "2026-10-11T21:03:53-0300",
-   "archive": ".claude/state/archive/iter19/iter19.md"
-  }
- ]
+  "schema": 1,
+  "ativas": [],
+  "entregues": [
+    {
+      "id": "iter18",
+      "origem": "legado",
+      "aberta_em": "2026-10-06T21:28:42-0300",
+      "campanha": "campanhas/iter18",
+      "entregue_em": "2026-10-07T10:50:16-0300",
+      "commit": "5e8f6b2",
+      "campanha_estado": "concluida",
+      "nota": "legado: movida à mão com autorização do founder (B-15) — feature.py não fecha legado"
+    },
+    {
+      "id": "iter20",
+      "origem": "legado",
+      "aberta_em": "2026-10-07T09:02:30-0300",
+      "campanha": "campanhas/iter20",
+      "entregue_em": "2026-10-07T10:58:06-0300",
+      "commit": "97a1718",
+      "campanha_estado": "concluida",
+      "nota": "legado: movida à mão com autorização do founder (B-15)"
+    },
+    {
+      "id": "iter19",
+      "fechada_em": "2026-10-11T21:03:53-0300",
+      "archive": ".claude/state/archive/iter19/iter19.md"
+    },
+    {
+      "id": "iter21",
+      "origem": "legado",
+      "aberta_em": "2026-10-08T19:54:07-0300",
+      "campanha": "campanhas/iter21",
+      "entregue_em": "2026-10-12T14:29:36-0300",
+      "commit": "7fdb431",
+      "campanha_estado": "concluida",
+      "archive": ".claude/state/archive/iter21/iter21.md",
+      "nota": "legado: movida à mão com autorização do founder (B-15, D-18) — feature.py não fecha legado"
+    }
+  ]
 }

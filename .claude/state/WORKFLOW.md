@@ -1,9 +1,9 @@
 # WORKFLOW — codebase-specialists
 
 <!-- features:inicio (gerado por .claude/tools/feature.py; não edite à mão) -->
-**Estado:** IN_PROGRESS
-**Features ativas:** iter21 (legado)
-**Última entrega:** iter19 (2026-10-11T21:03:53-0300) — .claude/state/archive/iter19/iter19.md
+**Estado:** IDLE
+**Features ativas:** nenhuma
+**Última entrega:** iter21 (?) — .claude/state/archive/iter21/iter21.md
 <!-- features:fim -->
 
 Feature = campanha no motor embutido, em `campanhas/<feature>/` (oráculo versionado; `.auto-correcao/` local).
