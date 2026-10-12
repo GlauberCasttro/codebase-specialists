@@ -1,9 +1,9 @@
 <!-- resume-stamp
 FEATURES: iter24
 BRANCH: release/desenv-mac
-HEAD: da30e17
+HEAD: 92f5cf2
 PRODUTO: 00207002352f08b04fafad000c8669c8ea88a802
-ESTADO: 412edd84321d5ad45cfcdc0f1cef58627462ddb6
+ESTADO: e6c20362aca1e2a333b8f51a05d0f8cc12443e12
 GATE: PENDENTE
 -->
 
@@ -22,31 +22,34 @@ arquivos sujos da skill: 4
 ## Escopo autorizado e limites
 - Autorizado: iter24 (hotfix de segurança 0.12.2: B-44, B-45, B-46, B-47 — fechar as portas do guard confirmadas pela
   auditoria da cobaia) — E1–E5 aprovadas ("ok", 2026-10-12); oráculo congelado (37f3042c76ae); campanha aprovada pelo
-  founder (intake.3 OK). Execução pelo `/tech-lead --modo autonomo`.
-- NÃO autorizado: liberar a troca de branch do principal (fica fora da iter24, D-30/E1); misturar B-48..B-53 ou a
-  iter23 na iter24; push; nova prova real `claude -p` sem confirmar custo (D-09); reabrir a iter23 antes de fechar a
-  iter24.
-- Aguardando decisão: `/install` da 0.12.1; upgrade da cobaia para 0.12.1 (libera o show lá); `git config user.email`
-  noreply.
+  founder (intake.3 OK). Execução pelo `/tech-lead --modo autonomo` (2026-10-12); D-31 (test_guards.py na 02).
+- NÃO autorizado: liberar a troca de branch do principal (D-30/E1); misturar B-48..B-53 ou a iter23 na iter24; push;
+  `claude -p` sem confirmar custo (D-09); reabrir a iter23 antes de fechar a iter24; pôr no BACKLOG sozinho os MENOR
+  da revisão (são candidatos: decisão do founder no aceite).
+- Aguardando decisão: (a) candidatos ao BACKLOG vindos das revisões — `git --config-env=core.hooksPath`/`GIT_CONFIG_*`
+  desligam hooks pelo principal; `git stash list` bloqueado (pré-existente); `.SWARM` maiúsculo passa no macOS
+  (pré-existente); variável opaca/symlink para dentro de .swarm (`$H/state.py`) passa; `python3 $PWD/.swarm/knowledge/x.py`
+  vira inanalisável (falso bloqueio raro); texto da 0.12.2 diz "branch -D" sem "de branch protegida". (b) `/install`.
 
 ## Onde paramos
-- 0.12.1 entregue (iter22, da30e17): `cs-state show` liberado no guard + varredura argparse × guard.
-- Auditoria /orquestrar-subagentes da cobaia: 4 auditores + 2 verificadores cegos; 3 críticos e 8 altos confirmados;
-  registrados B-44..B-51 (+ B-52 cancelar criação, B-53 guard com symlink). Decisão NO-GO por cobertura de leitura 20%.
-- iter24 aberta: 1/5 (01-TASK-ORACULO DONE, base 9/22 nos 2 Pythons). Criação da iter23 SUSPENSA (D-30) em
-  local/criar-iter23/criacao-suspensa/ (E1–E5 aprovadas; recriar reaproveitando os textos).
+- iter24 3/5. 03-VERSAO DONE/PASS. 02-GUARD-PORTAS reaberta pela 05-REVIEW (CHANGES_REQUESTED: `$PWD/.swarm/...`,
+  `push +HEAD`, `--no-veri`); ciclo 2 (opus) corrigiu; revisor do ciclo 2 achou `.swarm//` e `/./` por variável; ciclo 3
+  (opus) corrigiu e o revisor do ciclo 3 deu APPROVED. A 02 segue IN_PROGRESS/FAIL até o portão do ciclo 3 sair VERDE.
+- 04-QA está DONE com o Aceite QA do ciclo 1 no FEATURE.md: a matriz ficou VELHA (o guard mudou depois) — refazer.
+- Portão do ciclo 3 em local/portao-iter24/portao.out (o do ciclo 1 em local/tech-lead/iter24/portao-ciclo1.out).
 
 ## Próximos passos
-1. `/tech-lead --modo autonomo`: iter24 02-GUARD-PORTAS ∥ 03-VERSAO → 04-QA (portão, oráculos iter16..iter22
-   inteiros) → 05-REVIEW (tentar reabrir as portas) → aceite → `/fechar-feature iter24` → `/install`.
-2. Upgrade da cobaia para 0.12.2 e aviso à sessão de lá.
-3. Recriar a iter23 (fluxo da árvore) a partir de local/criar-iter23/ (decidir se B-48, B-49, B-50 entram); depois a
-   2ª auditoria focada em leitura do motor.
+1. `tail -3 local/portao-iter24/portao.out` — VERDE+FIM ⇒ Handoff da 02 (ciclos 2–3) e `python3 .claude/tools/feature.py
+   task marcar iter24 02-TASK-GUARD-PORTAS --status DONE --gate PASS --nota "..."`; VERMELHO ⇒ ciclo/diagnóstico.
+2. `/tech-lead --modo autonomo`: re-QA (atualizar o Aceite QA com o portão do ciclo 3) → 05-REVIEW nova (opus) → aceite
+   do founder (decidir os candidatos ao BACKLOG) → `/fechar-feature iter24` → `/install` → upgrade da cobaia.
+3. Recriar a iter23 a partir de local/criar-iter23/ (decidir se B-48, B-49, B-50 entram).
 
 ## Estado do ambiente
-- Fora do commit: campanhas/iter24/ (oráculo; entra no fechamento da iter24) e campanhas/README.md. Cópias
-  local/work/iter19, iter21 e iter22 (podem ser apagadas); auditoria em scratchpad (efêmera) e missão em
-  /var/folders (fora do repo); prova real em ~/cs-prova-iter21/.
+- Fora do commit: campanhas/iter24/ e campanhas/README.md (entram no fechamento). Cópia da feature em
+  local/work/iter24/codebase-specialists (bashscan/guard/hcore/auto, test_iter24_guard, test_guards, VERSION, README,
+  migrations, docs/09); lista do portão local/iter24-arquivos.txt; evidências em local/tech-lead/iter24/. Cópias
+  local/work/iter19, iter21, iter22 podem ser apagadas. Sondas dos revisores no scratchpad (efêmero).
 - Sessões da cobaia .NET mandam achados por SendMessage para esta sessão (nomes das sessões em local/).
 
 ## Ponteiros

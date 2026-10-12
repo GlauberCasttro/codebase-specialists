@@ -113,5 +113,18 @@ Das 8 portas confirmadas pela auditoria (F1–F8), 0 abertas num alvo atualizado
 mesmos payloads da auditoria.
 
 ## Aceite da Feature
-### Aceite QA — PENDENTE
+### Aceite QA — ACCEPT
+QA: Claude Code · general-purpose · sonnet (instância isolada; não escreveu — snapshot vazio). Portão `local/portao-iter24/portao.out`
+(cópia limpa HEAD 92f5cf2 + 10 arquivos de local/iter24-arquivos.txt; 17 suítes × python3 3.13 e /usr/bin/python3 3.9.6):
+`RESULTADO: VERDE` + `FIM`; 0 linhas FAIL/ERROR. `ac.py oracle verify`: oráculo intacto.
+
+| CA | Evidência | Resultado |
+|---|---|---|
+| CA-01 | test_iter24.TestCA01 (4) | PASS |
+| CA-02 | TestCA02 (3) | PASS |
+| CA-03 | TestCA03 (3) | PASS |
+| CA-04 | TestCA04 (3) | PASS |
+| CA-05 | TestCA05 (3) | PASS |
+| CA-06 | TestCA06 (3) | PASS |
+| CA-07 | TestCA07 (3) + oráculos iter16 48, iter18 38, iter19 39, iter20 24, iter21 64, iter22 9 OK nos 2 Pythons | PASS |
 ### Aceite Review — PENDENTE

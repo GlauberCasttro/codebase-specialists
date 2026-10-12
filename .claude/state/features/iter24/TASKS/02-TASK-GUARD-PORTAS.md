@@ -7,8 +7,8 @@ grupo: G1
 agente: corretor (papel; executor e model reais vão para o Handoff)
 CA: CA-01, CA-02, CA-03, CA-04, CA-05, CA-06
 depends: 01-TASK-ORACULO (o oráculo congelado é a régua da correção)
-status: PENDENTE
-gate: PENDENTE
+status: IN_PROGRESS
+gate: FAIL
 complexidade: normal
 
 ## Goal
@@ -41,6 +41,7 @@ IN: guard e testes. OUT: versão/catálogo (03); troca de branch; falsos bloquei
 - `scripts/harness/engine/hcore.py`
 - `scripts/harness/engine/auto.py`
 - `scripts/harness/tests/test_iter24_guard.py`
+- `scripts/harness/tests/test_guards.py` (founder, 2026-10-12, opção 1: a linha 57 contradizia o CA-03 — team.json5 passa a esperar 2 e `.swarm/knowledge/` prova a escrita do principal)
 
 ## AC
 - TestCA01..TestCA06 verdes nos 2 Pythons; suíte harness sem regressão.
@@ -54,3 +55,10 @@ cd campanhas/iter24/oraculo && python3 -m unittest test_iter24.TestCA01 test_ite
 ```
 
 ## Handoff
+- Executor: Claude Code · general-purpose · model sonnet (ciclo 1) + executor novo sonnet para o ajuste de test_guards.py:57 (decisão do founder, opção 1).
+- Arquivos (cópia local/work/iter24): scripts/harness/engine/{bashscan,guard,hcore,auto}.py; scripts/harness/tests/test_iter24_guard.py (novo, 12 testes); scripts/harness/tests/test_guards.py (team.json5 espera 2; .swarm/knowledge/notas-da-ana.md espera 0).
+- RED: oráculo CA01..06 19 testes, 11 falhas (exit 0 em vez de 2). GREEN: oráculo test_iter24 inteiro 22 OK em python3 e /usr/bin/python3.
+- Régua completa (tech-lead, 17 suítes × 2 Pythons): VERDE; harness 384 OK (16 skips pré-existentes) nos 2.
+- Escopo por snapshot: só arquivos permitidos; projeto vivo intocado pelo executor. Privacidade: 0 achados.
+- Revisor: instância isolada general-purpose · opus · APPROVED, sem findings; ~40 variantes de bypass sondadas e recusadas. Independência: instâncias distintas.
+- Limites: hardlink detectado só sob prefixos literais de `protected`/HUMAN_RECORDS; refspec cobre main/master e refs/heads/…; efeito colateral: subagente não cria branch nem `git config <k> <v>`. Script auxiliar do executor em local/work/iter24/run_or.sh (fora do produto).

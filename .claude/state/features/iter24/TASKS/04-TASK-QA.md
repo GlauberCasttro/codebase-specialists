@@ -7,8 +7,8 @@ grupo: —
 agente: QA
 CA: CA-01, CA-02, CA-03, CA-04, CA-05, CA-06, CA-07
 depends: 02-TASK-GUARD-PORTAS (guard corrigido), 03-TASK-VERSAO (versão e catálogo entram no portão)
-status: PENDENTE
-gate: PENDENTE
+status: DONE
+gate: PASS
 
 ## Goal
 Rodar o portão sobre a lista exata dos Arquivos permitidos das CORRECAO, com os oráculos iter24, iter16, iter18,
@@ -43,3 +43,7 @@ bash .claude/tools/portao.sh iter24 --lista local/iter24-arquivos.txt --oraculo 
 ```
 
 ## Handoff
+- QA: Claude Code · general-purpose · model sonnet · ACCEPT. Não escreveu (snapshot da cópia e do vivo).
+- Portão: local/portao-iter24/portao.out → RESULTADO: VERDE, FIM; 17 suítes × 2 Pythons; oráculos iter24 (22), iter16 (48), iter18 (38), iter19 (39), iter20 (24), iter21 (64), iter22 (9) OK nos 2.
+- oracle verify: intacto. Matriz CA-01..CA-07 PASS no FEATURE.md (Aceite QA).
+- Limites: o portão mede suítes/oráculos/def, não uso real; matriz por teste vem de execução -v em python3.

@@ -78,3 +78,35 @@
 ## [PASS] 01-TASK-ORACULO — 2026-10-12T17:11:21-0300
 - status: DONE · gate: PASS
 - oráculo congelado 37f3042c76ae; base 9/22 nos 2 Pythons
+
+## [NOTA] 02-TASK-GUARD-PORTAS — 2026-10-12T17:15:50-0300
+- status: IN_PROGRESS · gate: PENDENTE
+
+## [NOTA] 03-TASK-VERSAO — 2026-10-12T17:15:50-0300
+- status: IN_PROGRESS · gate: PENDENTE
+
+## [PASS] 02-TASK-GUARD-PORTAS — 2026-10-12T18:02:36-0300
+- status: DONE · gate: PASS
+- régua PASS 2 Pythons (17 suítes); oráculo 22 OK; revisor opus APPROVED
+
+## [PASS] 03-TASK-VERSAO — 2026-10-12T18:02:36-0300
+- status: DONE · gate: PASS
+- régua PASS 2 Pythons; TestCA07 3 OK; revisor APPROVED (ressalva MENOR branch -D)
+
+## [NOTA] 04-TASK-QA — 2026-10-12T18:02:47-0300
+- status: IN_PROGRESS · gate: PENDENTE
+
+## [PASS] 04-TASK-QA — 2026-10-12T18:45:28-0300
+- status: DONE · gate: PASS
+- portão VERDE 2 Pythons; 7 oráculos OK; oracle verify intacto
+
+## [NOTA] 05-TASK-REVIEW — 2026-10-12T18:45:33-0300
+- status: IN_PROGRESS · gate: PENDENTE
+
+## [REJECT] 02-TASK-GUARD-PORTAS — 2026-10-12T18:49:19-0300
+- status: IN_PROGRESS · gate: FAIL
+- REVIEW CHANGES_REQUESTED: $PWD/~ no caminho do state.py (CA-01), push +HEAD (CA-06), --no-veri abreviado (CA-06) — reproduzidos pelo tech-lead
+
+## [REJECT] 02-TASK-GUARD-PORTAS — 2026-10-12T18:53:40-0300
+- status: IN_PROGRESS · gate: FAIL
+- ciclo 2 revisor CHANGES_REQUESTED: $PWD/.swarm//harness e /./ escapam (regex antes de normalizar) — reproduzido
