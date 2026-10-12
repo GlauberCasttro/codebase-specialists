@@ -106,10 +106,11 @@ class DocsCaderno(unittest.TestCase):
 
     def test_versao_e_catalogo(self):
         v = (SKILL / "VERSION").read_text(encoding="utf-8").strip()
-        self.assertEqual(v, "0.12.0")
+        # B-32: teste nunca fixa versao; exige que a 0.12.0 exista (>=) e que a migracao dela esteja no catalogo.
+        self.assertGreaterEqual(tuple(int(x) for x in v.split(".")), (0, 12, 0))
         cat = (SKILL / "references" / "migrations.json5").read_text(encoding="utf-8")
         self.assertRegex(cat, r'to:\s*"0\.12\.0"')
-        self.assertIn('version: "0.12.0"', cat)
+        self.assertIn('version: "%s"' % v, cat)
 
 
 if __name__ == "__main__":

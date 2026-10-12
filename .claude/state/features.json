@@ -1,13 +1,6 @@
 {
  "schema": 1,
- "ativas": [
-  {
-   "id": "iter22",
-   "origem": "criar-feature",
-   "aberta_em": "2026-10-12T14:54:10-0300",
-   "campanha": "campanhas/iter22"
-  }
- ],
+ "ativas": [],
  "entregues": [
   {
    "id": "iter18",
@@ -44,6 +37,11 @@
    "campanha_estado": "concluida",
    "archive": ".claude/state/archive/iter21/iter21.md",
    "nota": "legado: movida à mão com autorização do founder (B-15, D-18) — feature.py não fecha legado"
+  },
+  {
+   "id": "iter22",
+   "fechada_em": "2026-10-12T16:58:33-0300",
+   "archive": ".claude/state/archive/iter22/iter22.md"
   }
  ]
 }

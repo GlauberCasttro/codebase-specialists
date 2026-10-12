@@ -1,0 +1,37 @@
+# base iter22 — HEAD d2e07ff (VERSION 0.12.0), 2026-10-12 14:57
+== python3 (Python 3.13.3)
+CA-01 R ok    TestCA01.test_ca01_principal_board_continua_liberado_controle
+CA-01 D FAIL  TestCA01.test_ca01_principal_show_pelo_hook_liberado_e_imprime_markdown
+CA-02 R ok    TestCA02.test_ca02_subagente_mutacao_continua_barrada
+CA-02 D FAIL  TestCA02.test_ca02_subagente_show_pelo_hook_liberado
+CA-03 D FAIL  TestCA03.test_ca03_todo_subcomando_do_argparse_tem_regra_no_guard
+CA-04 R ok    TestCA04.test_ca04_alvo_0120_show_barrado_antes_controle
+CA-04 D FAIL  TestCA04.test_ca04_docstring_do_caderno_nao_aceita_bloco_desatualizado
+CA-04 D FAIL  TestCA04.test_ca04_upgrade_de_alvo_0120_lista_0121_e_libera_show
+CA-04 D FAIL  TestCA04.test_ca04_version_e_catalogo_0121_com_harness
+placar: CA-01 1/2  CA-02 1/2  CA-03 0/1  CA-04 1/4
+por tipo (passam/total): CA-01 D 0/1 R 1/1  CA-02 D 0/1 R 1/1  CA-03 D 0/1 R 0/0  CA-04 D 0/3 R 1/1
+total: 3/9 passam
+== /usr/bin/python3 (Python 3.9.6)
+CA-01 R ok    TestCA01.test_ca01_principal_board_continua_liberado_controle
+CA-01 D FAIL  TestCA01.test_ca01_principal_show_pelo_hook_liberado_e_imprime_markdown
+CA-02 R ok    TestCA02.test_ca02_subagente_mutacao_continua_barrada
+CA-02 D FAIL  TestCA02.test_ca02_subagente_show_pelo_hook_liberado
+CA-03 D FAIL  TestCA03.test_ca03_todo_subcomando_do_argparse_tem_regra_no_guard
+CA-04 R ok    TestCA04.test_ca04_alvo_0120_show_barrado_antes_controle
+CA-04 D FAIL  TestCA04.test_ca04_docstring_do_caderno_nao_aceita_bloco_desatualizado
+CA-04 D FAIL  TestCA04.test_ca04_upgrade_de_alvo_0120_lista_0121_e_libera_show
+CA-04 D FAIL  TestCA04.test_ca04_version_e_catalogo_0121_com_harness
+placar: CA-01 1/2  CA-02 1/2  CA-03 0/1  CA-04 1/4
+por tipo (passam/total): CA-01 D 0/1 R 1/1  CA-02 D 0/1 R 1/1  CA-03 D 0/1 R 0/0  CA-04 D 0/3 R 1/1
+total: 3/9 passam
+# motivo de cada D na base (todos por AssertionError, nenhum ERROR):
+#  CA-01 show principal: hook exit 2 "cs-guard BLOQUEOU: cs-state show desconhecido"
+#  CA-02 show subagente: hook exit 2 "subagente não roda cs-state show (orquestração é do agente principal)"
+#  CA-03 varredura: ['show'] sem regra (principal recebe "desconhecido")
+#  CA-04 versão: VERSION 0.12.0 < 0.12.1; upgrade: plano "nada a fazer" (sem 0.12.1); docstring: ainda diz
+#        "bloco desatualizado mas com selo íntegro também não"
+# calibração (cópias em mktemp, sem escrever no projeto), python3 e /usr/bin/python3:
+#  correção mínima (show em STATE_SUB main+any; VERSION 0.12.1; catálogo to 0.12.1 com {kind: harness};
+#  docstring reescrita) ⇒ total 9/9 passam
+#  mutação CA-03 (subparser "ficticio" no argparse da cópia corrigida) ⇒ TestCA03 FAIL: ['ficticio'] != []

@@ -22,7 +22,7 @@
 // Nunca refeito num upgrade (salvo migração explícita): entrevista, roster aprovado, cartões aprovados,
 // memória de lições, board/eventos.
 {
- version: "0.12.0",
+ version: "0.12.1",
  migrations: [
   {
    to: "0.5.0",
@@ -97,6 +97,13 @@
    actions: [
     {kind: "harness"},
     {kind: "emit"}
+   ]
+  },
+  {
+   to: "0.12.1",
+   why: "o `cs-state show` da 0.11.0 era bloqueado pelo cs-guard do alvo como subcomando desconhecido (campanha-iter22): o guard corrigido libera o `show` para o agente principal e, por ser só leitura, também para o subagente; uma varredura impede que um subcomando do cs-state fique sem regra no guard. Reinstala o motor do harness no alvo (traz o guard corrigido), sem refazer entrevista, roster, cartões, memória nem board",
+   actions: [
+    {kind: "harness"}
    ]
   }
  ]

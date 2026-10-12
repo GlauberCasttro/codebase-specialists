@@ -35,3 +35,4 @@ vivo do desenvolvimento está em `.claude/state/`.
 Nova campanha: skill `new-front` (cria `campanhas/<frente>/` pelo `ac.py init`); acrescente a linha aqui ao abrir e
 preencha commit/decisão no `close-front`.
 | iter19 | Estado legível em JSON, chaves em inglês, amend refletido no arquivo, cs-state show e migração automática | — | em andamento |
+| iter22 | cs-state show liberado no guard do alvo, varredura que impede subcomando sem regra no guard, versão 0.12.1 | — | em andamento |

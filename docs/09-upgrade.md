@@ -241,3 +241,12 @@ A entrada `to: "0.12.0"` do catálogo declara `harness` e `emit`. O que ela faz:
 - o upgrade regenera os cadernos `.claude/agent-memory/<agente>/MEMORY.md` a partir das lições que já existem (ação do
   motor; `cs-mem notebook` faz o mesmo à mão). A área livre do agente, abaixo do bloco gerado, é preservada;
 - não refaz entrevista, roster, cartões, memória nem board. Detalhes do caderno em `docs/03-memoria-e-licoes.md`.
+
+## Migração 0.12.1: o `cs-state show` liberado no guard
+
+A entrada `to: "0.12.1"` do catálogo declara só `harness`. O que ela faz:
+
+- reinstala o motor do harness no alvo, que traz o `cs-guard` corrigido: o `cs-state show` (0.11.0) não é mais
+  bloqueado como "desconhecido" — liberado para o agente principal e, por ser leitura, também para o subagente;
+- uma varredura impede que um subcomando do `cs-state` fique sem regra no guard;
+- não refaz entrevista, roster, cartões, memória nem board.

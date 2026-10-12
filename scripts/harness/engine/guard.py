@@ -101,8 +101,9 @@ def task_hint(board, rel, agent=None):
 
 # ================================================================ caderno do agente (DEC-1, iter21)
 def notebook_text_problems(root, agent, text):
-    """Problemas do caderno `text` de `agent` contra o que o cs-mem gera: [] = bloco íntegro (CRLF/BOM não contam;
-    bloco desatualizado mas com selo íntegro também não — não é adulteração). Sem o cs-mem: fail-closed."""
+    """Problemas do caderno `text` de `agent` contra o que o cs-mem gera: [] = bloco aceito (CRLF/BOM não contam).
+    O bloco só é aceito se for IGUAL ao render atual do cs-mem: bloco desatualizado ou forjado é problema (recusado)
+    MESMO com o selo íntegro, porque o selo não é critério de aceite. Sem o cs-mem: fail-closed."""
     rel = ".claude/agent-memory/%s/MEMORY.md" % agent
     try:
         import mem
@@ -261,10 +262,10 @@ def decide_write(root, board, cfg, actor, path, base=None, tool_name=None, tool_
 # ================================================================ Bash
 STATE_SUB = {"main": {"init", "add", "epic", "feature", "story", "sprint", "session", "ready", "dispatch", "return", "verify",
                       "accept", "reject", "retry", "escalate", "block", "reroute", "delegate", "amend", "brief", "status", "drop", "reverify",
-                      "board", "next", "why", "autonomy", "ask", "consult", "validate",
+                      "board", "next", "why", "autonomy", "ask", "consult", "validate", "show",
                       "new", "start", "plan", "move", "park", "promote", "close", "reopen", "find", "tree", "check",
                       "migrate"},
-             "any": {"status", "board", "next", "why", "brief", "validate", "find", "tree", "check"}}
+             "any": {"status", "board", "next", "why", "brief", "validate", "find", "tree", "check", "show"}}
 
 
 def _subcmd(argv):
