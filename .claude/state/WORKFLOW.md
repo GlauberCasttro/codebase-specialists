@@ -1,8 +1,8 @@
 # WORKFLOW — codebase-specialists
 
 <!-- features:inicio (gerado por .claude/tools/feature.py; não edite à mão) -->
-**Estado:** IDLE
-**Features ativas:** nenhuma
+**Estado:** IN_PROGRESS
+**Features ativas:** iter22 (criar-feature)
 **Última entrega:** iter21 (?) — .claude/state/archive/iter21/iter21.md
 <!-- features:fim -->
 

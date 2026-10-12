@@ -1,10 +1,10 @@
 <!-- resume-stamp
-FEATURES: —
+FEATURES: iter22
 BRANCH: release/desenv-mac
-HEAD: 7fdb431
+HEAD: d2e07ff
 PRODUTO: 35d6171ce3ec09d42ae2ac773183fb923aa56213
-ESTADO: 1a3a8766e8690acdf0cabc80e2a32dea4f02a6d5
-GATE: —
+ESTADO: 12c9ea8416ec83f94b386181408c134fc29f7ab2
+GATE: PENDENTE
 -->
 
 <!-- carimbo:inicio (gerado por tools/carimbo.sh --write; não edite à mão) -->
@@ -20,28 +20,30 @@ arquivos sujos da skill: 4
 # RESUME — codebase-specialists (desenvolvimento)
 
 ## Escopo autorizado e limites
-- Autorizado: nada em execução (IDLE). A próxima feature é escolha do founder (topo do BACKLOG).
-- NÃO autorizado: push (só o founder); abrir feature sem a escolha do founder; mudar git config sem "pode"; nova prova
-  real (`claude -p`) sem confirmar o custo (D-09).
-- Aguardando decisão: `git config user.email` noreply neste repo; qual a próxima feature (candidatos: B-33 task legível
-  com review/submit, B-31 parecer no gate, B-15 fechar legado, B-34 coerência do consultei, B-19, B-28).
+- Autorizado: iter22 (hotfix 0.12.1, B-35: `cs-state show` liberado no guard + varredura argparse × guard) — E1–E5
+  aprovadas pelo founder ("ok") em 2026-10-12; oráculo congelado (524416ebaf44).
+- NÃO autorizado: corrigir antes de o founder rodar o script de aprovação da iter22 (o corretor fica bloqueado até
+  intake.3); misturar na iter22 qualquer item da feature "fluxo da árvore" (B-19, B-28, B-38..B-43); push; nova prova
+  real `claude -p` sem confirmar o custo (D-09).
+- Aguardando decisão: founder rodar `sh local/aprovar-iter22.sh` no terminal dele; B-38 (nomes curtos estilo v8) junto
+  da feature "fluxo da árvore" (recomendado) ou separado; `git config user.email` noreply.
 
 ## Onde paramos
-- 0.11.0 (iter19, c2b74ae) e 0.12.0 (iter21, 7fdb431) entregues e commitadas; estado IDLE; 4 features entregues.
-- iter21: oráculo 64/64, portão VERDE com oráculos iter16–21 inteiros, prova real com aplicação 100% (base 0%) e
-  pesquisa coerente 3/3; campanha GO conferida pelo founder; B-32 resolvido.
-- /install ainda não rodado: a skill instalada nesta máquina é anterior à 0.11.0.
+- 0.12.0 entregue (iter21, 7fdb431) e instalada; cobaia .NET atualizada para 0.12.0 (commits 29723e4 e 93df5ff lá;
+  pre-commit sem --no-verify OK).
+- iter22 aberta: 1/5 (01-TASK-ORACULO DONE, base 3/9). Próximas: 02-GUARD-SHOW ∥ 03-VERSAO → 04-QA → 05-REVIEW.
+- Uso real na cobaia gerou B-35..B-43 (B-35 em iter22; B-19, B-39, B-40, B-42, B-43 travam o fluxo diário lá).
 
 ## Próximos passos
-1. `/install` (instala a 0.12.0 nesta máquina).
-2. Escolher a próxima feature no BACKLOG (/criar-feature).
-3. Avisar a sessão da cobaia .NET para rodar `cs.py upgrade --apply` (0.10.1 → 0.12.0) e refazer o piloto da memória.
+1. Founder roda o script de aprovação da iter22 → `/tech-lead --modo autonomo` (02 ∥ 03 → QA → REVIEW → aceite →
+   /fechar-feature → /install → upgrade da cobaia para 0.12.1).
+2. Depois: `/criar-feature` "fluxo da árvore" (B-19, B-43, B-42, B-39, B-40, B-28 e, se aprovado, B-38).
 
 ## Estado do ambiente
-- Fora dos commits: local/work/iter19 e iter21 (cópias; podem ser apagadas), portões e notas em local/, prova real
-  em ~/cs-prova-iter21/ (r0, r1), backup do features.json em local/backup-iter21/.
-- Branch remota release/version-windows existe (outra sessão; números de decisão conflitam com D-21+ daqui).
+- Fora do commit (da iter22; entram no fechamento): campanhas/iter22/ (oráculo) e campanhas/README.md (linha da
+  abertura). Cópias local/work/iter19 e iter21 (podem ser apagadas); prova real em ~/cs-prova-iter21/.
+- Sessões da cobaia .NET mandam achados por SendMessage para esta sessão (nomes das sessões em local/).
 
 ## Ponteiros
-- archive/iter19/iter19.md · archive/iter21/iter21.md · PORTE-WINDOWS.md (0.11.0 e 0.12.0 com cherry-pick) ·
-  campanhas/iter21/revisoes/memoria-ciclo2.md · DECISIONS D-22..D-28 · BACKLOG B-29..B-34
+- features/iter22/ (FEATURE.md, TASKS, CHECKLIST) · archive/iter21/iter21.md · BACKLOG B-33..B-43 · DECISIONS
+  D-22..D-29 · PORTE-WINDOWS.md (0.11.0, 0.12.0)
