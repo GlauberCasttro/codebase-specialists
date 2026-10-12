@@ -134,14 +134,14 @@ def tree_paths(root):
     rt = os.path.join(sp, TREE_RUNTIME)
     return {
         "specialists": sp, "state_dir": rt, "zones": sp,
-        "board": os.path.join(rt, "projection.json5"),
+        "board": pick_state_file(os.path.join(rt, "projection")),
         "events": os.path.join(sp, "events.jsonl"),
         "index": os.path.join(sp, "INDEX.md"),
         "ledger": os.path.join(rt, "harness-ledger.jsonl"),
-        "autonomy": os.path.join(rt, "autonomy.json5"),
+        "autonomy": pick_state_file(os.path.join(rt, "autonomy")),
         "lock": os.path.join(rt, ".lock"),
         "evidence": os.path.join(rt, "evidence"),
-        "selftest": os.path.join(rt, "selftest.json5"),
+        "selftest": pick_state_file(os.path.join(rt, "selftest")),
         "config": os.path.join(sp, "harness", "config.json5"),
         "team": os.path.join(sp, "team.json5"),
         "facts_dir": os.path.join(sp, "facts"),
@@ -162,10 +162,10 @@ def state_paths(root):
         "board": os.path.join(sd, "board.json5"),
         "events": os.path.join(sd, "events.jsonl"),
         "ledger": os.path.join(sd, "harness-ledger.jsonl"),  # encadeado; ledger.jsonl é o log do cs.py (cslib.log)
-        "autonomy": os.path.join(sd, "autonomy.json5"),
+        "autonomy": pick_state_file(os.path.join(sd, "autonomy")),
         "lock": os.path.join(sd, ".lock"),
         "evidence": os.path.join(sd, "evidence"),
-        "selftest": os.path.join(sd, "selftest.json5"),
+        "selftest": pick_state_file(os.path.join(sd, "selftest")),
         "config": os.path.join(sp, "harness", "config.json5"),
         "team": os.path.join(sp, "team.json5"),
         "facts_dir": os.path.join(sp, "facts"),
@@ -236,6 +236,163 @@ def read_any(path):
         return j5.load(path)
     with open(path, "rb") as f:
         return json.loads(f.read().decode("utf-8"))
+
+
+# ---------------------------------------------------------------- estado em JSON padrão (B-14)
+# Estado de entidade e projeção: `.json` (json.dumps indent=2, um item de lista por linha), chaves em inglês na
+# ordem de leitura, `_generated_by` como campo, bytes determinísticos. Em memória o motor segue com as chaves
+# históricas (pt) — o mapa abaixo é POR CAMINHO (`para` da story = so_that; `para` do history = to) e traduz só nas
+# bordas (gravar/ler). A leitura aceita os dois idiomas e os dois formatos (.json5 antigo).
+GENERATED_BY = "_generated_by"
+
+
+def _node(pairs, kids=None):
+    return {"en": dict(pairs), "pt": dict((v, k) for k, v in pairs), "kids": kids or {}}
+
+
+def _kid(node, key, *names):
+    for n in names:
+        node["kids"][n] = key
+
+
+_CLOSED_METRICS = _node([("tentativas", "attempts"), ("status_m2", "m2_status")])
+_CLOSED = _node([("entregue", "delivered"), ("devolvido", "returned"), ("metricas", "metrics"), ("origem", "origin")],
+                {"metricas": _CLOSED_METRICS, "metrics": _CLOSED_METRICS})
+_CRITERIA = _node([("teste", "test")])
+_HISTORY = _node([("acao", "action"), ("de", "from"), ("para", "to")])
+_REOPENING = _node([], {"closed": _CLOSED})
+ITEM_SCHEMA = _node(
+    [("tipo", "type"), ("como", "as_a"), ("quero", "i_want"), ("para", "so_that"), ("criterios", "acceptance_criteria"),
+     ("teste", "proving_test"), ("reproducao", "failing_test"), ("motivo", "reason"), ("aceite", "acceptance_cmd"),
+     ("epico", "epic"), ("objetivo", "objective"), ("metrica", "metric"), ("meta", "goal"), ("reaberta", "reopened"),
+     ("reaberturas", "reopenings"), ("historico", "history")],
+    {"criterios": _CRITERIA, "acceptance_criteria": _CRITERIA, "historico": _HISTORY, "history": _HISTORY,
+     "closed": _CLOSED, "reaberturas": _REOPENING, "reopenings": _REOPENING})
+_BLOCK = _node([("titulo", "title"), ("linhas", "lines")])
+SESSION_SCHEMA = _node([("blocos", "blocks")], {"blocos": _BLOCK, "blocks": _BLOCK})
+PLAIN_SCHEMA = _node([])
+
+# Ordem de leitura do item (o resto em ordem alfabética; history por último).
+READ_ORDER = ("id", "kind", "type", "title", "agent", "allowed_paths", "protected_paths", "as_a", "i_want", "so_that",
+              "acceptance_criteria", "verify_cmd", "status", "wave", "route", "created_at", "created_by", "started_at",
+              "closed", "m2", "aliases", "path", "parent")
+_READ_ORDER_PT = ("id", "kind", "tipo", "title", "agent", "allowed_paths", "protected_paths", "como", "quero", "para",
+                  "criterios")
+
+
+def _translate(obj, node, to):
+    """to='en'|'pt': traduz as chaves de `obj` (dict ou lista de dicts) pelo nó do caminho. Chaves já no idioma
+    de destino passam como estão."""
+    if isinstance(obj, list):
+        return [_translate(x, node, to) for x in obj]
+    if not isinstance(obj, dict):
+        return obj
+    out = {}
+    for k, v in obj.items():
+        kid = node["kids"].get(k)
+        out[node[to].get(k, k)] = _translate(v, kid, to) if kid is not None else v
+    return out
+
+
+def item_to_en(item):
+    return _translate(item, ITEM_SCHEMA, "en")
+
+
+def item_to_pt(item):
+    """Normaliza um item lido (pt ou en) para a forma interna do motor; o caminho de estado vira `.json`."""
+    it = _translate(item, ITEM_SCHEMA, "pt")
+    if isinstance(it, dict):
+        it.pop(GENERATED_BY, None)
+        if isinstance(it.get("path"), str) and it["path"].endswith(".json5"):
+            it["path"] = it["path"][:-1]
+    return it
+
+
+def session_to_en(rec):
+    return _translate(rec, SESSION_SCHEMA, "en")
+
+
+def session_to_pt(rec):
+    r = _translate(rec, SESSION_SCHEMA, "pt")
+    if isinstance(r, dict):
+        r.pop(GENERATED_BY, None)
+    return r
+
+
+def _sorted_deep(obj, first=("id",)):
+    if isinstance(obj, dict):
+        keys = sorted(obj, key=lambda k: (0 if k in first else 1, k))
+        return {k: _sorted_deep(obj[k], first) for k in keys}
+    if isinstance(obj, list):
+        return [_sorted_deep(x, first) for x in obj]
+    return obj
+
+
+def order_item(en_item):
+    """Item (chaves en) na ordem de leitura: READ_ORDER, o resto alfabético, history por último."""
+    it = _sorted_deep(en_item)
+    out = {}
+    for k in READ_ORDER:
+        if k in it:
+            out[k] = it[k]
+    for k in sorted(it):
+        if k not in out and k != "history":
+            out[k] = it[k]
+    if "history" in it:
+        out["history"] = it["history"]
+    return out
+
+
+def json_text(obj):
+    """Texto canônico do estado em JSON: indent 2, um item de lista por linha, \n final."""
+    return json.dumps(obj, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
+
+
+def with_generated_by(obj, header):
+    out = {GENERATED_BY: " ".join(str(header).split())}
+    out.update((k, v) for k, v in obj.items() if k != GENERATED_BY)
+    return out
+
+
+def json_twin(path):
+    """`.json5` -> `.json` (o resto do caminho igual)."""
+    return path[:-1] if path.endswith(".json5") else path
+
+
+def write_json(path, obj, header, plain_sorted=True):
+    """Grava `obj` como estado JSON em `path` (força `.json`); remove o gêmeo `.json5` de um formato anterior."""
+    path = json_twin(path)
+    if plain_sorted:
+        obj = _sorted_deep(obj)
+    atomic_write_bytes(path, json_text(with_generated_by(obj, header)).encode("utf-8"))
+    with contextlib.suppress(OSError):
+        os.unlink(path + "5")
+    return path
+
+
+def write_item_json(path, item, header):
+    """Grava um item (forma interna) em `.json`, chaves em inglês e ordem de leitura."""
+    path = json_twin(path)
+    atomic_write_bytes(path, json_text(with_generated_by(order_item(item_to_en(item)), header)).encode("utf-8"))
+    with contextlib.suppress(OSError):
+        os.unlink(path + "5")
+    return path
+
+
+def read_state(path):
+    """Estado gravado pelo motor (.json ou .json5 antigo) sem o campo `_generated_by`."""
+    d = read_any(path)
+    if isinstance(d, dict):
+        d = {k: v for k, v in d.items() if k != GENERATED_BY}
+    return d
+
+
+def pick_state_file(base):
+    """`base` sem extensão: o `.json` se existir, senão o `.json5` antigo, senão o `.json` (a gravar)."""
+    for ext in (".json", ".json5"):
+        if os.path.isfile(base + ext):
+            return base + ext
+    return base + ".json"
 
 
 def foreign_harness_signals(root):
@@ -516,11 +673,13 @@ def load_board(root):
     if not os.path.isfile(p):
         raise StateError("board ausente: %s (estado ausente = bloqueio; rode cs-state init)" % p)
     try:
-        b = j5.load(p)
+        b = read_state(p)
     except (OSError, ValueError) as e:
         raise StateError("board ilegível: %s" % e)
     if not isinstance(b, dict) or b.get("schema_version") != SCHEMA_VERSION:
         raise StateError("board com schema inválido (schema_version != %d)" % SCHEMA_VERSION)
+    if isinstance(b.get("tree"), dict):
+        b["tree"] = dict((k, item_to_pt(v)) for k, v in b["tree"].items())
     for lst in OPTIONAL_LISTS:
         if lst not in b:
             b[lst] = []
@@ -531,8 +690,23 @@ def load_board(root):
 
 
 def save_board(root, board):
-    write_json5(state_paths(root)["board"], board,
-                "board.json5 — estado do harness; escrito SÓ por cs-state (cadeia em events.jsonl)")
+    p = state_paths(root)
+    if not p.get("tree"):  # board plano (legado): continua JSON5
+        write_json5(p["board"], board, "board.json5 — estado do harness; escrito SÓ por cs-state (cadeia em events.jsonl)")
+        return
+    write_tree_board(p["board"], board)
+
+
+def write_tree_board(path, board):
+    """Projeção do modo árvore: JSON padrão, chaves em inglês, itens na ordem de leitura."""
+    out = {}
+    for k in sorted(board):
+        if k == "tree" and isinstance(board[k], dict):
+            out[k] = dict((i, order_item(item_to_en(v))) for i, v in sorted(board[k].items()))
+        else:
+            out[k] = _sorted_deep(board[k])
+    write_json(path, out, "projeção do motor (antigo board) — escrita SÓ por cs-state (cadeia em events.jsonl)",
+               plain_sorted=False)
 
 
 def find(board, kind, eid):
@@ -572,7 +746,7 @@ def apply_ops(board, ops, check_legal=True, legacy=None, on_illegal=None):
         if kind in ("tput", "tdel", "tmeta"):
             # modo árvore: itens (épico/sprint/feature/story/task) por id; tmeta = contadores (ids nunca reaproveitados)
             if kind == "tput":
-                board.setdefault("tree", {})[op[1]] = json.loads(json.dumps(op[3]))
+                board.setdefault("tree", {})[op[1]] = item_to_pt(json.loads(json.dumps(op[3])))
             elif kind == "tdel":
                 if op[1] not in board.setdefault("tree", {}):
                     raise StateError("tdel: item inexistente %s" % op[1])

@@ -118,11 +118,11 @@ def pasta_rel(m):
 
 
 def draft_path(root, mid):
-    return os.path.join(hcore.state_paths(root)["state_dir"], "mandatos", "%s.rascunho.json5" % mid)
+    return hcore.pick_state_file(os.path.join(hcore.state_paths(root)["state_dir"], "mandatos", "%s.rascunho" % mid))
 
 
 def stop_path(root):
-    return os.path.join(hcore.state_paths(root)["state_dir"], "mandatos", "stop-hook.json5")
+    return hcore.pick_state_file(os.path.join(hcore.state_paths(root)["state_dir"], "mandatos", "stop-hook"))
 
 
 def plano_nos(m):
@@ -1217,7 +1217,7 @@ def new_package(m, eid, tipo, cond, nos, opcoes, why, no=None, evidencia=None):
     ts = hcore.now_iso().replace(":", "").replace("-", "").replace(".", "")[:15]
     return {"id": eid, "tipo": tipo, "condicao": cond, "no": no, "nos": list(nos), "opcoes": list(opcoes),
             "por_que": why, "evidencia": evidencia or [], "aberta": True, "criada_em": hcore.now_iso(),
-            "de": m.get("state"), "arquivo": "escalada-%s-%s.json5" % (ts, eid)}
+            "de": m.get("state"), "arquivo": "escalada-%s-%s.json" % (ts, eid)}
 
 
 def reconcile_escalations(root, actor):
@@ -1884,7 +1884,7 @@ def load_draft(root, m):
     p = draft_path(root, m["id"])
     if os.path.isfile(p):
         try:
-            d = j5.load(p)
+            d = hcore.read_state(p)
             if isinstance(d, dict) and d.get("feature") == m.get("feature_ativa"):
                 return d
         except (OSError, ValueError):
@@ -1896,7 +1896,7 @@ def load_draft(root, m):
 def save_draft(root, m, d):
     p = draft_path(root, m["id"])
     os.makedirs(os.path.dirname(p), exist_ok=True)
-    hcore.write_json5(p, d, "rascunho do plano do mandato %s (cs-auto plan add-node/edit-node; guardas no submit)" % m["id"])
+    hcore.write_json(p, d, "rascunho do plano do mandato %s (cs-auto plan add-node/edit-node; guardas no submit)" % m["id"])
 
 
 def _csv(v):
@@ -2914,14 +2914,14 @@ def cmd_report(root):
 
 # ================================================================ materialização e validação dos arquivos do mandato
 def files_of(m):
-    out = {"mandato.json5": m}
+    out = {"mandato.json": m}
     for p in m.get("planos") or []:
-        out["plano.v%d.json5" % int(p.get("versao") or 0)] = p
+        out["plano.v%d.json" % int(p.get("versao") or 0)] = p
     for e in m.get("escaladas") or []:
         if e.get("arquivo"):
-            out[e["arquivo"]] = {"mandato": m["id"], "pacote": e}
+            out[hcore.json_twin(e["arquivo"])] = {"mandato": m["id"], "pacote": e}  # pacote antigo: nome .json5
     if m.get("relatorio"):
-        out["relatorio.json5"] = m["relatorio"]
+        out["relatorio.json"] = m["relatorio"]
     return out
 
 
@@ -2935,13 +2935,15 @@ def materialize(root, board):
                 shutil.rmtree(other, ignore_errors=True)
         os.makedirs(d, exist_ok=True)
         for name, obj in files_of(m).items():
-            data = j5.dumps(obj, header=HEADER).encode("utf-8")
+            data = hcore.json_text(hcore.with_generated_by(hcore._sorted_deep(obj), HEADER)).encode("utf-8")
             p = os.path.join(d, name)
             if os.path.isfile(p):
                 with open(p, "rb") as f:
                     if f.read() == data:
                         continue
             hcore.atomic_write_bytes(p, data)
+            if os.path.isfile(p + "5"):  # visão do formato anterior (.json5) substituída
+                os.remove(p + "5")
 
 
 def validate_files(root, board):
@@ -2950,11 +2952,13 @@ def validate_files(root, board):
         rel = pasta_rel(m)
         for name, obj in files_of(m).items():
             p = os.path.join(root, rel, name)
+            if not os.path.isfile(p) and os.path.isfile(p + "5"):
+                p = p + "5"  # formato anterior ainda não regravado
             if not os.path.isfile(p):
                 E.append("mandato %s: %s/%s ausente (removido à mão?)" % (m["id"], rel, name))
                 continue
             try:
-                got = hcore.canonical(j5.load(p))
+                got = hcore.canonical(hcore.read_state(p))
             except (OSError, ValueError):
                 got = None
             if got != hcore.canonical(obj):
@@ -3083,7 +3087,7 @@ def stop_decision(root, payload):
     st = {}
     if os.path.isfile(p):
         try:
-            st = j5.load(p) or {}
+            st = hcore.read_state(p) or {}
         except (OSError, ValueError):
             st = {}
     blocks = int(st.get("blocks") or 0) if st.get("mandato") == m["id"] and st.get("marca") == mark else 0
@@ -3091,10 +3095,10 @@ def stop_decision(root, payload):
         pause(root, "hook", "anti-loop: %d bloqueios do Stop sem transição de M5/M2 (diagnóstico: próxima ação %s %s)" % (
             blocks, nx[0], nx[1] or ""))
         os.makedirs(os.path.dirname(p), exist_ok=True)
-        hcore.write_json5(p, {"mandato": m["id"], "marca": -1, "blocks": 0}, "contador anti-loop do hook Stop (cs-auto)")
+        hcore.write_json(p, {"mandato": m["id"], "marca": -1, "blocks": 0}, "contador anti-loop do hook Stop (cs-auto)")
         return (False, None)
     os.makedirs(os.path.dirname(p), exist_ok=True)
-    hcore.write_json5(p, {"mandato": m["id"], "marca": mark, "blocks": blocks + 1}, "contador anti-loop do hook Stop (cs-auto)")
+    hcore.write_json(p, {"mandato": m["id"], "marca": mark, "blocks": blocks + 1}, "contador anti-loop do hook Stop (cs-auto)")
     return (True, "mandato %s [%s] segue: próxima ação %s %s — rode `cs-auto tick` (objetivo: %s)" % (
         m["id"], m["state"], nx[0], nx[1] or "", m.get("objetivo")))
 

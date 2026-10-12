@@ -301,12 +301,12 @@ def last_stamp(root):
     d = sessoes_dir(root)
     if not os.path.isdir(d):
         return None, None
-    fs = sorted(f for f in os.listdir(d) if f.endswith(".json5"))
+    fs = sorted(f for f in os.listdir(d) if f.endswith(".json") or f.endswith(".json5"))
     if not fs:
         return None, None
     p = os.path.join(d, fs[-1])
     try:
-        return p, hcore.read_any(p)
+        return p, hcore.session_to_pt(hcore.read_any(p))
     except (OSError, ValueError):
         return p, None
 
@@ -458,13 +458,13 @@ def tree_save(root):
     os.makedirs(d, exist_ok=True)
     ts = hcore.now_iso()
     name = ts.replace(":", "").replace("-", "").replace(".", "")[:22]
-    path = os.path.join(d, "%s.json5" % name)
+    path = os.path.join(d, "%s.json" % name)
     n = 1
-    while os.path.exists(path):
+    while os.path.exists(path) or os.path.exists(path + "5"):
         n += 1
-        path = os.path.join(d, "%s-%d.json5" % (name, n))
+        path = os.path.join(d, "%s-%d.json" % (name, n))
     rec = dict(info, saved_at=ts, blocos=blocos)
-    hcore.write_json5(path, rec, "carimbo de sessão (cs-session save) — 8 blocos; não editar")
+    hcore.write_json(path, hcore.session_to_en(rec), "carimbo de sessão (cs-session save) — 8 blocks; não editar")
     return text, path
 
 

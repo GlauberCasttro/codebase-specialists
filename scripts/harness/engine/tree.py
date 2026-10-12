@@ -3,7 +3,7 @@
 Layout (relativo a <STATE_DIR>/): backlog/ (esperando) · state/ (executando) · archive/ (fechado, mesma árvore) ·
 events.jsonl (cadeia append-only na RAIZ) · INDEX.md (gerado) · state/sessoes/ (carimbos de cs-session).
 O motor continua o ÚNICO escritor: todo item nasce/move/fecha por evento encadeado (ops tput/tdel/tmeta aplicadas à
-projeção <STATE_DIR>/.engine/projection.json5, que é o antigo board) e as pastas são MATERIALIZADAS a partir da
+projeção <STATE_DIR>/.engine/projection.json, que é o antigo board) e as pastas são MATERIALIZADAS a partir da
 projeção depois do commit. Edição à mão, órfão e fechado fora de archive/ são acusados por `cs-state validate`.
 M2 (dispatch/submit/verify/review/accept/escalate) roda sobre a task M2 criada no `start` com o id da árvore.
 """
@@ -22,8 +22,8 @@ import engine
 from hcore import Refused, StateError
 
 HEADER = "gerado por cs-state (motor único) — não editar à mão: cs-state validate acusa a edição"
-ITEM_FILE = {"epico": "epico.json5", "sprint": "sprint.json5", "feature": "feature.json5", "story": "story.json5"}
-ITEM_FILES = tuple(ITEM_FILE.values())
+ITEM_FILE = {"epico": "epico.json", "sprint": "sprint.json", "feature": "feature.json", "story": "story.json"}
+ITEM_FILES = tuple(ITEM_FILE.values()) + tuple(v + "5" for v in ITEM_FILE.values())  # .json5 = formato anterior
 TIPOS = ("US", "BUG", "FIX", "CHORE")
 STORY_TIPOS = ("US", "BUG", "FIX")
 M2_DONE = ("ACCEPTED", "DROPPED")
@@ -58,7 +58,8 @@ def today():
 
 
 def render(item):
-    return j5.dumps(item, header=HEADER)
+    """Texto do arquivo do item: JSON padrão, chaves em inglês na ordem de leitura, `_generated_by` como campo."""
+    return hcore.json_text(hcore.with_generated_by(hcore.order_item(hcore.item_to_en(item)), HEADER))
 
 
 def tree_root(root):
@@ -67,7 +68,7 @@ def tree_root(root):
 
 def is_item_file(relpath):
     """Arquivo de ITEM dentro de uma zona (relativo a <STATE_DIR>/)."""
-    if relpath.startswith(SESSOES + "/") or not relpath.endswith(".json5"):
+    if relpath.startswith(SESSOES + "/") or not (relpath.endswith(".json") or relpath.endswith(".json5")):
         return False
     parts = relpath.split("/")
     return parts[-1] in ITEM_FILES or "tasks" in parts[1:-1]
@@ -120,6 +121,11 @@ class T(object):
         for it in self.items.values():
             if ident in (it.get("aliases") or []):
                 return it
+        rp = path_ident(ident)
+        if rp:
+            for it in self.items.values():
+                if it["path"] == rp:
+                    return it
         return None
 
     def need(self, ident, kinds=None, what=None):
@@ -258,6 +264,17 @@ def make_plan(before, after, events):
             "eventos": ["%s %s" % (ev.type, ev.entity or "") for ev in events]}
 
 
+def path_ident(text):
+    """Caminho de item citado por texto (com ou sem `<STATE_DIR>/`; `.json5` de eventos antigos vale como `.json`),
+    relativo a <STATE_DIR>/. Vazio se não parece caminho de estado."""
+    t = (text or "").strip().replace("\\", "/")
+    if t.startswith(hcore.STATE_DIR + "/"):
+        t = t[len(hcore.STATE_DIR) + 1:]
+    if "/" not in t or not (t.endswith(".json") or t.endswith(".json5")):
+        return ""
+    return hcore.json_twin(t)
+
+
 def need_tree(root):
     if not hcore.tree_mode(root):
         if os.path.isfile(os.path.join(root, hcore.STATE_DIR, "state", "board.json5")):
@@ -329,15 +346,16 @@ def materialize(root, before, board):
     for iid, it in before.items():
         if iid not in after or after[iid]["path"] != it["path"]:
             p = os.path.join(base, it["path"])
-            if os.path.isfile(p):
-                os.remove(p)
+            for q in (p, p + "5"):  # `.json5` = arquivo do formato anterior ainda não regravado
+                if os.path.isfile(q):
+                    os.remove(q)
             removed_dirs.add(os.path.dirname(p))
     for iid, it in after.items():
         if iid in before and before[iid] == it:
             continue
         p = os.path.join(base, it["path"])
         os.makedirs(os.path.dirname(p), exist_ok=True)
-        hcore.atomic_write_bytes(p, render(it).encode("utf-8"))
+        hcore.write_item_json(p, it, HEADER)
     stops = {os.path.join(base, z) for z in ZONES}
     for d in sorted(removed_dirs, key=len, reverse=True):
         cur = d
@@ -377,7 +395,7 @@ def _parent_folder(tv, pid, kinds):
 def new_epico(tv, title, objetivo, metrica=None):
     n = tv.counter("seq.EPC")
     eid = "EPC-%03d" % n
-    it = new_item("epico", eid, title, "backlog/epicos/%s-%s/epico.json5" % (eid, slugify(title)), tv.actor,
+    it = new_item("epico", eid, title, "backlog/epicos/%s-%s/epico.json" % (eid, slugify(title)), tv.actor,
                   objetivo=objetivo, metrica=metrica)
     tv.note(it, "criado")
     tv.put(it)
@@ -390,7 +408,7 @@ def new_sprint(tv, meta, epico=None):
         epico = tv.get(epico)["id"]
     n = tv.counter("seq.SPR")
     sid = "SPR-%03d" % n
-    it = new_item("sprint", sid, meta, "backlog/sprints/%s/sprint.json5" % sid, tv.actor, meta=meta, epico=epico)
+    it = new_item("sprint", sid, meta, "backlog/sprints/%s/sprint.json" % sid, tv.actor, meta=meta, epico=epico)
     tv.note(it, "criado")
     tv.put(it)
     return [tv.event("new", sid, {"kind": "sprint"})]
@@ -402,7 +420,7 @@ def new_feature(tv, title, aceite, sprint=None):
         sprint = tv.get(sprint)["id"]
     n = tv.counter("seq.FEA")
     fid = "FEA-%03d" % n
-    it = new_item("feature", fid, title, "backlog/features/%s-%s/feature.json5" % (fid, slugify(title)), tv.actor,
+    it = new_item("feature", fid, title, "backlog/features/%s-%s/feature.json" % (fid, slugify(title)), tv.actor,
                   aceite=aceite, sprint=sprint)
     tv.note(it, "criado")
     tv.put(it)
@@ -459,13 +477,13 @@ def _task_slot(tv, parent_kind, parent_id, tipo, title):
         d = today()
         n = tv.counter("nn." + d)
         tid = "%s-%02d" % (d, n)
-        return tid, "state/tasks/%s-%s-%s.json5" % (tid, tipo, slug), AVULSA
+        return tid, "state/tasks/%s-%s-%s.json" % (tid, tipo, slug), AVULSA
     if parent_kind == "backlog":
         n = tv.counter("nn." + BKL)
-        return "%s/%02d" % (BKL, n), "backlog/tasks/%02d-%s-%s.json5" % (n, tipo, slug), BKL
+        return "%s/%02d" % (BKL, n), "backlog/tasks/%02d-%s-%s.json" % (n, tipo, slug), BKL
     p = _parent_folder(tv, parent_id, (parent_kind,))
     n = tv.counter("nn." + p["id"])
-    return "%s/%02d" % (p["id"], n), "%s/tasks/%02d-%s-%s.json5" % (tv.folder(p), n, tipo, slug), p["id"]
+    return "%s/%02d" % (p["id"], n), "%s/tasks/%02d-%s-%s.json" % (tv.folder(p), n, tipo, slug), p["id"]
 
 
 def _parent_args(spec):
@@ -520,7 +538,7 @@ def new_story(tv, spec):
         raise Refused("--agents a[,b] obrigatório")
     for a in agents:
         if not hcore.team_agent(tv.ctx.team, a):
-            raise Refused("agente %r não existe em team.json5" % a)
+            raise Refused("agente %r não existe em team.json" % a)
     feat = _parent_folder(tv, spec.get("feature"), ("feature",))
     title = spec.get("title") or ""
     if len(agents) == 1:
@@ -532,7 +550,7 @@ def new_story(tv, spec):
     n = tv.counter("seq." + tipo)
     stid = "%s-%03d" % (tipo, n)
     fields = task_fields(dict(spec, tipo=tipo, agent=agents[0]))
-    st = new_item("story", stid, title, "%s/stories/%s-%s/story.json5" % (tv.folder(feat), stid, slugify(title)), tv.actor,
+    st = new_item("story", stid, title, "%s/stories/%s-%s/story.json" % (tv.folder(feat), stid, slugify(title)), tv.actor,
                   tipo=tipo, agents=agents, como=fields.get("como"), quero=fields.get("quero"), para=fields.get("para"),
                   criterios=fields.get("criterios"), verify_cmd=fields.get("verify_cmd"),
                   reproducao=fields.get("reproducao"), fixes=fields.get("fixes"), teste=fields.get("teste"))
@@ -590,7 +608,54 @@ def task_dor(tv, it, run=True):
     return P
 
 
-TREE_AMENDABLE = ("allowed_paths",)
+TREE_AMENDABLE = ("allowed_paths", "acceptance_criteria")
+
+
+def ac_view(criterios):
+    """Critérios do item (id, gherkin, teste) no formato da M2: [{id, criterion, verified_by}]."""
+    return [{"id": c.get("id"), "criterion": c.get("gherkin") or "",
+             "verified_by": ("test:%s" % c["teste"]) if c.get("teste") else "verification_command"}
+            for c in criterios or []]
+
+
+def criterios_of_ac(acs):
+    """Inverso de ac_view: `test:X` → teste X; `verification_command`/`reviewer`/outro → sem teste."""
+    out = []
+    for a in acs or []:
+        vb = a.get("verified_by") or ""
+        out.append({"id": a["id"], "gherkin": a.get("criterion") or "",
+                    "teste": vb[len("test:"):] if vb.startswith("test:") and vb[len("test:"):] else None})
+    return out
+
+
+# campo emendado na M2 -> chave do item da árvore (campos espelháveis do amend de task iniciada)
+AMEND_MIRROR = {"acceptance_criteria": "criterios", "allowed_paths": "allowed_paths",
+                "verification_command": "verify_cmd", "title": "title"}
+
+
+def mirror_amend(board, ev, m2_id, actor, field, new_t, reason):
+    """`cs-state amend` na task M2 iniciada: o MESMO evento regrava o arquivo da task (op tput, motor = escritor
+    único) com o campo espelhável emendado e registra no histórico do item before/after/reason. Campo não
+    espelhável ou task sem item: o evento fica como está. Devolve o evento."""
+    top = field.split(".")[0]
+    it = item_of_m2(board, m2_id)
+    if it is None or top not in AMEND_MIRROR:
+        return ev
+    key = AMEND_MIRROR[top]
+    new = copy.deepcopy(it)
+    if top == "acceptance_criteria":
+        new[key] = criterios_of_ac(new_t.get(top))
+        before_v, after_v = ac_view(it.get("criterios")), ac_view(new[key])
+    else:
+        new[key] = copy.deepcopy(new_t.get(top))
+        before_v, after_v = copy.deepcopy(it.get(key)), copy.deepcopy(new_t.get(top))
+    if new == it:
+        return ev
+    h = {"at": hcore.now_iso(), "acao": "amend", "by": actor, "reason": reason, "field": top,
+         "before": before_v, "after": after_v}
+    new.setdefault("historico", []).append(h)
+    ev.ops.append(["tput", it["id"], None, new])
+    return ev
 
 
 def amend(tv, ident, field, after, reason):
@@ -605,11 +670,32 @@ def amend(tv, ident, field, after, reason):
     if field not in TREE_AMENDABLE:
         raise Refused("campo não emendável em task da árvore não iniciada: %s (permitidos: %s)"
                       % (field, ", ".join(TREE_AMENDABLE)))
+    if field == "acceptance_criteria":
+        if not isinstance(after, list) or not after or not all(
+                isinstance(a, dict) and isinstance(a.get("id"), str) and a["id"].strip()
+                and isinstance(a.get("criterion"), str) and a["criterion"].strip() for a in after):
+            raise Refused("--after de acceptance_criteria: lista JSON [{id, criterion, verified_by}] "
+                          "(ex.: '[{\"id\":\"AC-1\",\"criterion\":\"Dado ... Quando ... Então ...\","
+                          "\"verified_by\":\"test:tests.t\"}]')")
+        if len(set(a["id"] for a in after)) != len(after):
+            raise Refused("--after de acceptance_criteria: ids repetidos")
+        before = ac_view(it.get("criterios"))
+        it = tv.items[it["id"]]
+        new_crit = criterios_of_ac(after)
+        shown = ac_view(new_crit)  # o que FICOU gravado (o próximo `before` é igual)
+        if new_crit == (it.get("criterios") or []):
+            return []  # emenda que não muda nada não vira evento nem história
+        it["criterios"] = new_crit
+        tv.note(it, "amend", reason, field=field, before=before, after=shown)
+        tv.put(it)
+        return [tv.event("amend", it["id"], {"field": field, "before": before, "after": shown, "reason": reason})]
     vals = after if isinstance(after, list) else [after]
     if not vals or not all(isinstance(v, str) and v.strip() for v in vals):
         raise Refused("--after de allowed_paths: lista JSON de caminhos (ex.: '[\"src/x.py\"]')")
     new = [hcore.norm_rel(v) for v in vals]
     before = list(it.get("allowed_paths") or [])
+    if new == before:
+        return []
     it = tv.items[it["id"]]
     it["allowed_paths"] = new
     tv.note(it, "amend", reason, field=field, before=before, after=new)
@@ -1162,7 +1248,7 @@ def promote(tv, ident):
     tipo = it["tipo"]
     n = tv.counter("seq." + tipo)
     stid = "%s-%03d" % (tipo, n)
-    st = new_item("story", stid, it["title"], "%s/stories/%s-%s/story.json5" % (tv.folder(par), stid, slugify(it["title"])),
+    st = new_item("story", stid, it["title"], "%s/stories/%s-%s/story.json" % (tv.folder(par), stid, slugify(it["title"])),
                   tv.actor, tipo=tipo, agents=[it.get("agent")], como=it.get("como"), quero=it.get("quero"),
                   para=it.get("para"), criterios=it.get("criterios"), verify_cmd=it.get("verify_cmd"),
                   reproducao=it.get("reproducao"), fixes=it.get("fixes"), teste=it.get("teste"), promovida_de=it["id"])
@@ -1206,13 +1292,55 @@ def node(tv, it):
 
 def find(tv, text):
     t = (text or "").lower()
+    rp = path_ident(text)
     out = []
     for it in sorted(tv.items.values(), key=lambda x: x["path"]):
+        if rp and it["path"] == rp:
+            out.append(it)
+            continue
         keys = [it["id"]] + list(it.get("aliases") or []) + [it.get("legacy_id") or "", it.get("title") or "",
                                                              it.get("m2") or ""]
         if any(t == k.lower() for k in keys if k) or any(t in k.lower() for k in keys if k):
             out.append(it)
     return out
+
+
+def show_md(tv, ident):
+    """`cs-state show <id|alias>`: Markdown do item (SÓ LEITURA). Id inexistente → Refused citando o id."""
+    it = tv.need(ident)
+    z = zone_of(it["path"])
+    L = ["# %s — %s" % (it["id"], it.get("title") or ""), ""]
+    L.append("- tipo: %s%s" % (it["kind"], (" (%s)" % it["tipo"]) if it.get("tipo") else ""))
+    L.append("- estado: %s (zona %s)" % (status_of(tv, it), z))
+    if z == "archive":
+        L.append("- arquivo: archive/ (fechado; cs-state reopen %s --reason ... para reabrir)" % it["id"])
+    if it.get("aliases"):
+        L.append("- ids anteriores: %s" % ", ".join(it["aliases"]))
+    if it.get("agent"):
+        L.append("- agente: %s" % it["agent"])
+    if it.get("parent"):
+        L.append("- pai: %s" % it["parent"])
+    L.append("- arquivo da task: %s" % sd_rel(it["path"]))
+    if it.get("allowed_paths"):
+        L.append("- escopo (allowed_paths): %s" % ", ".join(it["allowed_paths"]))
+    if it.get("verify_cmd"):
+        L.append("- verificação: `%s`" % it["verify_cmd"])
+    if it.get("aceite"):
+        L.append("- aceite: `%s`" % it["aceite"])
+    for k, lab in (("como", "como"), ("quero", "quero"), ("para", "para")):
+        if it.get(k):
+            L.append("- %s: %s" % (lab, it[k]))
+    if it.get("criterios"):
+        L += ["", "## Critérios", ""]
+        for c in it["criterios"]:
+            L.append("- %s: %s%s" % (c.get("id"), c.get("gherkin"), (" [teste: %s]" % c["teste"]) if c.get("teste") else ""))
+    hist = it.get("historico") or []
+    if hist:
+        L += ["", "## Histórico", ""]
+        for h in hist:
+            extra = " — %s" % h["reason"] if h.get("reason") else ""
+            L.append("- %s %s por %s%s" % (h.get("at"), h.get("acao"), h.get("by"), extra))
+    return "\n".join(L)
 
 
 def tree_json(tv):
@@ -1333,14 +1461,24 @@ def validate(root):
     for iid, it in sorted(items.items()):
         known[it["path"]] = iid
         ap = os.path.join(tree_root(root), it["path"])
+        if not os.path.isfile(ap) and os.path.isfile(ap + "5"):
+            ap = ap + "5"  # formato anterior (.json5, chaves pt) ainda não regravado: lido como o novo
         if not os.path.isfile(ap):
             E.append("item %s sem arquivo: %s (removido à mão?)" % (iid, sd_rel(it["path"])))
             continue
         try:
-            data = hcore.canonical(j5.load(ap))
-        except (OSError, ValueError):
-            data = None
-        if data != hcore.canonical(it):
+            raw = hcore.read_any(ap)
+            if ap.endswith(".json"):  # .json é só inglês: chave pt (ou en renomeada para pt) é edição à mão
+                raw = dict(raw)
+                raw.pop(hcore.GENERATED_BY, None)
+                data = hcore.canonical(raw)
+                want = hcore.canonical(hcore.item_to_en(it))
+            else:  # .json5 legado: lido com a tradução
+                data = hcore.canonical(hcore.item_to_pt(raw))
+                want = hcore.canonical(it)
+        except (OSError, ValueError, AttributeError, TypeError):
+            data, want = None, hcore.canonical(it)
+        if data != want:
             E.append("edição à mão em %s (%s): o arquivo difere do que o motor gravou — desfaça e use cs-state" % (
                 sd_rel(it["path"]), iid))
         z = zone_of(it["path"])
@@ -1348,21 +1486,21 @@ def validate(root):
             E.append("item fechado fora de archive/: %s (%s)" % (iid, sd_rel(it["path"])))
         if z == "archive" and not it.get("closed"):
             E.append("item aberto dentro de archive/: %s (%s)" % (iid, sd_rel(it["path"])))
-        if it["kind"] == "feature" and z == "state" and not re.search(r"(^|/)sprints/SPR-\d{3}/features/[^/]+/feature\.json5$",
+        if it["kind"] == "feature" and z == "state" and not re.search(r"(^|/)sprints/SPR-\d{3}/features/[^/]+/feature\.json5?$",
                                                                       it["path"]):
             E.append("feature %s em state/ fora de uma sprint: %s" % (iid, sd_rel(it["path"])))
     for rp, ap in sorted(disk.items()):
         if rp in known:
             continue
+        if rp.endswith(".json5") and rp[:-1] in known and not os.path.isfile(os.path.join(tree_root(root), rp[:-1])):
+            continue  # formato anterior ainda não regravado (o item existe e só tem este arquivo)
         msg = "arquivo órfão (sem evento na cadeia): %s" % sd_rel(rp)
+        if rp.endswith(".json5") and rp[:-1] in known:
+            msg = "arquivo órfão (.json5 do formato anterior ao lado do .json do mesmo item): %s" % sd_rel(rp)
         try:
-            d = j5.load(ap)
+            d = hcore.read_any(ap)
         except (OSError, ValueError):
-            try:
-                with open(ap, encoding="utf-8") as f:
-                    d = json.loads(f.read())
-            except (OSError, ValueError):
-                d = None
+            d = None
         if isinstance(d, dict) and d.get("closed") and zone_of(rp) != "archive":
             msg += " — item fechado dentro de %s/" % zone_of(rp)
         E.append(msg)
@@ -1404,7 +1542,7 @@ def migrate_plan(root, board, actor):
     for e in board.get("epics") or []:
         eid = "EPC-%03d" % cnt("seq.EPC")
         z = {"PROPOSED": "backlog", "ACTIVE": "state"}.get(e.get("state"), "archive")
-        it = mk("epico", eid, e.get("title") or e["id"], "%s/epicos/%s-%s/epico.json5" % (z, eid, slugify(e.get("title") or e["id"])),
+        it = mk("epico", eid, e.get("title") or e["id"], "%s/epicos/%s-%s/epico.json" % (z, eid, slugify(e.get("title") or e["id"])),
                 objetivo=e.get("objective"), metrica=e.get("metric"), legacy_id=e["id"])
         if z == "archive":
             it["closed"] = closed("migrado em %s" % e.get("state"))
@@ -1412,7 +1550,7 @@ def migrate_plan(root, board, actor):
     for s in board.get("sprints") or []:
         sid = "SPR-%03d" % cnt("seq.SPR")
         z = {"PLANNED": "backlog", "ACTIVE": "state", "REVIEW": "state"}.get(s.get("state"), "archive")
-        it = mk("sprint", sid, s.get("goal") or s["id"], "%s/sprints/%s/sprint.json5" % (z, sid), meta=s.get("goal") or s["id"],
+        it = mk("sprint", sid, s.get("goal") or s["id"], "%s/sprints/%s/sprint.json" % (z, sid), meta=s.get("goal") or s["id"],
                 legacy_id=s["id"])
         if z == "archive":
             it["closed"] = closed("migrado em %s" % s.get("state"))
@@ -1435,14 +1573,14 @@ def migrate_plan(root, board, actor):
                 kw_s = {"epico": ep["id"]}
             else:
                 kw_s = {}
-            mk("sprint", sid, "migração: %s" % title, sbase + "/sprint.json5", meta="migração da feature %s (%s)" % (f["id"], title),
+            mk("sprint", sid, "migração: %s" % title, sbase + "/sprint.json", meta="migração da feature %s (%s)" % (f["id"], title),
                **kw_s)
-            it = mk("feature", fid, title, "%s/features/%s/feature.json5" % (sbase, folder), sprint=sid, **kw)
+            it = mk("feature", fid, title, "%s/features/%s/feature.json" % (sbase, folder), sprint=sid, **kw)
         elif st in ("DONE", "DROPPED"):
-            it = mk("feature", fid, title, "archive/features/%s/feature.json5" % folder, **kw)
+            it = mk("feature", fid, title, "archive/features/%s/feature.json" % folder, **kw)
             it["closed"] = closed("migrado em %s" % st)
         else:
-            it = mk("feature", fid, title, "backlog/features/%s/feature.json5" % folder, **kw)
+            it = mk("feature", fid, title, "backlog/features/%s/feature.json" % folder, **kw)
             if st == "IN_PROGRESS":
                 it["park"] = {"at": now, "reason": "migração: uma feature ativa por vez"}
         feat_map[f["id"]] = it
@@ -1464,12 +1602,12 @@ def migrate_plan(root, board, actor):
         if f is not None:
             n = cnt("nn." + f["id"])
             tid = "%s/%02d" % (f["id"], n)
-            path = "%s/tasks/%02d-%s-%s.json5" % (posixpath.dirname(f["path"]), n, tipo, slugify(title))
+            path = "%s/tasks/%02d-%s-%s.json" % (posixpath.dirname(f["path"]), n, tipo, slugify(title))
             parent = f["id"]
         else:
             n = cnt("nn." + BKL)
             tid = "%s/%02d" % (BKL, n)
-            path = "backlog/tasks/%02d-%s-%s.json5" % (n, tipo, slugify(title))
+            path = "backlog/tasks/%02d-%s-%s.json" % (n, tipo, slugify(title))
             parent = BKL
         it = mk("task", tid, title, path, parent=parent, **kw)
         if done or zone_of(path) == "archive":
@@ -1519,14 +1657,15 @@ def migrate(root, actor="lead"):
         nb.setdefault("tree_meta", {})
         hcore.apply_ops(nb, ops)
         nb["event_count"], nb["last_event_hash"] = seq + 1, h
-        hcore.write_json5(tp["board"], nb, "projeção do motor (antigo board) — escrita SÓ por cs-state")
+        hcore.write_tree_board(tp["board"], nb)
         for z in ZONES:
             os.makedirs(os.path.join(tree_root(root), z), exist_ok=True)
         materialize(root, {}, nb)
         os.replace(tmp, tp["events"])
         os.remove(lp["board"])
         os.remove(lp["events"])
-        for name in ("harness-ledger.jsonl", "autonomy.json5", "model-router.jsonl", "selftest.json5", "autonomy-report.json5"):
+        for name in ("harness-ledger.jsonl", "autonomy.json", "autonomy.json5", "model-router.jsonl", "selftest.json",
+                     "selftest.json5", "autonomy-report.json", "autonomy-report.json5"):
             src = os.path.join(lp["dir"], name)
             if os.path.isfile(src):
                 shutil.move(src, os.path.join(tp["state_dir"], name))
@@ -1534,3 +1673,71 @@ def migrate(root, actor="lead"):
         if os.path.isdir(ev):
             shutil.move(ev, tp["evidence"])
     return "migrado: %d item(ns) na árvore (backup em %s)" % (len(items), os.path.relpath(bdir, root))
+
+
+# ================================================================ migrate state-format (.json5 de estado → .json em inglês)
+RUNTIME_STATE = ("projection", "autonomy", "selftest", "autonomy-report")  # estado do motor em <STATE_DIR>/.engine/
+
+
+def format_plan(root, board):
+    """[(antigo, novo)] relativos a <STATE_DIR>/: todo `.json5` de ESTADO (itens da árvore, carimbos de sessão, projeção e
+    visões do motor). Fora: config/team (JSON5 por decisão), memória do cs-mem, visões do mandato (M5) e logs."""
+    base = tree_root(root)
+    out = []
+    for iid, it in sorted((board.get("tree") or {}).items(), key=lambda kv: kv[1]["path"]):
+        if os.path.isfile(os.path.join(base, it["path"] + "5")):
+            out.append((it["path"] + "5", it["path"]))
+    sess = os.path.join(root, hcore.STATE_DIR, "state", "sessoes")
+    if os.path.isdir(sess):
+        for f in sorted(os.listdir(sess)):
+            if f.endswith(".json5"):
+                out.append((SESSOES + "/" + f, SESSOES + "/" + f[:-1]))
+    rt = hcore.TREE_RUNTIME
+    for name in RUNTIME_STATE:
+        if os.path.isfile(os.path.join(base, rt, name + ".json5")):
+            out.append(("%s/%s.json5" % (rt, name), "%s/%s.json" % (rt, name)))
+    return out
+
+
+def migrate_format(root, actor="lead", dry_run=False):
+    """Formato do estado: `.json5` (chaves pt) → `.json` (chaves en, ordem de leitura) por UM evento encadeado novo
+    (`arvore.format`: tput de cada item + data.paths {antigo: novo}). Os eventos antigos não são tocados.
+    Idempotente: sem `.json5` de estado → "nada a migrar" (nenhum evento). dry_run: lista e não escreve nada."""
+    need_tree(root)
+    import validate as V
+    ok, errs, _ = V.run(root, strict=False)
+    if not ok:
+        raise Refused(["estado não valida — conserte antes de migrar o formato:"] + errs[:10])
+    board = hcore.load_board(root)
+    plan = format_plan(root, board)
+    if not plan:
+        return ["nada a migrar: estado já em JSON (idempotente)"]
+    head = "%d arquivo(s) de estado .json5 → .json" % len(plan)
+    if dry_run:
+        return ["state-format (dry-run): %s em 1 evento encadeado (arvore.format); nada foi escrito" % head] + [
+            "  %s → %s" % (a, b) for a, b in plan]
+    paths = dict(plan)
+    base = tree_root(root)
+
+    def build(ctx):
+        items = ctx.board.get("tree") or {}
+        ops = [["tput", iid, None, copy.deepcopy(it)] for iid, it in sorted(items.items(), key=lambda kv: kv[1]["path"])]
+        # arquivos: dentro do lock do commit (o evento é a prova do mapa; a projeção o commit regrava como .json)
+        for old, new in plan:
+            if old.startswith(hcore.TREE_RUNTIME + "/"):
+                continue
+            ap = os.path.join(base, old)
+            if old.startswith(SESSOES + "/"):
+                rec = hcore.session_to_pt(hcore.read_any(ap))
+                hcore.write_json(os.path.join(base, new), hcore.session_to_en(rec),
+                                 "carimbo de sessão (cs-session save) — 8 blocks; não editar")
+            else:
+                it = items.get(next((i for i, x in items.items() if x["path"] == new), None))
+                hcore.write_item_json(os.path.join(base, new), it, HEADER)
+        for old, new in plan:
+            if old.startswith(hcore.TREE_RUNTIME + "/") and not old.endswith("projection.json5"):
+                d = hcore.read_state(os.path.join(base, old))
+                hcore.write_json(os.path.join(base, new), d, "estado do motor — escrito SÓ por cs-state/cs-auto")
+        return [engine.Event("arvore.format", None, ops, {"de": "json5", "para": "json", "paths": paths})]
+    engine.commit(root, actor, build, post=False)
+    return ["migrado: %s em 1 evento encadeado (arvore.format)" % head]

@@ -49,6 +49,8 @@ coletado: board (tasks por status, sessão M1 ativa, tentativas), últimos event
 sujos por área/território), gates (último verify e selftest), lições novas desde o último save, fase da
 execução (`run.json5`), e o comando do próximo passo.
 
+- (0.11.0) Os carimbos de sessão do estado (`.swarm/state/sessoes/`) são `.json`, com chaves `blocks`/`title`/`lines`;
+  o `resume.json5` abaixo continua JSON5.
 - Grava `.swarm/session/resume.json5` com **carimbo** = sha256(board + hash do último evento + HEAD +
   fase).
 - Apensa um episódio na memória ("sessão salva: fez …; próximo …").

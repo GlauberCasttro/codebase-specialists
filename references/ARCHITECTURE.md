@@ -69,7 +69,7 @@ nativos de cada plataforma.
 ├── acceptance.json5          GO/NO-GO final com motivos
 ├── tmp/                      TODO temporário da execução (saídas de subagente, rascunhos, lotes, cópia do cético);
 │                             nunca o scratchpad da sessão nem /tmp — execuções paralelas colidiram lá
-└── state/                    estado do harness (board.json5, events.jsonl, ledger)
+└── state/                    estado do harness (árvore de itens em .json desde a 0.11.0, events.jsonl, ledger)
 ```
 
 ## 4. Formato de fato (toda camada do scan)

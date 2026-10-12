@@ -1518,6 +1518,10 @@ options:
   --reason REASON
 ```
 
+> 0.11.0 — `amend` numa task já iniciada regrava o arquivo da task e o `history` do item no mesmo evento.
+> `cs-state show <id>` (só leitura) imprime a task em Markdown; `cs-state migrate state-format [--dry-run]`
+> converte o estado `.json5` em `.json` por um evento encadeado (docs/10-arvore-de-estado.md).
+
 #### `cs-state amend`
 
 ```text

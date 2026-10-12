@@ -13,13 +13,16 @@
 //                  mecanismo (hooks, settings, Makefile, emitidos, .swarm/bin, .swarm/harness, .git/hooks/pre-commit);
 //                  dados/histórico (board, eventos, memória, ledgers append-only) vão intactos. from/to opcionais e
 //                  FIXOS: qualquer outra pasta é recusada (exit 2). .swarm/ já ocupada junto do legado → exit 3
+//   state-format   converte o estado de entidade `.json5` (chaves pt) em `.json` (chaves en, ordem de leitura) por UM
+//                  evento encadeado novo, chamando `cs-state migrate state-format` do motor; só anexa a events.jsonl,
+//                  idempotente, recusa se o estado não valida antes; sem parâmetros
 //   state-tree     converte o board plano legado (.swarm/state/board.json5) na árvore de pastas
 //                  (backlog/ state/ archive/ + .swarm/events.jsonl) chamando `cs-state migrate state-tree` do motor;
 //                  idempotente, backup do board/events legados em .swarm/backups/; sem parâmetros
 // Nunca refeito num upgrade (salvo migração explícita): entrevista, roster aprovado, cartões aprovados,
 // memória de lições, board/eventos.
 {
- version: "0.10.1",
+ version: "0.11.0",
  migrations: [
   {
    to: "0.5.0",
@@ -76,6 +79,15 @@
    why: "correção de uso real (cobaia .NET, B-13): o pre-commit (`guard.py check-diff --staged`) barrava o resultado da própria ferramenta (motor em .swarm/harness/, artefatos emitidos fora de allowed_paths) e o commit do upgrade só passava com --no-verify; agora `harness install` e `emit` gravam um atestado (sha256 de cada arquivo que deixaram, fora da árvore versionada, em .git/, ancorado no harness-ledger) e o check-diff libera só esses caminhos enquanto o conteúdo staged tiver o sha atestado: edição ou remoção à mão continua barrada (a remoção é vista com o próprio nome, sem detecção de renomeação para o backup), arquivo que a ferramenta não escreveu continua barrado, estado continua passando pelo validate; emit num alvo com motor anterior ao atestado reinstala o harness; .swarm/harness/.gitignore ignora o __pycache__ do motor; reinstala o motor e reemite os artefatos (o emit registra o que escreveu), sem refazer entrevista, roster, cartões, memória nem board",
    actions: [
     {kind: "harness"},
+    {kind: "emit"}
+   ]
+  },
+  {
+   to: "0.11.0",
+   why: "o estado de entidade (épico, sprint, feature, story, task, carimbos de sessão, projeção e visões do motor) passa de .json5 para JSON padrão (.json): chaves em inglês numa ordem de leitura fixa (id, kind, type, title, agent, allowed_paths…), bytes determinísticos; o `cs-state amend` numa task já iniciada regrava o arquivo da task e o histórico do item no mesmo evento; `cs-state show <id>` imprime a task em Markdown (só leitura). Reinstala o motor, converte o estado existente por UM evento encadeado novo (`cs-state migrate state-format`, só anexa a events.jsonl, idempotente, recusa se o estado não valida antes) e reemite os artefatos. Ficam como estão: eventos, ledgers e logs JSONL, config JSON5 (team, run, config, machines, routing, migrations), memória do cs-mem e as chaves do mandato M5. Sem refazer entrevista, roster, cartões, memória nem board",
+   actions: [
+    {kind: "harness"},
+    {kind: "state-format"},
     {kind: "emit"}
    ]
   }

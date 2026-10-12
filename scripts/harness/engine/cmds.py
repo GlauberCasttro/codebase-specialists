@@ -906,7 +906,9 @@ def amend(root, actor, tid, field, after, reason, found_by=None):
                 ops.append(["set", ref("task", tid), k, new_t.get(k)])
         ops.append(["append", ref("task", tid), "amendments", {"at": _now(), "by": actor, "field": field, "before": before,
                                                                "after": after, "reason": reason, "found_by": found_by}])
-        return [Event("task.amend", tid, ops, {"args": {"field": field, "reason": reason}})]
+        ev = Event("task.amend", tid, ops, {"args": {"field": field, "reason": reason}})
+        import tree  # modo árvore: o mesmo evento regrava o arquivo da task (campos espelháveis) e o histórico
+        return [tree.mirror_amend(ctx.board, ev, tid, actor, field, new_t, reason)]
     return engine.commit(root, actor, build)
 
 

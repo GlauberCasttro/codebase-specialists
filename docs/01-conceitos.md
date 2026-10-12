@@ -5,6 +5,9 @@ Os conceitos abaixo aparecem em todas as etapas. Fontes: `references/ARCHITECTUR
 
 ## 1. Fato com evidência
 
+> O que é *fato* (abaixo) continua JSON5. O **estado de entidade** do harness (épicos, features, tasks, carimbos de
+> sessão) é JSON padrão desde a 0.11.0 — ver `docs/10-arvore-de-estado.md`.
+
 Tudo que a skill sabe sobre o repositório é um **fato**: um registro JSON5 em `.swarm/facts/<camada>.json5`,
 indexado em `.swarm/facts/index.json5`. Formato (ARCHITECTURE §4):
 

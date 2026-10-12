@@ -280,12 +280,15 @@ def _tree_parsers(sub):
     p.add_argument("--dry-run", action="store_true")
     p = sub.add_parser("find")
     p.add_argument("text")
+    p = sub.add_parser("show", help="SÓ LEITURA: Markdown do item (id ou id anterior): título, agente, escopo, critérios, estado, histórico")
+    p.add_argument("id")
     p = sub.add_parser("tree")
     p.add_argument("--json", action="store_true")
     p = sub.add_parser("check", help="SÓ LEITURA: DoR/pré-condições do item (exit 0 pronto, 1 lista o que falta)")
     p.add_argument("id")
-    p = sub.add_parser("migrate")
-    p.add_argument("what", choices=["state-tree"])
+    p = sub.add_parser("migrate", help="state-tree: board plano → árvore; state-format: estado .json5 → .json (um evento)")
+    p.add_argument("what", choices=["state-tree", "state-format"])
+    p.add_argument("--dry-run", action="store_true", help="state-format: lista o que muda e não escreve nada")
 
 
 TREE_M2 = ("ready", "dispatch", "submit", "return", "verify", "review", "accept", "reject", "retry", "escalate", "block",
@@ -323,7 +326,9 @@ def _tree_amend(root, actor, a):
     st, _ = tv.m2_status(it)
     if st is not None and not (st in tree.M2_DONE and it.get("reaberta")):
         return None
-    tree.run_build(root, actor, lambda t: tree.amend(t, it["id"], a.field, _value(a.after), a.reason))
+    plan, _ = tree.run_build(root, actor, lambda t: tree.amend(t, it["id"], a.field, _value(a.after), a.reason))
+    if not plan.get("eventos"):
+        return ["nada emendado em %s: %s já tem esse valor (nenhum evento, nenhuma história)" % (it["id"], a.field)]
     return ["emendado %s (%s, item da árvore ainda não iniciado): cs-state check %s" % (it["id"], a.field, it["id"])]
 
 
@@ -340,15 +345,22 @@ def run_tree(root, actor, a):
     c = a.cmd
     dry = bool(getattr(a, "dry_run", False))
     if c == "migrate":
+        if a.what == "state-format":
+            return tree.migrate_format(root, actor, dry)
+        if dry:
+            raise hcore.Refused("--dry-run só vale em migrate state-format")
         return [tree.migrate(root, actor)]
     if c == "find":
         tv = tree.load_view(root)
         hits = tree.find(tv, a.text)
         if not hits:
             return ["nada encontrado para %r" % a.text]
-        return ["%s [%s] %s — %s%s" % (it["id"], tree.status_of(tv, it), it.get("title") or "", tree.sd_rel(it["path"]),
-                                       (" (ids anteriores: %s)" % ", ".join(it["aliases"])) if it.get("aliases") else "")
+        return ["%s [%s] %s%s — %s" % (it["id"], tree.status_of(tv, it), it.get("title") or "",
+                                       (" (ids anteriores: %s)" % ", ".join(it["aliases"])) if it.get("aliases") else "",
+                                       tree.sd_rel(it["path"]))
                 for it in hits]
+    if c == "show":
+        return [tree.show_md(tree.load_view(root), a.id)]
     if c == "tree":
         tv = tree.load_view(root)
         return [json.dumps(tree.tree_json(tv), ensure_ascii=False)] if a.json else [tree.tree_text(tv)]
@@ -434,7 +446,7 @@ def _value(s):
         return s
 
 
-TREE_CMDS = ("new", "start", "plan", "move", "park", "promote", "close", "reopen", "find", "tree", "check", "migrate")
+TREE_CMDS = ("new", "start", "plan", "move", "park", "promote", "close", "reopen", "find", "show", "tree", "check", "migrate")
 
 
 def run(a):
@@ -714,7 +726,7 @@ def run(a):
             out.append("mandato %s ACTIVE de novo (decisão registrada). Loop: cs-state next" % m["signature"][:12])
         elif a.action == "stop":
             autonomy.stop(root, actor, a.reason or "parado")
-            out.append("modo assistido; relatório em .swarm/state/autonomy-report.json5")
+            out.append("modo assistido; relatório em .swarm/state/autonomy-report.json")
         elif a.action == "report":
             rep = autonomy.report(root)
             out.append(j5.dumps({k: rep[k] for k in ("target", "state", "elapsed_min", "acceptance_after", "escalation")}))

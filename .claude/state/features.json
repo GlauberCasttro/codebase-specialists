@@ -2,12 +2,6 @@
  "schema": 1,
  "ativas": [
   {
-   "id": "iter19",
-   "origem": "criar-feature",
-   "aberta_em": "2026-10-07T12:27:44-0300",
-   "campanha": "campanhas/iter19"
-  },
-  {
    "id": "iter21",
    "origem": "legado",
    "aberta_em": "2026-10-08T19:54:07-0300",
@@ -34,6 +28,11 @@
    "commit": "97a1718",
    "campanha_estado": "concluida",
    "nota": "legado: movida à mão com autorização do founder (B-15)"
+  },
+  {
+   "id": "iter19",
+   "fechada_em": "2026-10-11T21:03:53-0300",
+   "archive": ".claude/state/archive/iter19/iter19.md"
   }
  ]
 }

@@ -20,11 +20,11 @@ def load(root):
     p = path(root)
     if not os.path.isfile(p):
         return None
-    return j5.load(p)
+    return hcore.read_state(p)
 
 
 def save(root, m):
-    hcore.write_json5(path(root), m, "autonomy.json5 — mandato do modo autônomo; escrito só por cs-state autonomy")
+    hcore.write_json(path(root), m, "autonomy.json — mandato do modo autônomo; escrito só por cs-state autonomy")
 
 
 def signature(m):
@@ -228,8 +228,8 @@ def escalate(root, m, cond, evidence):
         pass
     m["escalation"] = pack
     save(root, m)
-    p = os.path.join(hcore.state_paths(root)["state_dir"], "escalation-%s.json5" % pack["at"].replace(":", "").replace(".", ""))
-    hcore.write_json5(p, pack, "pacote de evidência de escalada do modo autônomo")
+    p = os.path.join(hcore.state_paths(root)["state_dir"], "escalation-%s.json" % pack["at"].replace(":", "").replace(".", ""))
+    hcore.write_json(p, pack, "pacote de evidência de escalada do modo autônomo")
     hcore.ledger_append(root, {"kind": "autonomy", "event": "escalated", "condition": cond})
     return pack
 
@@ -382,7 +382,7 @@ def report(root):
         m["mode"] = "assistido"
         save(root, m)
         rep["state"] = "DONE"
-    hcore.write_json5(os.path.join(hcore.state_paths(root)["state_dir"], "autonomy-report.json5"), rep,
+    hcore.write_json(os.path.join(hcore.state_paths(root)["state_dir"], "autonomy-report.json"), rep,
                       "relatório final do modo autônomo (cs-state autonomy report)")
     return rep
 

@@ -95,8 +95,9 @@ class TestForja(Base):
         self.assertIn("FORA: %s " % rel, out)
 
     def test_estado_nunca_e_atestavel(self):
-        for rel in (".swarm/state/x.json5", ".swarm/backlog/a.md", ".swarm/archive/b.md", ".swarm/events.jsonl",
-                    ".swarm/INDEX.md", ".swarm/.engine/projection.json5", ".swarm/memory/m.md"):
+        for rel in (".swarm/state/x.json", ".swarm/state/x.json5", ".swarm/backlog/a.md", ".swarm/archive/b.md",
+                    ".swarm/events.jsonl", ".swarm/INDEX.md", ".swarm/.engine/projection.json",
+                    ".swarm/.engine/projection.json5", ".swarm/memory/m.md"):
             self.assertFalse(attest.attestable(rel), rel)
         for rel in (ENGINE_FILE, ".claude/agents/a.md", "CLAUDE.md", "src/AGENTS.md", "Makefile"):
             self.assertTrue(attest.attestable(rel), rel)

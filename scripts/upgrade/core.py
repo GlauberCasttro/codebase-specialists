@@ -15,10 +15,15 @@ Separa "atualizar o mecanismo" de "refazer o conhecimento": só as ações das m
   state-tree    → python3 <skill>/scripts/harness/engine/state.py --root <alvo> migrate state-tree (o motor converte
                   o board plano legado em árvore de pastas, idempotente, com backup do board/events); sem board legado
                   nem árvore (alvo pausado antes do harness) → nada a migrar.
+  state-format  → python3 <skill>/scripts/harness/engine/state.py --root <alvo> --actor lead migrate state-format (o
+                  motor converte todo estado .json5 em .json num ÚNICO evento encadeado `arvore.format` que só ANEXA
+                  a events.jsonl; idempotente; recusa se o validate não passa). O apply roda `harness validate
+                  --strict` ANTES (reprovou → recusa sem escrever) e o VERIFY roda de novo DEPOIS; o plano usa o
+                  --dry-run do motor e lista os pares antigo → novo sem escrever.
 Nunca refeito (salvo migração explícita): entrevista, roster aprovado, cartões aprovados, memória/lições, board/eventos.
 
 Ordem canônica das ações consolidadas (cada uma roda UMA vez mesmo que várias migrações a peçam):
-rename-dir → schema → scan → facts-refresh → harness → state-tree → emit → cards → probes.
+rename-dir → schema → scan → facts-refresh → harness → state-tree → state-format → emit → cards → probes.
 
 Backup (U-2): `<pasta>/tmp/` (clones de exame) e todo `.git` aninhado ficam FORA do backup e são listados em
 `manifest.json5` (`excluded`); `.git/hooks/pre-commit` (raiz de fora) é guardado sob outro nome (`stored_as`).
@@ -37,7 +42,7 @@ from stage import engine as stage_engine
 from . import version as V
 
 CS_PY = os.path.join(V.HERE, "cs.py")
-ORDER = ("rename-dir", "schema", "scan", "facts-refresh", "harness", "state-tree", "emit", "cards", "probes")
+ORDER = ("rename-dir", "schema", "scan", "facts-refresh", "harness", "state-tree", "state-format", "emit", "cards", "probes")
 ADVISORY = ("cursor", "copilot", "codex")
 LEGACY = paths.LEGACY_STATE_DIR
 NEW = paths.STATE_DIR
@@ -57,7 +62,7 @@ CMD_TIMEOUT = 1800
 # conferidos byte a byte antes/depois: mudança sem ação explícita (schema|cards|probes|rename-dir) = falha
 PRESERVED_PATHS = ("interview.jsonl", "team-approvals.jsonl", "approvals.jsonl", os.path.join("cards", "status.json5"),
                    os.path.join("state", "board.json5"), os.path.join("state", "events.jsonl"), "memory")
-EXPLICIT_KINDS = ("schema", "cards", "probes", "rename-dir", "state-tree")
+EXPLICIT_KINDS = ("schema", "cards", "probes", "rename-dir", "state-tree", "state-format")
 STATE_PY = os.path.join(V.HERE, "harness", "engine", "state.py")     # motor DA SKILL (nunca um script do alvo)
 # U-1: subetapa que instala o harness (e o pre-commit) no alvo; antes dela feita, o pre-commit não é exigido
 HARNESS_SUBSTAGE = "validate.5"
@@ -73,7 +78,8 @@ EMIT_DATA = ("team.json5", "team.json", os.path.join("knowledge", "deps.json5"),
 _LEGACY_PREFIX_RE = re.compile(r"(?<![A-Za-z0-9_./\-])((?:\./)?)" + re.escape(LEGACY) + r"/")
 # U-4: resíduo PRÓPRIO da skill numa pasta nova junto do legado (gravado por um comando rodado no alvo ainda legado):
 # descartável; qualquer outro conteúdo em .swarm/ continua recusado por rename_conflict.
-OWN_RESIDUE = (os.path.join("state", "selftest.json5"), os.path.join(".engine", "selftest.json5"))
+OWN_RESIDUE = (os.path.join("state", "selftest.json5"), os.path.join(".engine", "selftest.json5"),
+               os.path.join("state", "selftest.json"), os.path.join(".engine", "selftest.json"))
 # U-3: quantas linhas do comando que falhou o progresso mostra (cabeça + cauda; nunca só a cauda)
 FAIL_HEAD, FAIL_TAIL = 40, 20
 
@@ -505,6 +511,10 @@ def describe(a):
     if k == "rename-dir":
         return ("rename-dir: move %s/ → %s/ e reescreve os caminhos do mecanismo (hooks, settings, Makefile, "
                 "emitidos, %s/bin, %s/harness); dados e histórico vão intactos" % (LEGACY, NEW, NEW, NEW))
+    if k == "state-format":
+        return ("state-format: converte todo estado .json5 (backlog, state, archive, .engine) em .json num único "
+                "evento encadeado (`cs-state migrate state-format`; só anexa a events.jsonl; idempotente; "
+                "`harness validate --strict` roda antes e depois)")
     if k == "state-tree":
         return ("state-tree: converte o board plano legado (%s/state/board.json5) em árvore de pastas "
                 "(`cs-state migrate state-tree`; idempotente, backup do board/events em %s/backups/)" % (NEW, NEW))
@@ -586,11 +596,14 @@ def build_plan(target):
         sim_tmp, root = _simulate_rename(target)
     try:
         _dry_runs(plan, root, run, kinds)
+        sf_lines = _plan_state_format(plan, root, kinds) if "state-format" in kinds else []
     finally:
         if sim_tmp:
             shutil.rmtree(sim_tmp, ignore_errors=True)
     for a in plan["actions"]:
-        if a["kind"] == "scan":
+        if a["kind"] == "state-format":
+            plan["inside"] += sf_lines
+        elif a["kind"] == "scan":
             plan["inside"] += ["%s/facts/<camadas %s>.json5 + index.json5" % (NEW, ",".join(a["layers"]))]
         elif a["kind"] == "schema":
             plan["inside"] += ["%s/team.json5 / state (conversor %s)" % (NEW, a["script"])]
@@ -817,6 +830,33 @@ def preserved_violations(before, after):
     return sorted(k for k in set(before) | set(after) if before.get(k) != after.get(k))
 
 
+def events_snapshot(target):
+    """(tamanho, sha256) dos bytes de events.jsonl da árvore (pasta VIGENTE); None se não existe."""
+    import hashlib
+    p = os.path.join(state_root(target), "events.jsonl")
+    if not os.path.isfile(p):
+        return None
+    with open(p, "rb") as fh:
+        data = fh.read()
+    return len(data), hashlib.sha256(data).hexdigest()
+
+
+def events_append_violation(before, target):
+    """state-format ANEXA 1 evento: os bytes antigos de events.jsonl têm de continuar como prefixo. → texto do
+    problema ou None. Reescrita, truncamento ou remoção de evento antigo são violação."""
+    import hashlib
+    if before is None:
+        return None
+    p = os.path.join(state_root(target), "events.jsonl")
+    if not os.path.isfile(p):
+        return "events.jsonl sumiu"
+    with open(p, "rb") as fh:
+        data = fh.read()
+    if len(data) < before[0] or hashlib.sha256(data[:before[0]]).hexdigest() != before[1]:
+        return "events.jsonl: eventos antigos reescritos (a migração só pode ANEXAR)"
+    return None
+
+
 # ------------------------------------------------------------------ aplicação
 
 def do_state_tree(target, say):
@@ -843,12 +883,60 @@ def do_state_tree(target, say):
     return True, ""
 
 
+def _state_format_cmd(root, dry):
+    """(rc, stdout, stderr) de `cs-state migrate state-format [--dry-run]` com o motor DA SKILL (o do alvo pode ser
+    anterior e não conhecer o comando)."""
+    env = dict(os.environ, CLAUDE_PROJECT_DIR=root)
+    env.pop("CS_GUARD_OFF", None)
+    cmd = [sys.executable, STATE_PY, "--root", root, "--actor", "lead", "migrate", "state-format"]
+    if dry:
+        cmd.append("--dry-run")
+    try:
+        p = subprocess.run(cmd, cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                           timeout=CMD_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        return 124, "", "cs-state migrate state-format: timeout (%ds)" % CMD_TIMEOUT
+    return p.returncode, p.stdout.decode("utf-8", "replace"), p.stderr.decode("utf-8", "replace")
+
+
+def _plan_state_format(plan, root, kinds):
+    """Linhas do plano para a ação state-format, pelo --dry-run do motor (não escreve). Define plan['conflict']
+    se o motor recusa (validate reprovado)."""
+    if "state-tree" in kinds and not os.path.isfile(os.path.join(paths.specialists_dir(root), "events.jsonl")):
+        return ["state-format: depois do state-tree (que já grava o estado em .json) o que sobrar em .json5 vira "
+                ".json; a lista exata sai na aplicação"]
+    rc, out, err = _state_format_cmd(root, True)
+    if rc != 0:
+        plan["conflict"] = ("state-format --dry-run recusado (exit %d); corrija o estado e rode de novo:\n%s"
+                            % (rc, _tail(err or out)))
+        return []
+    lines = [l for l in out.splitlines() if l.strip()]
+    if not any("→" in l for l in lines):
+        return ["state-format: " + (lines[-1].strip() if lines else "nada a migrar: estado já em JSON")]
+    head = [l for l in lines if "→" not in l]
+    pairs = [l.strip() for l in lines if "→" in l]
+    return ["state-format: " + (head[0].strip() if head else "estado .json5 → .json")] + \
+           ["%s/%s" % (NEW, l) for l in pairs]
+
+
+def do_state_format(target, say):
+    """Ação state-format: orquestra `cs-state migrate state-format` do motor DA SKILL (idempotente; UM evento
+    encadeado que só anexa; recusa se o validate não passa). Falhou → False (o apply restaura o backup)."""
+    rc, out, err = _state_format_cmd(target, False)
+    if rc != 0:
+        return False, "cs-state migrate state-format → exit %d\n%s" % (rc, _tail(err or out))
+    say("    cs-state migrate state-format: ok%s" % ((" — " + out.strip().splitlines()[0]) if out.strip() else ""))
+    return True, ""
+
+
 def _run_action(target, run, a, allow_outside, say, record=None):
     k = a["kind"]
     if k == "rename-dir":
         return do_rename(target, say, record)
     if k == "state-tree":
         return do_state_tree(target, say)
+    if k == "state-format":
+        return do_state_format(target, say)
     if k == "harness":
         steps = [_harness_argv(target, run, allow_outside=allow_outside)]
     elif k == "emit":
@@ -972,12 +1060,22 @@ def apply(target, allow_outside=False, out=None):
                          "--allow-outside (mostre a lista acima ao usuário antes)\n"
                          % (len(plan["outside"]), LEGACY if plan["layout_legacy"] else NEW))
         return 3
+    if "state-format" in [a["kind"] for a in plan["actions"]] and not plan["layout_legacy"]:
+        rc, vout, verr = run_cs(target, ["harness", "validate", "--strict", "--allow-empty"])
+        if rc != 0:
+            sys.stderr.write("upgrade recusado (nada escrito): o estado do alvo não passa em `harness validate "
+                             "--strict` ANTES da migração de formato (state-format); corrija e rode de novo:\n%s\n"
+                             % _excerpt(vout + "\n" + verr))
+            return 3
+        say("  harness validate --strict antes da migração: ok")
     rel = plan["backup"]
     hook_before = os.path.lexists(os.path.join(target, ".git", "hooks", "pre-commit"))
     manifest = make_backup(target, rel, [p for _, _, p in plan["outside"]])
     say("aplicando (backup em %s):" % rel)
     keep = preserved_snapshot(target)
-    explicit = any(a["kind"] in EXPLICIT_KINDS for a in plan["actions"])
+    kinds_now = [a["kind"] for a in plan["actions"]]
+    explicit = any(k in EXPLICIT_KINDS and k != "state-format" for k in kinds_now)
+    ev_before = events_snapshot(target) if "state-format" in kinds_now else None
     ok, why = True, ""
     record = {}
     for a in plan["actions"]:
@@ -1001,6 +1099,10 @@ def apply(target, allow_outside=False, out=None):
         ok, why = verify(target, say, run=plan["run"], hook_before=hook_before)
     if ok and plan["renaming"] and os.path.lexists(legacy_root(target)):
         ok, why = False, "rename-dir: %s/ reapareceu depois das ações" % LEGACY
+    if ok and "state-format" in kinds_now:
+        why_ev = events_append_violation(ev_before, target)
+        if why_ev:
+            ok, why = False, why_ev
     if ok and not explicit:
         bad = preserved_violations(keep, preserved_snapshot(target))
         if bad:

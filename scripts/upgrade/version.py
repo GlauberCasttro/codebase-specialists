@@ -8,7 +8,8 @@ Esquema de references/migrations.json5:
    migrations: [{to: "<semver>", why: "<texto>", actions: [{kind: <KIND>, ...}]}]}   // `to` estritamente crescente
 KINDs: harness | emit | scan (layers: [...], no_exec?) | facts-refresh (layers?) | schema (script) |
        cards (argv?) | probes (argv?) | rename-dir (from?/to? só podem ser paths.LEGACY_STATE_DIR → paths.STATE_DIR) |
-       state-tree (sem parâmetros: board plano legado → árvore de pastas, via `cs-state migrate state-tree`).
+       state-tree (sem parâmetros: board plano legado → árvore de pastas, via `cs-state migrate state-tree`) |
+       state-format (sem parâmetros: estado .json5 → .json em UM evento encadeado, via `cs-state migrate state-format`).
 """
 
 import os
@@ -22,7 +23,7 @@ VERSION_FILE = os.path.join(SKILL_ROOT, "VERSION")
 MIGRATIONS_FILE = os.path.join(SKILL_ROOT, "references", "migrations.json5")
 
 LEGACY = "0.0.0-legado"
-KINDS = ("harness", "emit", "scan", "facts-refresh", "schema", "cards", "probes", "rename-dir", "state-tree")
+KINDS = ("harness", "emit", "scan", "facts-refresh", "schema", "cards", "probes", "rename-dir", "state-tree", "state-format")
 RESERVED_KINDS = ()                       # kinds previstos sem implementação (rename-dir implementado: SWARM-DIR-3)
 REEXAM_KINDS = ("cards", "probes")        # sempre avisam: haverá reexame
 _SEMVER = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-([0-9A-Za-z.-]+))?$")
@@ -120,9 +121,9 @@ def validate_catalog(cat, version=None):
                         or a.get("to", paths.STATE_DIR) != paths.STATE_DIR:
                     errs.append("%s: rename-dir só renomeia %s → %s (from/to diferentes ou chaves extras %s)"
                                 % (w, paths.LEGACY_STATE_DIR, paths.STATE_DIR, extra))
-            if k == "state-tree" and sorted(x for x in a if x != "kind"):
-                errs.append("%s: state-tree não aceita parâmetros (chaves extras %s)"
-                            % (w, sorted(x for x in a if x != "kind")))
+            if k in ("state-tree", "state-format") and sorted(x for x in a if x != "kind"):
+                errs.append("%s: %s não aceita parâmetros (chaves extras %s)"
+                            % (w, k, sorted(x for x in a if x != "kind")))
             if k in REEXAM_KINDS and a.get("argv") is not None and not (
                     isinstance(a["argv"], list) and all(isinstance(x, str) for x in a["argv"])):
                 errs.append("%s: argv deve ser lista de strings (argumentos do cs.py)" % w)

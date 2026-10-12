@@ -290,7 +290,7 @@ def run(root, drift=False):
     # bloquearia o `cs.py upgrade`): só imprime.
     if os.path.isdir(os.path.join(root, hcore.STATE_DIR)):
         try:
-            hcore.write_json5(hcore.state_paths(root)["selftest"], res, "resultado do selftest (G6) — escrito por selftest.py")
+            hcore.write_json(hcore.state_paths(root)["selftest"], res, "resultado do selftest (G6) — escrito por selftest.py")
         except OSError:
             pass
     return res

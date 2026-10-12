@@ -203,3 +203,30 @@ O atestado:
 
 Arquivo que a ferramenta não escreveu (fonte, skill do usuário em `.claude/skills/`, arquivo novo em
 `.swarm/harness/`) continua barrado, junto ou não do resultado do upgrade.
+
+## Migração 0.11.0: estado em JSON padrão
+
+A entrada `to: "0.11.0"` do catálogo declara três ações, na ordem de aplicação do upgrade: `harness`,
+`state-format` e `emit`. O que ela faz:
+
+- reinstala o motor (que já grava e lê o estado em `.json`, com chaves em inglês) e reemite os artefatos;
+- a ação nova `state-format` converte o estado de entidade existente de `.json5` para `.json` chamando
+  `python3 <alvo>/.swarm/harness/state.py --root <alvo> migrate state-format [--dry-run]` (o upgrade usa o motor da
+  própria skill, não o do alvo). O plano mostra o resultado do `--dry-run` (quantos arquivos e quais);
+- a conversão é **um único evento encadeado** (`arvore.format`) com o mapa de caminhos antigo → novo; só anexa a
+  `events.jsonl` (os bytes antigos ficam como prefixo) e é **idempotente**: um alvo já em JSON diz "nada a migrar";
+- **recusa** se o `validate` do estado não passa antes (o plano acusa o conflito e o `--apply` não segue): conserte
+  o estado e rode de novo;
+- alvo ainda no board plano (`board.json5`) recebe antes a `state-tree`, que já grava a árvore em `.json`; a
+  `state-format` pega o que sobrar.
+
+Não mudam: eventos e ledgers JSONL, config JSON5 (`team`, `run`, `harness/config`, `machines`, `routing`), memória
+do `cs-mem` e as chaves do mandato M5. Sem refazer entrevista, roster, cartões, memória nem board. O formato, o mapa
+de chaves, o `cs-state show` e o `amend` refletido no arquivo estão em `docs/10-arvore-de-estado.md`.
+
+## Nota sobre o `reverify` depois da 0.10.0 (B-20)
+
+O primeiro `cs-state reverify` de um `verify` feito **antes** da 0.10.0 sempre invalida as reviews: aquele verify não
+guardou o `changed_sha256`, e o `reverify` é conservador sem ele. Resultado esperado, não defeito: a task pede
+**revisão nova** (`cs-state review`) antes do `accept`. Os verifies feitos já na 0.10.0 ou depois guardam o hash e
+preservam as reviews quando os `files_changed` não mudaram.

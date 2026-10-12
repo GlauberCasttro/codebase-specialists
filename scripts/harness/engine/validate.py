@@ -173,7 +173,7 @@ def run(root, strict=True, allow_empty=False):
     if os.path.isfile(p["autonomy"]):
         try:
             import autonomy
-            m = j5.load(p["autonomy"])
+            m = hcore.read_state(p["autonomy"])
             if autonomy.signature(m) != m.get("signature"):
                 E.append("autonomy.json5: assinatura não confere (mandato editado à mão)")
             starts = [e for e in events if e.get("type") == "autonomy.start"]
