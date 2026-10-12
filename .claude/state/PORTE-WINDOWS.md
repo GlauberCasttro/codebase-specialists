@@ -58,13 +58,19 @@ pode divergir do que a ferramenta gravou ⇒ o commit do upgrade seria barrado. 
 `git config core.autocrlf false` (ou `.gitattributes` com `* -text` para `.swarm/**` e artefatos emitidos) e testar o
 U1 do oráculo iter20 lá.
 
-## 0.11.0 — iter19 · EM ANDAMENTO (feature `iter19`, B-14)
+## 0.11.0 — iter19 · commit `c2b74ae` (2026-10-11) · B-14
 
-Estado de entidades em JSON padrão (ordem de leitura, indent 2, chaves em inglês, `_generated_by`), `amend` refletido
-no arquivo (e no `history` com before/after/reason), `cs-state show`, `cs-state find` terminando no caminho, validate
-estrito para `.json`, migração automática no `upgrade` por evento encadeado novo. Arquivos e commit entram aqui no
-fechamento. Riscos Windows previstos: escrita de `.json` com `\n` (o motor grava com newline explícito — conferir que
-não vira CRLF, ver `core.autocrlf` acima); renomeação `.json5`→`.json` em disco.
+Estado de entidades em JSON padrão (ordem de leitura, indent 2, chaves em inglês com aliases pt na leitura,
+`_generated_by`), `amend` refletido no arquivo no mesmo evento (`history` com before/after/reason), `cs-state show`,
+`cs-state migrate state-format [--dry-run]` (um evento `arvore.format` com o mapa de caminhos; idempotente) e a ação
+`state-format` no `cs.py upgrade --apply` (validate --strict antes/depois, backup restaurado em falha).
+Arquivos para cherry-pick (23): `scripts/harness/engine/{auto,autonomy,cmds,hcore,selftest,session,state,tree,validate}.py`,
+`scripts/harness/tests/{test_iter19_estado,test_iter20_atestado}.py`, `scripts/upgrade/{core,version}.py`,
+`scripts/upgrade/tests/test_iter19_upgrade.py`, `VERSION`, `README.md`, `references/{migrations.json5,ARCHITECTURE.md}`,
+`docs/{01-conceitos,05-sessao-e-retomada,06-referencia-cli,09-upgrade,10-arvore-de-estado}.md`.
+Riscos Windows: escrita de `.json` com `\n` explícito (conferir que não vira CRLF com `core.autocrlf`); renomeação
+`.json5`→`.json` em disco (arquivo aberto no editor pode travar o rename); oráculos iter18 R8 / iter20 U5 fixam versão
+(B-32) — rodar só R1–R7 e U1–U4.
 
 ## 0.12.0 — iter21 · EM ANDAMENTO (memória dos agentes: B-22, B-23, B-24, M12, M13)
 

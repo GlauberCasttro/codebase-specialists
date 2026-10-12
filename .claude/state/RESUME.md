@@ -1,9 +1,9 @@
 <!-- resume-stamp
-FEATURES: iter19,iter21
+FEATURES: iter21
 BRANCH: release/desenv-mac
-HEAD: bacfc07
-PRODUTO: 5e08335652440fa31bbba2ce63b205ef2970580c
-ESTADO: ff0ac8249589c37a94c295319f0bd56ce260fa08
+HEAD: c2b74ae
+PRODUTO: 0278c8073e381b8177c9807cba69a33ad9c9ae64
+ESTADO: 14ec5d10e375a83d3962f90d16aa7011c390ac23
 GATE: PENDENTE
 -->
 
@@ -20,32 +20,34 @@ arquivos sujos da skill: 4
 # RESUME — codebase-specialists (desenvolvimento)
 
 ## Escopo autorizado e limites
-- Autorizado: iter19 (0.11.0, estado em JSON) em /tech-lead modo AUTÔNOMO; iter21 (memória dos agentes) no método
-  auto-correção — founder: "provar que o agente fez Y, foi corrigido, a memória foi atualizada e ele não esquece mais";
-  decisões técnicas são do tech-lead (provar com números); DEC-1 (caderno = bloco gerado + área livre) aprovada no
-  portão plan:DEC-1.
-- NÃO autorizado: push (só o founder); mudar git config sem "pode" (e-mail noreply pendente); correção das frentes
-  motor/emissao da iter21 antes do commit da iter19 (colisão); B-19/B-28/B-26/B-27 junto destas features.
-- Aguardando decisão: configurar `git config user.email` noreply neste repo.
+- Autorizado: iter21 (memória dos agentes) no método auto-correção — founder: "provar que o agente fez Y, foi
+  corrigido, a memória foi atualizada e ele não esquece mais"; decisões técnicas são do tech-lead (provar com números);
+  DEC-1 aprovada (plan:DEC-1); mo2 do oráculo oficializada (D-23). Founder liberou /orquestrar-subagentes "se precisar".
+- NÃO autorizado: push (só o founder); mudar git config sem "pode"; remedição real com `claude -p` sem confirmar o
+  custo com o founder (D-09); abrir feature nova; B-19/B-28/B-26/B-27/B-30/B-31/B-32 junto da iter21.
+- Aguardando decisão: configurar `git config user.email` noreply neste repo; /install da 0.11.0 (sugerido).
 
 ## Onde paramos
-- iter19: tasks 01–04 DONE (4/8); 05 (upgrade chama `migrate state-format`) IN_PROGRESS — executor parou com a
-  sessão anterior (verificar cópia local/work/iter19 antes de retomar); 06 (versão/docs) depois da 05.
-- iter21: intake→plano fechados; base real = aplicação 0/9 depois da correção (brief corta a memória, sem caderno);
-  frente memoria ciclo 1 (oráculo 19→41/55); revisor achou F1 (corrigir 2× faz a lição sumir) — ciclo 2 e a mudança
-  oficial M14 do oráculo pararam com a sessão anterior (retomar; cópia local/work/iter21 tem trabalho parcial).
-- Vazamento do commit 44baf58 limpo: release/desenv-mac reescrita (bacfc07) e publicada pelo founder.
+- iter19 ENTREGUE: 0.11.0 commit c2b74ae (portão VERDE nos 2 Pythons, QA ACCEPT, Review APPROVED, campanha GO).
+- iter21: etapa correção (rodada 0). Frente memória ciclos 1–3 revisados e APPROVED na cópia local/work/iter21
+  (F1–F8 + M14.5); oráculo recongelado com mo2 (64 asserções): 49/64 nos 2 Pythons (base 19/55). As 15 falhas
+  restantes são das frentes motor e emissão (brief, guard/pre-commit do caderno, upgrade, consultei, skill /correct),
+  agora desbloqueadas (a colisão com a iter19 acabou).
 
 ## Próximos passos
-1. Retomar os 3 agentes parados: memoria ciclo 2 (local/work/iter21), oráculo mo2 (patch em
-   campanhas/iter21/oraculo/mudanca-oficial/), task 05 (local/work/iter19) — conferir o parcial antes.
-2. iter19: 05 → 06 → QA (portão) → REVIEW → aceite do founder → /fechar-feature → PORTE-WINDOWS.
-3. iter21: depois do commit da iter19, frentes motor e emissao → integração → remedição real (claude -p) → decisão.
+1. `/install` (instala a 0.11.0 nesta máquina).
+2. iter21: atualizar a cópia local/work/iter21 com o HEAD c2b74ae (a 0.11.0 mudou o motor) sem perder a frente
+   memória; despachar as frentes motor e emissão (disjuntas; /orquestrar-subagentes) contra as 15 falhas do oráculo.
+3. iter21: integração (suítes 2 Pythons + oráculos) → confirmar custo com o founder → remedição real (prova_real.py,
+   claude -p) → decisão.
 
 ## Estado do ambiente
-- Fora do commit do estado: obj/ da fixture em evals (gitignored agora); local/work/iter19 e iter21 (cópias); prova real
-  em ~/cs-prova-iter21/.
+- Fora do commit: cópias local/work/iter19 (entregue; pode ser apagada) e local/work/iter21 (frente memória, NÃO
+  portada); portões e notas em local/; prova real em ~/cs-prova-iter21/; ledgers .auto-correcao locais.
+- campanhas/iter21 (oráculo mo2, PORQUE, revisoes/) modificados e ainda não commitados (não é estado: entram no commit
+  da iter21).
 - Branch remota release/version-windows existe (outra sessão; números de decisão conflitam com D-21+ daqui).
 
 ## Ponteiros
-- PORTE-WINDOWS.md (D-21) · BACKLOG B-19..B-29 · DECISIONS D-17..D-21 · campanhas/iter21/.auto-correcao (local)
+- archive/iter19/iter19.md · PORTE-WINDOWS.md (0.11.0 com a lista de cherry-pick) · BACKLOG B-17 (2 ocorrências no
+  fechamento da iter19), B-29..B-32 · DECISIONS D-22..D-25 · campanhas/iter21/revisoes/memoria-ciclo2.md
