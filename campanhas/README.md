@@ -36,3 +36,4 @@ Nova campanha: skill `new-front` (cria `campanhas/<frente>/` pelo `ac.py init`);
 preencha commit/decisão no `close-front`.
 | iter19 | Estado legível em JSON, chaves em inglês, amend refletido no arquivo, cs-state show e migração automática | — | em andamento |
 | iter22 | cs-state show liberado no guard do alvo, varredura que impede subcomando sem regra no guard, versão 0.12.1 | — | em andamento |
+| iter24 | Hotfix de segurança do guard do harness gerado — fechar as portas confirmadas pela auditoria da cobaia (B-44, B-45, B-46, B-47) | — | em andamento |

@@ -189,6 +189,13 @@ def decide_write(root, board, cfg, actor, path, base=None, tool_name=None, tool_
     if hcore.tree_mode(root):
         protected += [x for x in hcore.TREE_PROTECTED if x not in protected]
     for rel in rels:
+        if rel in hcore.HUMAN_RECORDS:
+            return ("%s é registro do HUMANO (aprovação/aceite/corrida/time): só o motor e os comandos humanos gravam — "
+                    "peça ao usuário que rode o comando dele no terminal" % rel)
+        twin = hcore.hardlink_of_protected(root, rel, protected + list(hcore.HUMAN_RECORDS)) \
+            if not hcore.matches_any(rel, protected) else None
+        if twin:
+            return "%s é hardlink de %s (área protegida): escrita bloqueada" % (rel, twin)
         if hcore.matches_any(rel, protected):
             if hcore.tree_mode(root) and hcore.matches_any(rel, list(hcore.TREE_PROTECTED)):
                 return ("%s é a árvore de estado (backlog/state/archive, eventos): só o motor escreve — use cs-state "
@@ -376,7 +383,10 @@ def decide_bash(root, board, cfg, team, actor, command, cwd):
     import autonomy
     auto = autonomy.active(root) if board is not None else None
     for sub, args in s.git:
-        eff = bashscan.git_effect(sub)
+        eff = bashscan.git_effect(sub, args)
+        bad = bashscan.git_problem(sub, args, cfg.get("protected_branches"))
+        if bad:
+            return bad
         if not actor["main"] and eff != "read":
             return "subagente não roda git %s (CLAUDE.md: git é do tech-lead)" % sub
         if eff == "tree":

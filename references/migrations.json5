@@ -22,7 +22,7 @@
 // Nunca refeito num upgrade (salvo migração explícita): entrevista, roster aprovado, cartões aprovados,
 // memória de lições, board/eventos.
 {
- version: "0.12.1",
+ version: "0.12.2",
  migrations: [
   {
    to: "0.5.0",
@@ -102,6 +102,13 @@
   {
    to: "0.12.1",
    why: "o `cs-state show` da 0.11.0 era bloqueado pelo cs-guard do alvo como subcomando desconhecido (campanha-iter22): o guard corrigido libera o `show` para o agente principal e, por ser só leitura, também para o subagente; uma varredura impede que um subcomando do cs-state fique sem regra no guard. Reinstala o motor do harness no alvo (traz o guard corrigido), sem refazer entrevista, roster, cartões, memória nem board",
+   actions: [
+    {kind: "harness"}
+   ]
+  },
+  {
+   to: "0.12.2",
+   why: "hotfix de segurança do guard do harness gerado (campanha-iter24): fecha as portas confirmadas pela auditoria — harness chamado por caminho indireto (sh/bash script, python3 -m, -W/-X, cd .swarm/harness), hardlink de arquivo protegido, registros humanos (approvals.jsonl, team-approvals.jsonl, acceptance.json5, run.json5, team.json5) graváveis pelo agente, escritores com flag de saída (git --output, curl -o, wget -O, tar -C, unzip -d, dotnet -o), inline/stdin com flags combinadas e git que desliga proteção (core.hooksPath, --no-verify, push forçado ou com refspec protegido, branch -D, remote set-url/add, reflog expire). Reinstala o motor do harness no alvo (traz o guard corrigido), sem refazer entrevista, roster, cartões, memória nem board",
    actions: [
     {kind: "harness"}
    ]

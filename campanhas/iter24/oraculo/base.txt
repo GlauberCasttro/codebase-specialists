@@ -1,0 +1,59 @@
+# base iter24 — HEAD da30e17 (VERSION 0.12.1), 2026-10-12T20:09:35Z
+# fixture com raiz resolvida (realpath); medido com TMPDIR padrão (/var/folders, symlink) e com scratchpad: 9/22 idêntico
+## python3 (Python 3.13.3), TMPDIR padrão
+CA-01 R ok    TestCA01.test_ca01_controle_build_e_caminho_direto
+CA-01 R ok    TestCA01.test_ca01_controle_caminho_direto_ato_humano_continua_barrado
+CA-01 D FAIL  TestCA01.test_ca01_principal_ato_humano_formas_indiretas_recusado
+CA-01 D FAIL  TestCA01.test_ca01_subagente_formas_indiretas_do_harness_recusadas
+CA-02 R ok    TestCA02.test_ca02_controle_escrita_normal_no_allowed
+CA-02 D FAIL  TestCA02.test_ca02_escrita_por_hardlink_preexistente_recusada
+CA-02 D FAIL  TestCA02.test_ca02_subagente_ln_e_cp_l_de_protegido_recusado
+CA-03 R ok    TestCA03.test_ca03_controle_escrita_legitima_do_principal_em_swarm
+CA-03 D FAIL  TestCA03.test_ca03_principal_redirect_em_registro_humano_recusado
+CA-03 D FAIL  TestCA03.test_ca03_principal_write_edit_em_registro_humano_recusado
+CA-04 R ok    TestCA04.test_ca04_controle_leitura_git_e_destino_permitido
+CA-04 D FAIL  TestCA04.test_ca04_principal_escritor_com_flag_de_saida_em_protegido
+CA-04 D FAIL  TestCA04.test_ca04_subagente_escritor_com_flag_de_saida_em_protegido
+CA-05 R ok    TestCA05.test_ca05_controle_python_c_continua_barrado
+CA-05 R ok    TestCA05.test_ca05_controle_script_de_arquivo_do_projeto
+CA-05 D FAIL  TestCA05.test_ca05_inline_e_stdin_fail_closed
+CA-06 R ok    TestCA06.test_ca06_controle_leituras_git
+CA-06 D FAIL  TestCA06.test_ca06_principal_git_que_desliga_hook_ou_reescreve_remoto
+CA-06 D FAIL  TestCA06.test_ca06_subagente_git_config_remote_branch_reflog
+CA-07 R ok    TestCA07.test_ca07_alvo_0121_porta_aberta_antes_controle
+CA-07 D FAIL  TestCA07.test_ca07_upgrade_de_alvo_0121_lista_0122_e_fecha_porta
+CA-07 D FAIL  TestCA07.test_ca07_version_e_catalogo_0122_com_harness
+placar: CA-01 2/4  CA-02 1/3  CA-03 1/3  CA-04 1/3  CA-05 2/3  CA-06 1/3  CA-07 1/3
+por tipo (passam/total): CA-01 D 0/2 R 2/2  CA-02 D 0/2 R 1/1  CA-03 D 0/2 R 1/1  CA-04 D 0/2 R 1/1  CA-05 D 0/1 R 2/2  CA-06 D 0/2 R 1/1  CA-07 D 0/2 R 1/1
+total: 9/22 passam
+## /usr/bin/python3 (Python 3.9.6), TMPDIR padrão
+CA-01 R ok    TestCA01.test_ca01_controle_build_e_caminho_direto
+CA-01 R ok    TestCA01.test_ca01_controle_caminho_direto_ato_humano_continua_barrado
+CA-01 D FAIL  TestCA01.test_ca01_principal_ato_humano_formas_indiretas_recusado
+CA-01 D FAIL  TestCA01.test_ca01_subagente_formas_indiretas_do_harness_recusadas
+CA-02 R ok    TestCA02.test_ca02_controle_escrita_normal_no_allowed
+CA-02 D FAIL  TestCA02.test_ca02_escrita_por_hardlink_preexistente_recusada
+CA-02 D FAIL  TestCA02.test_ca02_subagente_ln_e_cp_l_de_protegido_recusado
+CA-03 R ok    TestCA03.test_ca03_controle_escrita_legitima_do_principal_em_swarm
+CA-03 D FAIL  TestCA03.test_ca03_principal_redirect_em_registro_humano_recusado
+CA-03 D FAIL  TestCA03.test_ca03_principal_write_edit_em_registro_humano_recusado
+CA-04 R ok    TestCA04.test_ca04_controle_leitura_git_e_destino_permitido
+CA-04 D FAIL  TestCA04.test_ca04_principal_escritor_com_flag_de_saida_em_protegido
+CA-04 D FAIL  TestCA04.test_ca04_subagente_escritor_com_flag_de_saida_em_protegido
+CA-05 R ok    TestCA05.test_ca05_controle_python_c_continua_barrado
+CA-05 R ok    TestCA05.test_ca05_controle_script_de_arquivo_do_projeto
+CA-05 D FAIL  TestCA05.test_ca05_inline_e_stdin_fail_closed
+CA-06 R ok    TestCA06.test_ca06_controle_leituras_git
+CA-06 D FAIL  TestCA06.test_ca06_principal_git_que_desliga_hook_ou_reescreve_remoto
+CA-06 D FAIL  TestCA06.test_ca06_subagente_git_config_remote_branch_reflog
+CA-07 R ok    TestCA07.test_ca07_alvo_0121_porta_aberta_antes_controle
+CA-07 D FAIL  TestCA07.test_ca07_upgrade_de_alvo_0121_lista_0122_e_fecha_porta
+CA-07 D FAIL  TestCA07.test_ca07_version_e_catalogo_0122_com_harness
+placar: CA-01 2/4  CA-02 1/3  CA-03 1/3  CA-04 1/3  CA-05 2/3  CA-06 1/3  CA-07 1/3
+por tipo (passam/total): CA-01 D 0/2 R 2/2  CA-02 D 0/2 R 1/1  CA-03 D 0/2 R 1/1  CA-04 D 0/2 R 1/1  CA-05 D 0/1 R 2/2  CA-06 D 0/2 R 1/1  CA-07 D 0/2 R 1/1
+total: 9/22 passam
+
+## calibração (cópia `git archive HEAD` em temporário; CS_SKILL_DIR=cópia), python3 e /usr/bin/python3 iguais
+# mutação mínima: hcore.DEFAULT_CONFIG.protected += os 5 registros humanos; bashscan.GIT_READONLY -= branch/remote/config/reflog
+# ⇒ CA-03 D 2/2 ok; CA-06 subagente D ok (principal segue FAIL: push/commit/-c não cobertos pela mutação); todos os R ok
+# placar: CA-01 2/4  CA-02 1/3  CA-03 3/3  CA-04 1/3  CA-05 2/3  CA-06 2/3  CA-07 1/3 — total 12/22 (base 9/22)

@@ -3052,7 +3052,7 @@ def human_act_in_command(command):
         except ValueError:
             toks = seg.split()
         for i, t in enumerate(toks):
-            if os.path.basename(t) not in ("cs-auto", "auto.py"):
+            if os.path.basename(t) not in ("cs-auto", "auto.py") and not (t == "auto" and i > 0 and toks[i - 1] == "-m"):
                 continue
             j = i + 1
             while j < len(toks):

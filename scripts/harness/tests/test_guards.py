@@ -54,7 +54,8 @@ class GuardBase(unittest.TestCase):
 class TestWriteGuard(GuardBase):
     def test_main_cannot_write_product_but_can_specialists(self):
         self.assertEqual(hook(self.root, "pre-write", W(self.root, "src/billing/discount.py"))[0], 2)
-        self.assertEqual(hook(self.root, "pre-write", W(self.root, ".swarm/team.json5"))[0], 0)
+        self.assertEqual(hook(self.root, "pre-write", W(self.root, ".swarm/team.json5"))[0], 2)
+        self.assertEqual(hook(self.root, "pre-write", W(self.root, ".swarm/knowledge/notas-da-ana.md"))[0], 0)
         self.assertEqual(hook(self.root, "pre-write", W(self.root, ".swarm/state/board.json5"))[0], 2)
 
     def test_subagent_territory(self):

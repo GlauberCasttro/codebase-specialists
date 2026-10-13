@@ -825,6 +825,43 @@ def gate_agents(team):
     return {a.get("name") for a in (team or {}).get("agents") or [] if isinstance(a, dict) and a.get("kind") == "gate"}
 
 
+# Registros do HUMANO (aprovação, aceite, corrida, time): só o motor/comandos humanos gravam; Write/Edit/redirect do
+# agente (principal ou subagente) são recusados pelo guard, mesmo em alvos cuja config antiga não os lista.
+HUMAN_RECORDS = tuple(STATE_DIR + "/" + n for n in ("approvals.jsonl", "team-approvals.jsonl", "acceptance.json5",
+                                                     "run.json5", "team.json5"))
+
+
+def hardlink_of_protected(root, rel, protected):
+    """Caminho protegido (relativo) que compartilha o inode de `rel` (arquivo com nlink>1), ou None."""
+    full = os.path.join(root, rel)
+    try:
+        st = os.lstat(full)
+    except OSError:
+        return None
+    if st.st_nlink < 2 or not os.path.isfile(full):
+        return None
+    key = (st.st_dev, st.st_ino)
+    for pat in protected or []:
+        pre = literal_prefix(pat).rstrip("/")
+        start = os.path.join(root, pre) if pre else root
+        if os.path.isfile(start):
+            walk = [(os.path.dirname(start), [], [os.path.basename(start)])]
+        else:
+            walk = os.walk(start)
+        for d, dirs, files in walk:
+            if pre.startswith(".git") or os.path.relpath(d, root).startswith(".git"):
+                dirs[:] = [x for x in dirs if x != "objects"]
+            for f in files:
+                fp = os.path.join(d, f)
+                try:
+                    s2 = os.lstat(fp)
+                except OSError:
+                    continue
+                if (s2.st_dev, s2.st_ino) == key and os.path.abspath(fp) != os.path.abspath(full):
+                    return os.path.relpath(fp, root).replace(os.sep, "/")
+    return None
+
+
 DEFAULT_CONFIG = {
     "schema_version": 1,
     "lead_write_allow": [STATE_DIR + "/", "docs/state/"],

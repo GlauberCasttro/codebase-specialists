@@ -129,6 +129,136 @@ def _add_write(s, state, tok, why):
     s.writes.append((tok, state["cwd"]))
 
 
+STDIN_NAMES = {"-", "/dev/stdin", "/dev/fd/0", "/proc/self/fd/0"}
+MODULE_TOOLS = {"state": "state", "validate": "validate", "mem": "mem", "guard": "guard", "session": "session",
+                "router": "route"}
+
+
+def _parse_interp(prog, args):
+    """{"inline", "module", "script", "rest"} de um interpretador, entendendo flags com valor (python -W/-X)
+    e flags curtas combinadas (-Sc, -Ic, -uc, -ne, -pe)."""
+    info = {"inline": False, "module": None, "script": None, "rest": []}
+    py = prog.startswith("python")
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a == "-" or not a.startswith("-"):
+            info["script"], info["rest"] = a, args[i + 1:]
+            return info
+        if a == "--":
+            if i + 1 < len(args):
+                info["script"], info["rest"] = args[i + 1], args[i + 2:]
+            return info
+        if a.startswith("--"):
+            if a in INLINE_FLAGS:
+                info["inline"] = True
+            elif a in ("--eval", "--print") or a.startswith("--eval="):
+                info["inline"] = True
+            i += 1
+            continue
+        if py:
+            consumed = 1
+            for k, ch in enumerate(a[1:], 1):
+                if ch == "c":
+                    info["inline"] = True
+                    break
+                if ch in "WXQ":
+                    consumed = 1 if k < len(a) - 1 else 2
+                    break
+                if ch == "m":
+                    if k < len(a) - 1:
+                        info["module"], info["rest"] = a[k + 1:], args[i + 1:]
+                    elif i + 1 < len(args):
+                        info["module"], info["rest"] = args[i + 1], args[i + 2:]
+                    else:
+                        info["inline"] = True  # -m sem módulo: fail-closed
+                    return info
+            if info["inline"]:
+                return info
+            i += consumed
+            continue
+        if a in INLINE_FLAGS or any(ch in "ceEp" for ch in a[1:]) or (prog == "perl" and "i" in a[1:]):
+            info["inline"] = True
+            return info
+        i += 1
+    return info
+
+
+def _harness_script(s, state, hp, script, rest):
+    """Script de arquivo (sh|bash <script>, python3 [-W v] <script>): se for do harness vira harness_call."""
+    if _expandable(script):
+        norm = os.path.normpath(script)  # fail-closed: '.swarm//harness', '.swarm/./bin', 'x/../harness' casam
+        m = re.search(r"(?:^|/)\.swarm/((?:harness|bin)/.*)$", norm)
+        if not m:
+            if ".swarm" in norm.split("/"):
+                s.unanalyzable.append("script sob .swarm por variável/~ não resolvido: %r" % script)
+            return  # script comum com variável: segue como antes
+        suf = os.path.normpath(m.group(1))
+        base = hp.get("state") and os.path.dirname(os.path.dirname(hp["state"]))
+        cand = os.path.realpath(os.path.join(base, suf)) if base and not _expandable(suf) else None
+        for key, path in hp.items():
+            if cand and path and cand == path:
+                s.harness_calls.append({"tool": key.replace("bin_", ""), "argv": rest, "cwd": state["cwd"]})
+                return
+        s.unanalyzable.append("script do harness por variável/~ não resolvido: %r" % script)
+        return
+    sp = _resolve(state, script)
+    if not sp:
+        return
+    rp = os.path.realpath(sp)
+    for key, path in hp.items():
+        if path and rp == path:
+            s.harness_calls.append({"tool": key.replace("bin_", ""), "argv": rest, "cwd": state["cwd"]})
+            return
+
+
+WRITER_FLAGS = {  # programa → (flags longas com valor, flags curtas com valor): destino que o programa grava
+    "curl": (("--output", "--output-dir", "--dump-header"), ("-o", "-D")),
+    "wget": (("--output-document", "--directory-prefix", "--output-file"), ("-O", "-P", "-o")),
+    "tar": (("--directory",), ("-C",)),
+    "unzip": ((), ("-d",)),
+    "dotnet": (("--output",), ("-o",)),
+}
+
+
+def _flag_dests(s, state, args, longs, shorts, why):
+    """Destinos de escrita dados por flags: `--output=X`, `--output X`, `-o X`, `-oX`, `-o:X`, `-sSo X`."""
+    for j, a in enumerate(args):
+        if a == "--":
+            break
+        nxt = args[j + 1] if j + 1 < len(args) else None
+        for lf in longs:
+            if a == lf and nxt is not None:
+                _add_write(s, state, nxt, why)
+            elif a.startswith(lf + "="):
+                _add_write(s, state, a.split("=", 1)[1], why)
+        if not a.startswith("-") or a.startswith("--") or len(a) < 2:
+            continue
+        for sf in shorts:
+            c = sf[1]
+            k = a.find(c, 1)
+            if k < 0:
+                continue
+            if k == len(a) - 1:
+                if nxt is not None:
+                    _add_write(s, state, nxt, why)
+            elif k == 1:
+                v = a[2:]
+                _add_write(s, state, v[1:] if v[:1] in ":=" else v, why)
+            elif a[1:k].isalpha():
+                if nxt is not None:  # cluster com valor no meio (ex.: tar -xCf dir): o valor é o próximo argumento
+                    _add_write(s, state, nxt, why)
+
+
+def _is_hardlink(prog, args):
+    if prog == "ln":
+        sym = any(a == "--symbolic" or (a.startswith("-") and not a.startswith("--") and "s" in a[1:]) for a in args)
+        return not sym
+    if prog == "cp":
+        return any(a == "--link" or (a.startswith("-") and not a.startswith("--") and "l" in a[1:]) for a in args)
+    return False
+
+
 def _scan_segment(seg, state, s, root, hp):
     # 1) redirecionamentos (em qualquer posição) e remoção de marcadores de fd
     words, i = [], 0
@@ -202,28 +332,28 @@ def _scan_segment(seg, state, s, root, hp):
     if prog in SHELLS:
         if any(a in ("-c",) or (a.startswith("-") and "c" in a[1:] and not a.startswith("--")) for a in args):
             s.unanalyzable.append("%s -c (código inline)" % prog)
-        elif not nonopt:
+            return
+        files = [a for a in nonopt if a != "-"]
+        if not files or any(a in STDIN_NAMES for a in nonopt[:1]) or (nonopt and nonopt[0] == "-"):
             s.unanalyzable.append("%s lendo comandos do stdin" % prog)
+            return
+        _harness_script(s, state, hp, files[0], args[args.index(files[0]) + 1:])
         return
     if prog in INTERPRETERS or re.match(r"^python\d+(\.\d+)?$", prog):
-        if any(a in INLINE_FLAGS or (prog == "perl" and a.startswith("-") and ("e" in a or "i" in a)) for a in args):
+        info = _parse_interp(prog, args)
+        if info["inline"]:
             s.unanalyzable.append("%s com código inline/in-place (escreva um script em arquivo)" % prog)
             return
-        if not nonopt:
+        if info["module"]:
+            tool = MODULE_TOOLS.get(info["module"])
+            if tool:
+                s.harness_calls.append({"tool": tool, "argv": info["rest"], "cwd": state["cwd"]})
+            return
+        script = info["script"]
+        if script is None or script in STDIN_NAMES:
             s.unanalyzable.append("%s lendo código do stdin" % prog)
             return
-        if prog.startswith("python") and args and args[0] == "-m":
-            return
-        script = nonopt[0]
-        sp = _resolve(state, script)
-        if sp:
-            rp = os.path.realpath(sp)
-            for key, path in hp.items():
-                tool = key.replace("bin_", "")
-                if path and rp == path and not key.startswith("bin_"):
-                    rest = args[args.index(script) + 1:]
-                    s.harness_calls.append({"tool": tool, "argv": rest, "cwd": state["cwd"]})
-                    return
+        _harness_script(s, state, hp, script, info["rest"])
         return
     if prog == "git":
         sub_i = 0
@@ -234,6 +364,13 @@ def _scan_segment(seg, state, s, root, hp):
             s.unanalyzable.append("git com -C/--git-dir/--work-tree")
             return
         s.git.append((sub, args[sub_i + 1:]))
+        for j in range(sub_i):  # git -c core.hooksPath=... <sub>
+            if args[j] == "-c" and j + 1 < len(args) and re.match(r"(?i)^core\.hookspath(=|$)", args[j + 1]):
+                s.unanalyzable.append("git -c core.hooksPath (desliga os hooks)")
+                return
+        _flag_dests(s, state, args[sub_i + 1:], ("--output",), (), "git --output")
+        if sub == "format-patch":
+            _flag_dests(s, state, args[sub_i + 1:], ("--output-directory",), ("-o",), "git format-patch")
         if sub in ("branch", "tag", "remote", "config") and len(args) > sub_i + 1 and sub != "config":
             # branch/tag/remote com argumentos alteram refs (não a árvore) — tratados como git de lead
             pass
@@ -296,7 +433,16 @@ def _scan_segment(seg, state, s, root, hp):
         for a in nonopt:
             _add_write(s, state, a, prog)
         return
+    if prog in WRITER_FLAGS:
+        longs, shorts = WRITER_FLAGS[prog]
+        _flag_dests(s, state, args, longs, shorts, prog)
+        return
     if prog in WRITE_DEST:
+        if _is_hardlink(prog, args):  # ln / cp -l: a ORIGEM também é conferida (o destino vira o mesmo inode)
+            tdirs = [a for j, a in enumerate(args) if j and args[j - 1] in ("-t", "--target-directory")]
+            srcs = nonopt if tdirs else nonopt[:-1]
+            for a in srcs:
+                _add_write(s, state, a, "%s (hardlink da origem)" % prog)
         tdir = None
         for j, a in enumerate(args):
             if a in ("-t", "--target-directory") and j + 1 < len(args):
@@ -320,10 +466,120 @@ def _scan_segment(seg, state, s, root, hp):
     return
 
 
-def git_effect(sub):
-    """'read' | 'lead' | 'tree' (reescreve árvore de trabalho)."""
+def _short_has(args, ch):
+    return any(a.startswith("-") and not a.startswith("--") and ch in a[1:] for a in args)
+
+
+def _is_listing(sub, args):
+    """branch/remote/config/reflog/tag sem alterar nada (só listar/consultar)."""
+    pos = [a for a in args if not a.startswith("-")]
+    flags = [a for a in args if a.startswith("-")]
+    if sub == "branch":
+        mut = ("-d", "-D", "-m", "-M", "-c", "-C", "-f", "-u", "--delete", "--move", "--copy", "--force",
+               "--set-upstream-to", "--unset-upstream", "--edit-description", "--track", "--no-track")
+        if any(f in mut or f.startswith("--set-upstream-to=") for f in flags):
+            return False
+        listing = any(f in ("-l", "--list", "-a", "-r", "--all", "--remotes", "--show-current", "--merged", "--no-merged",
+                            "--contains", "--no-contains", "--points-at") for f in flags)
+        return not pos or listing
+    if sub == "remote":
+        return not pos or pos[0] in ("show", "get-url")
+    if sub == "reflog":
+        return not pos or pos[0] not in ("expire", "delete")
+    if sub == "config":
+        if any(f in ("--get", "--get-all", "--get-regexp", "--list", "-l", "--show-origin", "--show-scope", "--get-urlmatch")
+               for f in flags):
+            return True
+        if any(f in ("--unset", "--unset-all", "--add", "--replace-all", "--edit", "-e", "--rename-section",
+                     "--remove-section") for f in flags):
+            return False
+        return len(pos) <= 1
+    return True
+
+
+def git_effect(sub, args=None):
+    """'read' | 'lead' | 'tree' (reescreve árvore de trabalho). Com `args`, branch/remote/config/reflog que
+    alteram refs/config contam como 'lead' (o subagente não roda)."""
     if sub in GIT_READONLY or sub == "":
+        if args is not None and sub in ("branch", "remote", "config", "reflog") and not _is_listing(sub, args):
+            return "lead"
         return "read"
     if sub in GIT_LEAD_OK:
         return "lead"
     return "tree"
+
+
+def _cluster_has_n(a):
+    """`-n`/`-nm`/`-anm` (git commit): flags curtas até a primeira que leva valor (m, F, C, c, S, u)."""
+    if not a.startswith("-") or a.startswith("--"):
+        return False
+    for ch in a[1:]:
+        if ch == "n":
+            return True
+        if ch in "mFCcSu":
+            return False
+    return False
+
+
+def _long_abbrev(a, full, minimum):
+    """Abreviação de opção longa que o git aceita (`--no-veri` = `--no-verify`): prefixo de `full` com ao menos
+    `minimum` caracteres (o mínimo que a torna única entre as opções do git)."""
+    a = a.split("=", 1)[0]
+    return len(a) >= len(minimum) and full.startswith(a)
+
+
+def git_problem(sub, args, protected_branches):
+    """Motivo para recusar um git que desliga proteção ou reescreve remoto/ref protegido (qualquer ator); None = ok."""
+    args = list(args or [])
+    prot = set(protected_branches or [])
+    low = [a.lower() for a in args]
+    if sub == "config" and not _is_listing(sub, args) and any(
+            re.match(r"^(core\.hookspath|remote\.[^=]*\.(url|pushurl))(=|$)", a) for a in low):
+        return "git config de core.hooksPath/remote.*.url desliga os hooks ou reaponta o remoto: ato humano"
+    if sub in ("commit", "merge", "push", "am", "cherry-pick", "rebase", "revert"):
+        skip = False
+        for a in args:
+            if skip:
+                skip = False
+                continue
+            if a == "--":
+                break  # depois de '--' é pathspec, não opção
+            if a in ("-m", "-F", "-C", "-c", "--message", "--file"):
+                skip = True
+                continue
+            if _long_abbrev(a, "--no-verify", "--no-veri") or (sub == "commit" and _cluster_has_n(a)):
+                return "git %s --no-verify/-n pula os hooks (pre-commit do harness): recusado" % sub
+    if sub == "push":
+        refs = []
+        for a in args:
+            if a in ("-f", "--force", "--delete", "--mirror", "-d") or a.startswith("--force") or a.startswith("--delete") \
+                    or _long_abbrev(a, "--force", "--forc") or _long_abbrev(a, "--mirror", "--mi") \
+                    or _long_abbrev(a, "--delete", "--de"):
+                return "git push %s reescreve/apaga ref remota: ato humano" % a
+            if a.startswith("-") and not a.startswith("--") and ("f" in a[1:] or "d" in a[1:]):
+                return "git push %s reescreve/apaga ref remota: ato humano" % a
+            if not a.startswith("-"):
+                if a.startswith("+"):
+                    return "git push %s: refspec com '+' força a atualização (= --force): ato humano" % a
+                refs.append(a)
+        for a in refs:
+            dst = a.lstrip("+").split(":")[-1]
+            dst = dst[len("refs/heads/"):] if dst.startswith("refs/heads/") else dst
+            if dst in prot:
+                return "push em branch protegida %s" % dst
+    if sub == "branch":
+        names = [a for a in args if not a.startswith("-")]
+        destructive = any(a in ("-d", "-D", "-m", "-M", "-f", "--force", "--delete", "--move") or
+                          (a.startswith("-") and not a.startswith("--") and any(c in a[1:] for c in "dDmMf"))
+                          for a in args)
+        if destructive and any(n in prot for n in names):
+            return "git branch apaga/move/força branch protegida"
+    if sub == "remote":
+        pos = [a for a in args if not a.startswith("-")]
+        if pos and pos[0] in ("set-url", "add", "remove", "rm", "rename", "set-branches", "set-head"):
+            return "git remote %s reaponta/altera o remoto: ato humano" % pos[0]
+    if sub == "reflog":
+        pos = [a for a in args if not a.startswith("-")]
+        if pos and pos[0] in ("expire", "delete"):
+            return "git reflog %s apaga o histórico de recuperação: recusado" % pos[0]
+    return None

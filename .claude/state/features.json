@@ -1,13 +1,6 @@
 {
  "schema": 1,
- "ativas": [
-  {
-   "id": "iter24",
-   "origem": "criar-feature",
-   "aberta_em": "2026-10-12T16:58:55-0300",
-   "campanha": "campanhas/iter24"
-  }
- ],
+ "ativas": [],
  "entregues": [
   {
    "id": "iter18",
@@ -49,6 +42,11 @@
    "id": "iter22",
    "fechada_em": "2026-10-12T16:58:33-0300",
    "archive": ".claude/state/archive/iter22/iter22.md"
+  },
+  {
+   "id": "iter24",
+   "fechada_em": "2026-10-13T19:03:03-0300",
+   "archive": ".claude/state/archive/iter24/iter24.md"
   }
  ]
 }

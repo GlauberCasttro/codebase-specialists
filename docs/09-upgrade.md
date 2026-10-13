@@ -250,3 +250,15 @@ A entrada `to: "0.12.1"` do catálogo declara só `harness`. O que ela faz:
   bloqueado como "desconhecido" — liberado para o agente principal e, por ser leitura, também para o subagente;
 - uma varredura impede que um subcomando do `cs-state` fique sem regra no guard;
 - não refaz entrevista, roster, cartões, memória nem board.
+
+## Migração 0.12.2: hotfix de segurança do guard
+
+A entrada `to: "0.12.2"` do catálogo declara só `harness`. O que ela faz:
+
+- reinstala o motor do harness no alvo, que traz o `cs-guard` endurecido contra as portas confirmadas pela auditoria:
+  harness chamado por caminho indireto (sh/bash script, `python3 -m`, `-W`/`-X`, `cd .swarm/harness`), hardlink de
+  arquivo protegido, registros humanos (`approvals.jsonl`, `team-approvals.jsonl`, `acceptance.json5`, `run.json5`,
+  `team.json5`) graváveis pelo agente, escritores com flag de saída (`git --output`, `curl -o`, `wget -O`, `tar -C`,
+  `unzip -d`, `dotnet -o`), inline/stdin com flags combinadas e git que desliga proteção (`core.hooksPath`,
+  `--no-verify`, push forçado ou com refspec protegido, `branch -D`, `remote set-url/add`, `reflog expire`);
+- não refaz entrevista, roster, cartões, memória nem board.
