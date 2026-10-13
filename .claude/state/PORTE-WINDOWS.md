@@ -87,6 +87,29 @@ Riscos Windows: CRLF no caderno é normalizado no pre-commit (testado por bytes,
 NOTEBOOK_RE case-insensitive e symlink divergente recusado (no Windows conferir junction/`\`); `--paths` com globs usa
 `/`; a prova real chama `claude -p` (conferir o binário e o stream-json).
 
+## 0.12.1 — iter22 · commit `da30e17` (2026-10-12) · B-35
+
+`cs-state show` liberado no guard (STATE_SUB main e any) + varredura argparse × guard (subcomando sem regra reprova).
+Arquivos para cherry-pick: `scripts/harness/engine/guard.py`, `scripts/harness/tests/test_iter22_*.py`,
+`scripts/emit/tests/test_iter21_emit.py`, `references/migrations.json5`, `docs/09-upgrade.md`, `VERSION`, `README.md`;
+oráculo `campanhas/iter22`. Riscos Windows: nenhum novo (só lista de subcomandos).
+
+## 0.12.2 — iter24 · commit `b757d1f` (2026-10-13) · B-44, B-45, B-46, B-47 (parcial)
+
+Hotfix de segurança do guard: harness por `sh|bash`, `python3 -m`, `-W/-X`, `cd .swarm/harness` e caminho por
+variável/`~` (normpath antes do regex); `ln`/`cp -l` e escrita por hardlink (nlink>1) de protegido; registros humanos
+(approvals.jsonl, team-approvals.jsonl, acceptance.json5, run.json5, team.json5) não graváveis; destinos de `--output=`,
+`-o`, `-O`, `-C`, `-d`; inline com flags combinadas e stdin fail-closed; git que desliga hooks / push forçado ou
+protegido / branch -D protegida / remote set-url|add / reflog expire.
+Arquivos para cherry-pick (10): `scripts/harness/engine/{bashscan,guard,hcore,auto}.py`,
+`scripts/harness/tests/{test_iter24_guard,test_guards}.py`, `references/migrations.json5`, `docs/09-upgrade.md`,
+`VERSION`, `README.md`; oráculo `campanhas/iter24`.
+Riscos Windows (o bashscan modela shell POSIX): `os.path.normpath` no Windows troca `/` por `\` — o regex
+`\.swarm/(harness|bin)/` precisa de `posixpath.normpath` ou de casar os dois separadores; hardlink no NTFS existe
+(`st_nlink` funciona em Python 3.9+), mas `os.walk` com junctions pode laçar; FS case-insensitive (B-55: `.SWARM`,
+`:MAIN`) é o padrão no Windows — tratar caixa antes de portar; comandos PowerShell (`Copy-Item`, `New-Item
+-ItemType HardLink`, `Out-File`) não são modelados.
+
 ## Pendentes no BACKLOG que também afetarão o Windows
 
 B-19 (descarte de task não iniciada), B-21 (chaves do mandato em inglês), B-25, B-26, B-27, B-28 (`cs-state add` →
