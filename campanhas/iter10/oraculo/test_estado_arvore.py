@@ -345,6 +345,33 @@ class Base(unittest.TestCase):
              paths=("src/billing/discount.py",), crit=True, repro=REPRO_RED, fixes=None, teste=None, extra=(),
              motivo="manutencao tecnica sem valor de usuario", verify=VERIFY):
         """parent: ['--feature', FEA] | ['--sprint', SPR] | ['--avulsa'] | ['--backlog'] | ['--story', US-nnn]."""
+        return self.new1(root, *self._task_args(parent, tipo, title, agent, paths, crit, repro, fixes, teste, extra,
+                                                motivo, verify))
+
+    def task_refused(self, root, parent, words, msg, **kw):
+        """D-35 (iter23/CA-05): `new task` que não passa no DoR estático do tipo é recusado ANTES de criar,
+        citando o campo que falta, e nada é criado."""
+        kw.setdefault("tipo", "US")
+        kw.setdefault("title", "Confirmar pagamento")
+        kw.setdefault("agent", "dev-billing")
+        kw.setdefault("paths", ("src/billing/discount.py",))
+        kw.setdefault("crit", True)
+        kw.setdefault("repro", REPRO_RED)
+        kw.setdefault("fixes", None)
+        kw.setdefault("teste", None)
+        kw.setdefault("extra", ())
+        kw.setdefault("motivo", "manutencao tecnica sem valor de usuario")
+        kw.setdefault("verify", VERIFY)
+        args = self._task_args(parent, **kw)
+        before = snapshot(root)
+        txt = self.refused(root, "new", *args, exit_code=None, msg=msg)
+        self.assertTrue(any(w in txt.lower() for w in words),
+                        "%s: a recusa do `new` deve citar o que falta (%s): %s" % (msg, words, txt))
+        self.assertFalse(CREATED_RE.findall(txt), "%s: `new` recusado não pode dizer `criado`: %s" % (msg, txt))
+        self.assert_unchanged(root, before, "%s: `new` recusado" % msg)
+        return txt
+
+    def _task_args(self, parent, tipo, title, agent, paths, crit, repro, fixes, teste, extra, motivo, verify):
         args = ["task", "--tipo", tipo, "--agent", agent, "--title", title] + list(parent)
         for p in paths:
             args += ["--allowed-path", p]
@@ -362,7 +389,7 @@ class Base(unittest.TestCase):
             if fixes:
                 args += ["--fixes", fixes]
             args += ["--teste", teste or REPRO_RED]
-        return self.new1(root, *(list(args) + list(extra)))
+        return list(args) + list(extra)
 
     # ---------------------------------------------------------------- pipeline de uma task (M2 inteira, sem atalho)
     def dispatch(self, root, tid, path):
@@ -551,8 +578,8 @@ class TestTiposDeTask(Base):
 
     def test_bug_sem_teste_que_falha_nao_comeca(self):
         r, fid = self._feat()
-        tid, p = self.task(r, ["--feature", fid], "BUG", "Sem repro", repro=None)
-        self._not_start(r, tid, p, ("reprodu", "teste"), "BUG sem --reproducao")
+        self.task_refused(r, ["--feature", fid], ("reprodu", "teste"), "BUG sem --reproducao",
+                          tipo="BUG", title="Sem repro", repro=None)
 
     def test_bug_com_teste_que_passa_hoje_nao_comeca(self):
         r, fid = self._feat()
@@ -567,16 +594,16 @@ class TestTiposDeTask(Base):
     def test_fix_sem_fixes_nao_comeca_e_com_fixes_comeca(self):
         r, fid = self._feat()
         bug, _ = self.task(r, ["--feature", fid], "BUG", "Reproduz", repro=REPRO_RED)
-        tid, p = self.task(r, ["--feature", fid], "FIX", "Corrige sem alvo", fixes=None)
-        self._not_start(r, tid, p, ("fixes",), "FIX sem fixes")
+        self.task_refused(r, ["--feature", fid], ("fixes",), "FIX sem fixes",
+                          tipo="FIX", title="Corrige sem alvo", fixes=None)
         tid2, _ = self.task(r, ["--feature", fid], "FIX", "Corrige", fixes=bug, agent="dev-users",
                             paths=("src/users/model.py",))
         self.ok(r, "start", tid2, msg="FIX com fixes")
 
     def test_us_sem_criterio_nao_comeca_e_com_criterio_comeca(self):
         r, fid = self._feat()
-        tid, p = self.task(r, ["--feature", fid], "US", "Sem criterio", crit=False)
-        self._not_start(r, tid, p, ("critério", "criterio"), "US sem critério")
+        self.task_refused(r, ["--feature", fid], ("critério", "criterio"), "US sem critério",
+                          tipo="US", title="Sem criterio", crit=False)
         tid2, _ = self.task(r, ["--feature", fid], "US", "Com criterio", agent="dev-users", paths=("src/users/model.py",))
         self.ok(r, "start", tid2, msg="US com critério")
 
@@ -1269,17 +1296,13 @@ class TestChore(Base):
 
     def test_chore_sem_motivo_nao_comeca(self):
         r, sid = self._sprint()
-        tid, p = self.task(r, ["--sprint", sid], "CHORE", "Ajustar timeout", motivo=None)
-        self._check(r, tid, 1, "motivo")
-        before = snapshot(r)
-        self.refused(r, "start", tid, msg="CHORE sem motivo")
-        self.assert_unchanged(r, before, "start de CHORE sem motivo")
+        self.task_refused(r, ["--sprint", sid], ("motivo",), "CHORE sem motivo",
+                          tipo="CHORE", title="Ajustar timeout", motivo=None)
 
     def test_chore_sem_verify_cmd_nao_comeca(self):
         r, sid = self._sprint()
-        tid, p = self.task(r, ["--sprint", sid], "CHORE", "Ajustar timeout", verify=None)
-        self._check(r, tid, 1, "verify")
-        self.refused(r, "start", tid, msg="CHORE sem verify-cmd")
+        self.task_refused(r, ["--sprint", sid], ("verify",), "CHORE sem verify-cmd",
+                          tipo="CHORE", title="Ajustar timeout", verify=None)
 
     def test_close_de_chore_exige_verify_cmd_verde(self):
         r, sid = self._sprint()
@@ -1416,16 +1439,16 @@ class TestCheckDoR(Base):
         r = self.repo()
         sid = self.sprint(r)
         fid = self.feature(r, sid)
-        us0, _ = self.task(r, ["--feature", fid], "US", "Sem criterio", crit=False)
-        self.check(r, us0, 1, ("crit",))
+        self.task_refused(r, ["--feature", fid], ("crit",), "US sem critério", tipo="US", title="Sem criterio",
+                          crit=False)
         us1, _ = self.task(r, ["--feature", fid], "US", "Com criterio")
         self.check(r, us1, 0)
         b0, _ = self.task(r, ["--feature", fid], "BUG", "Nao reproduz", repro=REPRO_GREEN)
         self.check(r, b0, 1, ("passa",))
         b1, _ = self.task(r, ["--feature", fid], "BUG", "Reproduz", repro=REPRO_RED)
         self.check(r, b1, 0)
-        f0, _ = self.task(r, ["--feature", fid], "FIX", "Sem alvo", fixes=None)
-        self.check(r, f0, 1, ("fixes",))
+        self.task_refused(r, ["--feature", fid], ("fixes",), "FIX sem fixes", tipo="FIX", title="Sem alvo",
+                          fixes=None)
         f1, _ = self.task(r, ["--feature", fid], "FIX", "Corrige", fixes=b1)
         self.check(r, f1, 0)
         self.ok(r, "start", us1, msg="check 0 ⇒ start passa (mesma regra)")
