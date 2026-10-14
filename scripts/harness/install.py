@@ -48,10 +48,12 @@ HOOKS = [
 MAKE_TARGETS = [
     ("next", "cs-state next", "próxima ação permitida"),
     ("board", "cs-state board", "árvore épico→feature→story→task com rollup"),
-    ("add-epic", "cs-state add epic $(ARGS)", "ARGS='--title .. --objective .. --metric ..'"),
-    ("add-feature", "cs-state add feature $(ARGS)", "ARGS='--epic EPIC-n --title .. --spec .. --accept-cmd ..'"),
-    ("add-story", "cs-state add story $(ARGS)", "ARGS='--type us|bug|fix --feature FEAT-n --title ..'"),
-    ("sprint-plan", "cs-state sprint plan $(ARGS)", "ARGS='--goal .. --budget tasks=N,attempts=2,minutes=M --stories US-1,BUG-2'"),
+    ("new-epic", "cs-state new epico $(ARGS)", "ARGS='--title .. --objetivo .. [--metrica ..]'"),
+    ("new-sprint", "cs-state new sprint $(ARGS)", "ARGS='--meta .. [--epico EPC-nnn]'"),
+    ("new-feature", "cs-state new feature $(ARGS)", "ARGS='--title .. --aceite <cmd> (--sprint SPR-nnn | --backlog)'"),
+    ("new-story", "cs-state new story $(ARGS)", "ARGS='--tipo US|BUG|FIX|CHORE --feature FEA-nnn --agents .. --title ..'"),
+    ("new-task", "cs-state new task $(ARGS)", "ARGS='--tipo US|BUG|FIX|CHORE --agent .. --title .. (--story .. | --avulsa | --backlog)'"),
+    ("plan", "cs-state plan $(ARGS)", "ARGS='<story|task> --sprint SPR-nnn'"),
     ("sprint-start", "cs-state sprint start $(ARGS)", ""),
     ("sprint-review", "cs-state sprint review $(ARGS)", ""),
     ("sprint-close", "cs-state sprint close $(ARGS)", ""),
@@ -151,7 +153,7 @@ def copy_engine(root, changes):
         if _write(os.path.join(dst, name), data, 0o644):
             changes.append(hcore.STATE_DIR + "/harness/" + name)
         manifest[name] = hcore.sha256_bytes(data)
-    _write(os.path.join(dst, "MANIFEST.json5"), j5.dumps({"files": manifest},
+    _write(os.path.join(dst, "MANIFEST.json5"), j5.dumps({"version": skill_version(), "files": manifest},
            header="sha256 dos arquivos do motor instalado (drift/selftest)").encode("utf-8"))
     if _write(os.path.join(dst, ".gitignore"), HARNESS_GITIGNORE, 0o644):
         changes.append(hcore.STATE_DIR + "/harness/.gitignore")

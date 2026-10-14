@@ -3,7 +3,7 @@
 <!-- features:inicio (gerado por .claude/tools/feature.py; não edite à mão) -->
 **Estado:** IDLE
 **Features ativas:** nenhuma
-**Última entrega:** iter24 (2026-10-13T19:03:03-0300) — .claude/state/archive/iter24/iter24.md
+**Última entrega:** iter23 (2026-10-14T20:00:55-0300) — .claude/state/archive/iter23/iter23.md
 <!-- features:fim -->
 
 Feature = campanha no motor embutido, em `campanhas/<feature>/` (oráculo versionado; `.auto-correcao/` local).

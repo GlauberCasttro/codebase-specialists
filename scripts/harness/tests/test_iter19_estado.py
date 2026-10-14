@@ -175,7 +175,7 @@ class TestAmendShow(unittest.TestCase):
         self.addCleanup(fixture.rm, self.root)
         st_ok(self.root, "init")
         st_ok(self.root, "new", "task", "--tipo", "chore", "--agent", "dev-a", "--title", "Limpa", "--avulsa", "--allowed-path",
-              "src/a.py", "--verify-cmd", "true", "--criterio", "AC-1|Dado a Quando b Então c|")
+              "src/a.py", "--verify-cmd", "true", "--criterio", "AC-1|Dado a Quando b Então c|", "--motivo", "m")
 
     def test_show_inexistente_e_so_leitura(self):
         code, out = st(self.root, "show", "TSK-999/09")

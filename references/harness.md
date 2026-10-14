@@ -101,25 +101,26 @@ protected): o brief_valid a recusa, o sufixo legado é removido na geração/ame
 
 ```
 cs-state init | next | board | status [--task] | why <id> | brief --task T [--phase implement|verify|review] [--agent]
-cs-state add epic --title --objective [--metric]
-cs-state add feature --epic --title --spec <arq> --accept-cmd <cmd>… [--accept-file <arq>…]
-cs-state add sprint --goal [--budget tasks=N,attempts=2,minutes=M]
-cs-state add story --type us|bug|fix [--feature F] --title [--as-a --i-want --so-that --criterion 'AC-1|Dado…Quando…Então…|<test>']
-                   [--repro … --failing-test <test> --severity critical|high|medium|low|alta|media|baixa|critica --environment]
-                   [--fixes BUG-n (herda a feature) --proving-test <test>] [--regression <cmd>] [--reopens US-n]
+cs-state new epico --title --objetivo [--metrica]
+cs-state new sprint --meta [--epico EPC-n]
+cs-state new feature --title --aceite <cmd> (--sprint SPR-n | --backlog)
+cs-state new story --tipo US|BUG|FIX|CHORE --feature F --agents A… --title [--como --quero --para --criterio 'AC-1|Dado…Quando…Então…|<test>']
+                   [--reproducao … --teste <test>] [--fixes BUG-n] [--motivo …] [--allowed-path P… --verify-cmd C]
+cs-state new task --tipo … --agent A --title … (--story S | --avulsa | --backlog) [--feature F --sprint SPR-n]   (mesmos campos da story)
+cs-state plan <story|task> --sprint SPR-n [--dry-run]         (move para a sprint; uma chamada por item)
 cs-state add task --story S --agent A --title --goal --allowed-path P… [--protected-path] --verify-cmd C --ac 'AC-1|crit|verified_by'…
                   --ref arq:linha… --out '…' [--in] [--wave --depends-on --class --hot-path --security-gate --type BE… --from brief.json5] [--ready]
 cs-state add task --quick --agent A --title '…' --allowed-path P… --verify-cmd C [--ac … --goal … --ref … --out … --work-type us|bug|fix]
 cs-state ask <agente> '<pergunta>' [--paths '<glob>'…]        (imprime Agent(... description='ASK-n: …'))
 cs-state consult cancel --id ASK-n --reason '…'
 cs-state epic|feature|story <transição> --id X [--reason]      (activate/done/drop | ready/start/done/drop | ready/start/review/done/reject/requeue)
-cs-state sprint plan [--id] [--goal --budget] --stories US-1,BUG-2 | sprint start|review|close [--id] [--reason]
+cs-state sprint start|review|close [--id] [--reason]   (sprint plan só no modo legado; em árvore: new sprint + plan)
 cs-state session start --request '…' [--mode] | triage --class C --why '…' [--assume] | confirm --note | answer | plan | execute
                  | replan | verify | review --by G --verdict V --findings | report | close | status
 cs-state dispatch --task T --manual [--model M]   (só plataforma SEM hook pre-agent: tool_use_id manual:<ts>, dispatch_origin manual; sem --manual/--tool-use-id recusa; no Claude Code o guard bloqueia — ferramenta Agent)
 cs-state ready|submit --files-changed --check --risk --handoff-notes|return|verify|review --by --verdict --findings
          |accept|reject --reason|retry [--findings|--decision]|escalate|block --reason|reroute --agent [--allowed-path] --reason|--decision
-         |drop --task|--id X --reason|reverify --task|waive-verify --task --by --reason --evidence|legacy-ack --reason
+         |drop --task|--id X --reason (task não iniciada)|reverify --task|waive-verify --task --by --reason --evidence|legacy-ack --reason
          |abstain --kind spec_ambiguous|test_suspect|out_of_territory|other --reason|delegate|amend --field --after --reason [--found-by]
 cs-state autonomy start --feature F|--story S --budget tasks=N,attempts=2,minutes=M[,usd=X] [--spec --accept-cmd --accept-file --class]
                   | status | stop [--reason] | report | spend --usd X | resume --decision '…'   (ESCALATED → ACTIVE; stop → STOPPED)
@@ -128,7 +129,7 @@ cs-mem add (--text … | --agent A --rule … --why … [--paths] [--check]) | c
        | revalidate | consolidate [--agent] | stats
 cs-session save --did --next [--blocked --decision --commit] | save --check | load [--brief]
 cs-route recommend <id> [--act] | override <id> --model X --reason | outcome <id> [--success --procedencia] | anular --at --motivo | stats
-make next|board|add-epic|add-feature|add-story|sprint-plan|…|brief ID=|dispatch ID=|verify ID=|review ID=|accept ID=|reject ID=
+make next|board|new-epic|new-sprint|new-feature|new-story|new-task|plan|…|brief ID=|dispatch ID=|verify ID=|review ID=|accept ID=|reject ID=
      |abstain ID=|session-save|session-load|mem Q=|autonomy-start FEAT=|autonomy-status|selftest|validate|drift|help   (ARGS='…')
 cs.py harness install [--platforms cursor,copilot,codex --git-hook --no-settings --no-makefile --dry-run --allow-outside] | selftest [--drift] | validate | status
 cs.py memory <args do cs-mem>

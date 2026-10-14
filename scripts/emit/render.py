@@ -250,11 +250,11 @@ S0_LINES = {
                     "orçamento), `.swarm/bin/cs-state autonomy start --feature <id> --spec <arquivo> --budget "
                     "tasks=N,attempts=2,minutes=M`; depois `.swarm/bin/cs-state next` até REPORTING."},
     "process": {
-        "native": "Processo: Épico → Feature → Sprint → Story (US|Bug|Fix) via `.swarm/bin/cs-state add ...`; "
-                  "`.swarm/bin/cs-state board` mostra a árvore; `/plan-sprint` planeja a sprint.",
-        "terminal": "Processo: Épico → Feature → Sprint → Story (US|Bug|Fix) via `.swarm/bin/cs-state add ...`; "
-                    "`.swarm/bin/cs-state board` mostra a árvore; `.swarm/bin/cs-state sprint plan --goal \"<meta>\" --budget <n> "
-                    "--stories <ids>` planeja a sprint."},
+        "native": "Processo: Épico → Feature → Sprint → Story (US|Bug|Fix) via `.swarm/bin/cs-state new epico|feature|story|sprint|task`; "
+                  "`.swarm/bin/cs-state board` mostra a árvore; `/plan-sprint` planeja a sprint (`cs-state plan <id> --sprint`).",
+        "terminal": "Processo: Épico → Feature → Sprint → Story (US|Bug|Fix) via `.swarm/bin/cs-state new epico|feature|story|sprint|task`; "
+                    "`.swarm/bin/cs-state board` mostra a árvore; `.swarm/bin/cs-state plan <id> --sprint <SPR-n>` planeja "
+                    "cada item na sprint; `cs-state drop <id> --reason \"...\"` retira o que não começou."},
     "routing": {
         "native": "Modelo por despacho: passe o `model` de `.swarm/bin/cs-route recommend <id>` (o hook bloqueia despacho "
                   "sem model); discordou, `.swarm/bin/cs-route override <id> --model X --reason \"...\"`.",

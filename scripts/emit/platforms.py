@@ -125,7 +125,7 @@ COMMAND_SKILLS = (
       ("allowed-tools", yq("Bash(.swarm/bin/cs-mem correct *) Bash(.swarm/bin/cs-mem retract *) "
                            "Bash(.swarm/bin/cs-mem notebook *)"))]),
     ("plan-sprint", "claude.command", "CMD", "plan-sprint.md",
-     "Planeja a próxima sprint com stories que passam no DoR, via `.swarm/bin/cs-state sprint plan`.",
+     "Planeja a próxima sprint com stories que passam no DoR, via `.swarm/bin/cs-state new sprint` e `cs-state plan <id> --sprint`.",
      [("argument-hint", yq("[--dry-run]"))]),
     ("feature-autonoma", "claude.command", "CMD", "feature-autonoma.md",
      "Inicia o modo autônomo de uma feature: aprovação única de spec, testes de aceite, "

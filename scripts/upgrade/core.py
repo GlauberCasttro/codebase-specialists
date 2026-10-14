@@ -31,6 +31,7 @@ Alvo pausado antes da etapa que instala o harness (U-1, validate.5 pendente): a 
 que a etapa ainda não instalou; o run.json5 (etapa corrente, status) é preservado e o alvo retoma de onde parou.
 """
 
+import json
 import os
 import re
 import shutil
@@ -576,6 +577,11 @@ def build_plan(target):
         plan["conflict"] = ("o alvo está no diretório legado %s/ e nenhuma migração no intervalo tem rename-dir "
                             "(o mecanismo atual só opera em %s/)" % (LEGACY, NEW))
         return plan
+    if any(str(m.get("to")) == "0.13.0" for m in migs):
+        if layout_legacy:
+            plan["stuck_deferred"] = True
+        else:
+            plan["stuck"] = stuck_items(target)
     sim_tmp, root = None, target
     if layout_legacy:
         plan["renaming"] = True
@@ -613,6 +619,98 @@ def build_plan(target):
     return plan
 
 
+_STUCK_SNIPPET = r"""
+import json, sys
+sys.path.insert(0, sys.argv[1])
+import tree
+if not tree.hcore.tree_mode(sys.argv[2]):
+    try:
+        tree.need_tree(sys.argv[2])
+        why = "estado em árvore ausente"
+    except Exception as exc:
+        why = str(exc)
+    print(json.dumps({"absent": why}, ensure_ascii=False))
+    sys.exit(0)
+tv = tree.load_view(sys.argv[2])
+out = []
+open_spr = {}
+for it in sorted(tv.items.values(), key=lambda x: x["id"]):
+    z = tree.zone_of(it["path"])
+    if z == "archive":
+        continue
+    if it["kind"] == "task":
+        if tv.m2(it) is not None:
+            continue
+        try:
+            probs = tree.task_dor(tv, it, run=False)
+        except Exception as exc:
+            probs = ["DoR não avaliável: %s: %s" % (type(exc).__name__, exc)]
+        if probs:
+            out.append({"id": it["id"], "kind": "task", "tipo": it.get("tipo"), "title": it.get("title"),
+                        "problems": probs})
+    elif it["kind"] == "sprint" and it.get("epico"):
+        open_spr.setdefault(it["epico"], []).append(it)
+for ep, rows in sorted(open_spr.items()):
+    for it in rows[1:]:
+        out.append({"id": it["id"], "kind": "sprint", "title": it.get("title") or it.get("meta"),
+                    "problems": ["o épico %s já tem a sprint aberta %s (UMA sprint aberta por épico)"
+                                 % (ep, rows[0]["id"])]})
+print(json.dumps(out, ensure_ascii=False))
+"""
+
+
+def stuck_items(target):
+    """0.13.0: tasks/sprints NÃO iniciadas que não passam no DoR do motor novo (e sprints além da primeira aberta de um
+    épico). Só leitura: roda o motor DA SKILL sobre o estado do alvo, sem executar testes e sem escrever.
+    Devolve a lista (vazia = nada preso), {"absent": motivo} (o alvo não tem estado em árvore) ou {"error": motivo}
+    (não foi possível listar — nunca confundido com "nada preso")."""
+    def tail(b):
+        t = b.decode("utf-8", "replace").strip()
+        return (" | " + t.splitlines()[-1][:200]) if t else ""
+    try:
+        p = subprocess.run([sys.executable, "-I", "-c", _STUCK_SNIPPET, os.path.dirname(STATE_PY), target],
+                           cwd=target, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=CMD_TIMEOUT,
+                           env=dict(os.environ, CLAUDE_PROJECT_DIR=target, PYTHONDONTWRITEBYTECODE="1"))
+    except subprocess.TimeoutExpired:
+        return {"error": "o motor não respondeu em %ss" % CMD_TIMEOUT}
+    except Exception as exc:
+        return {"error": "%s: %s" % (type(exc).__name__, exc)}
+    if p.returncode != 0:
+        return {"error": "o motor saiu %d%s" % (p.returncode, tail(p.stderr))}
+    lines = p.stdout.decode("utf-8", "replace").strip().splitlines()
+    if not lines:
+        return {"error": "o motor não devolveu nada%s" % tail(p.stderr)}
+    try:
+        out = json.loads(lines[-1])
+    except ValueError as exc:
+        return {"error": "saída inválida do motor (%s)" % exc}
+    if isinstance(out, list) or (isinstance(out, dict) and ("absent" in out or "error" in out)):
+        return out
+    return {"error": "saída inesperada do motor"}
+
+
+def render_stuck(stuck):
+    if isinstance(stuck, dict):
+        if "error" in stuck:
+            return ["  não foi possível listar itens presos: %s — confira com `cs-state check` / `cs-state board`"
+                    % stuck["error"]]
+        return ["  itens presos: não verificados (%s)" % stuck.get("absent")]
+    if not stuck:
+        return ["  itens presos: nenhum (todas as tasks/sprints não iniciadas passam no DoR do motor novo)"]
+    L = ["  itens presos (não iniciados, fora do DoR do motor novo; o upgrade NÃO altera nenhum — "
+         "você decide item a item):"]
+    for x in stuck:
+        L.append("    %s (%s) %s" % (x["id"], x.get("tipo") or x["kind"], x.get("title") or ""))
+        if x["kind"] == "sprint":
+            L.append("      descartar: cs-state drop %s --reason '<motivo>'" % x["id"])
+        else:
+            L.append("      descartar: cs-state drop %s --reason '<motivo>'  |  emendar: cs-state amend %s "
+                     "--field <campo> --after '<valor>' --reason '<motivo>'" % (x["id"], x["id"]))
+        for pr in x["problems"]:
+            L.append("      - %s" % pr)
+    return L
+
+
 def render_plan(plan):
     here = (LEGACY if plan.get("layout_legacy") else NEW) + "/"
     L = ["upgrade: %s" % plan["target"],
@@ -642,6 +740,10 @@ def render_plan(plan):
     L.append("  backup: %s" % plan["backup"])
     L.append("  verificação: cs.py harness selftest; cs.py harness validate --strict --allow-empty; "
              "cs.py emit validate (falhou → restaura o backup, exit 1)")
+    if plan.get("stuck_deferred"):
+        L.append("  itens presos serão listados depois do rename (rode `cs.py upgrade` de novo após o apply)")
+    elif "stuck" in plan:
+        L += render_stuck(plan["stuck"])
     if plan["conflict"]:
         L.append("  BLOQUEIO: " + plan["conflict"])
     L.append("  próximo: cs.py upgrade --apply%s" % (" --allow-outside" if plan["outside"] else ""))

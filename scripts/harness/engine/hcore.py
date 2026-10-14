@@ -672,6 +672,31 @@ def resolve_target(root, path, base=None):
     return lex_rel, rel(real, root_rp)
 
 
+def auto_memory_dir(root):
+    """`<HOME>/.claude/projects/<slug>/memory` do PRÓPRIO projeto (auto-memória do Claude Code). slug = realpath da raiz
+    com todo caractere fora de [A-Za-z0-9] trocado por '-'. Não resolve a memory/ em si (quem usa confere symlink)."""
+    slug = re.sub(r"[^A-Za-z0-9]", "-", os.path.realpath(root))
+    return os.path.join(os.path.realpath(os.path.expanduser("~")), ".claude", "projects", slug, "memory")
+
+
+def in_auto_memory(root, path, base=None):
+    """True só se `path` (lexical E real) cai dentro da memory/ do próprio projeto e a própria memory/ é diretório de
+    verdade (não symlink). `..` e symlink saindo da memory/ → False. Nada além da memory/ é liberado."""
+    try:
+        mem = auto_memory_dir(root)
+        if os.path.islink(mem) or os.path.realpath(mem) != mem:
+            return False
+        raw_home = os.path.abspath(os.path.expanduser("~"))
+        absp = path if os.path.isabs(path) else os.path.join(base or root, path)
+        lex = os.path.normpath(absp)
+        if lex == raw_home or lex.startswith(raw_home + os.sep):
+            lex = os.path.realpath(raw_home) + lex[len(raw_home):]
+        real = os.path.realpath(absp)
+        return all(p.startswith(mem + os.sep) for p in (lex, real))
+    except (OSError, ValueError):
+        return False
+
+
 # ---------------------------------------------------------------- board e operações
 def new_board():
     b = {"schema_version": SCHEMA_VERSION, "event_count": 0, "last_event_hash": GENESIS}

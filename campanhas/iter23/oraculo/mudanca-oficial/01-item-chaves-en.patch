@@ -1,0 +1,26 @@
+--- a/test_iter23.py
++++ b/test_iter23.py
+@@ -224,11 +224,22 @@
+     return got
+ 
+ 
++# Contrato de disco da 0.11.0 (B-14, hcore.ITEM_SCHEMA): o arquivo do item grava as chaves em INGLÊS.
++# O oráculo fala em português; a leitura traduz (sem sobrescrever uma chave em português que já exista).
++ITEM_KEYS_EN_PT = (("reason", "motivo"), ("failing_test", "reproducao"), ("as_a", "como"), ("i_want", "quero"),
++                   ("so_that", "para"), ("proving_test", "teste"))
++
++
+ def item(root, iid):
+     got = find_item(root, iid)
+     if len(got) != 1:
+         raise AssertionError("item %s: esperado 1 arquivo, achei %s" % (iid, got))
+-    return got[0][0], got[0][1], _strip_json5(read_text(got[0][1]))
++    d = _strip_json5(read_text(got[0][1]))
++    if isinstance(d, dict):
++        for en, pt in ITEM_KEYS_EN_PT:
++            if en in d and pt not in d:
++                d[pt] = d[en]
++    return got[0][0], got[0][1], d
+ 
+ 
+ def board_open(root):

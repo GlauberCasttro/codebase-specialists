@@ -22,7 +22,7 @@
 // Nunca refeito num upgrade (salvo migração explícita): entrevista, roster aprovado, cartões aprovados,
 // memória de lições, board/eventos.
 {
- version: "0.12.2",
+ version: "0.13.0",
  migrations: [
   {
    to: "0.5.0",
@@ -111,6 +111,14 @@
    why: "hotfix de segurança do guard do harness gerado (campanha-iter24): fecha as portas confirmadas pela auditoria — harness chamado por caminho indireto (sh/bash script, python3 -m, -W/-X, cd .swarm/harness), hardlink de arquivo protegido, registros humanos (approvals.jsonl, team-approvals.jsonl, acceptance.json5, run.json5, team.json5) graváveis pelo agente, escritores com flag de saída (git --output, curl -o, wget -O, tar -C, unzip -d, dotnet -o), inline/stdin com flags combinadas e git que desliga proteção (core.hooksPath, --no-verify, push forçado ou com refspec protegido, branch -D, remote set-url/add, reflog expire). Reinstala o motor do harness no alvo (traz o guard corrigido), sem refazer entrevista, roster, cartões, memória nem board",
    actions: [
     {kind: "harness"}
+   ]
+  },
+  {
+   to: "0.13.0",
+   why: "itens presos e porta da memória (campanha-iter23): o motor passa a ter `cs-state drop <id> --reason` e `cs-state amend <id> --field <campo> --after <valor> --reason` para task não iniciada (a task presa por DoR incompleto sai por descarte ou emenda, sem editar JSON à mão), o DoR é conferido já na criação, uma sprint aberta por épico, e os textos emitidos orientam o caminho. Reinstala o motor e reemite os artefatos. O upgrade NÃO descarta nem altera nenhum item: o plano e o relatório do apply LISTAM as tasks/sprints não iniciadas que não passam no DoR novo, cada uma com o comando `cs-state drop|amend <id>`. Sem refazer entrevista, roster, cartões, memória nem board",
+   actions: [
+    {kind: "harness"},
+    {kind: "emit"}
    ]
   }
  ]

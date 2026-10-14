@@ -1030,6 +1030,159 @@ options:
 usage: cs-state init [-h]
 ```
 
+#### `cs-state new`
+
+Cria itens da árvore (modo árvore, o padrão do alvo instalado): `new epico|sprint|feature|story|task`. É o comando que os textos emitidos (CLAUDE.md, orchestrator, `/plan-sprint`, Makefile) citam; `add epic|feature|story` é o caminho legado (alvos antigos) e `add task --quick` continua para a task avulsa.
+
+```text
+usage: cs-state new [-h] {epico,sprint,feature,task,story} ...
+
+positional arguments:
+  {epico,sprint,feature,task,story}
+
+options:
+  -h, --help            show this help message and exit
+```
+
+#### `cs-state new epico`
+
+Épico com objetivo e métrica opcional.
+
+```text
+usage: cs-state new epico [-h] --title TITLE --objetivo OBJETIVO
+                          [--metrica METRICA] [--dry-run]
+
+options:
+  -h, --help           show this help message and exit
+  --title TITLE
+  --objetivo OBJETIVO
+  --metrica METRICA
+  --dry-run            mostra {ids, criar, mover, eventos} em JSON e não
+                       escreve nada
+```
+
+#### `cs-state new sprint`
+
+Sprint com meta; `--epico` liga a um épico.
+
+```text
+usage: cs-state new sprint [-h] --meta META [--epico EPICO] [--dry-run]
+
+options:
+  -h, --help     show this help message and exit
+  --meta META
+  --epico EPICO
+  --dry-run      mostra {ids, criar, mover, eventos} em JSON e não escreve
+                 nada
+```
+
+#### `cs-state new feature`
+
+Feature na sprint (`--sprint`) ou no backlog (`--backlog`); `--aceite` é o comando de aceite.
+
+```text
+usage: cs-state new feature [-h] --title TITLE [--sprint SPRINT] [--backlog]
+                            --aceite ACEITE [--dry-run]
+
+options:
+  -h, --help       show this help message and exit
+  --title TITLE
+  --sprint SPRINT
+  --backlog
+  --aceite ACEITE
+  --dry-run        mostra {ids, criar, mover, eventos} em JSON e não escreve
+                   nada
+```
+
+#### `cs-state new story`
+
+Story US, BUG, FIX ou CHORE numa feature.
+
+```text
+usage: cs-state new story [-h] --tipo {US,BUG,FIX,CHORE} --title TITLE
+                          [--allowed-path ALLOWED_PATH]
+                          [--verify-cmd VERIFY_CMD] [--como COMO]
+                          [--quero QUERO] [--para PARA]
+                          [--reproducao REPRODUCAO] [--fixes FIXES]
+                          [--teste TESTE] [--motivo MOTIVO]
+                          [--criterio CRITERIO] --feature FEATURE
+                          --agents AGENTS [--dry-run]
+
+options:
+  -h, --help            show this help message and exit
+  --tipo {US,BUG,FIX,CHORE}
+  --title TITLE
+  --allowed-path ALLOWED_PATH
+  --verify-cmd VERIFY_CMD
+  --como COMO
+  --quero QUERO
+  --para PARA
+  --reproducao REPRODUCAO
+  --fixes FIXES
+  --teste TESTE
+  --motivo MOTIVO
+  --criterio CRITERIO
+  --feature FEATURE
+  --agents AGENTS
+  --dry-run             mostra {ids, criar, mover, eventos} em JSON e não
+                        escreve nada
+```
+
+#### `cs-state new task`
+
+Task numa story, avulsa (`--avulsa`) ou no backlog (`--backlog`).
+
+```text
+usage: cs-state new task [-h] --tipo {US,BUG,FIX,CHORE} --title TITLE
+                         [--allowed-path ALLOWED_PATH]
+                         [--verify-cmd VERIFY_CMD] [--como COMO]
+                         [--quero QUERO] [--para PARA]
+                         [--reproducao REPRODUCAO] [--fixes FIXES]
+                         [--teste TESTE] [--motivo MOTIVO]
+                         [--criterio CRITERIO] --agent AGENT
+                         [--feature FEATURE] [--sprint SPRINT] [--story STORY]
+                         [--avulsa] [--backlog] [--dry-run]
+
+options:
+  -h, --help            show this help message and exit
+  --tipo {US,BUG,FIX,CHORE}
+  --title TITLE
+  --allowed-path ALLOWED_PATH
+  --verify-cmd VERIFY_CMD
+  --como COMO
+  --quero QUERO
+  --para PARA
+  --reproducao REPRODUCAO
+  --fixes FIXES
+  --teste TESTE
+  --motivo MOTIVO
+  --criterio CRITERIO
+  --agent AGENT
+  --feature FEATURE
+  --sprint SPRINT
+  --story STORY
+  --avulsa
+  --backlog
+  --dry-run             mostra {ids, criar, mover, eventos} em JSON e não
+                        escreve nada
+```
+
+#### `cs-state plan`
+
+Move uma story ou task para a sprint (uma chamada por item). `sprint plan` em alvo em árvore é recusado e aponta `new sprint` + `plan <id> --sprint`.
+
+```text
+usage: cs-state plan [-h] --sprint SPRINT [--dry-run] id
+
+positional arguments:
+  id
+
+options:
+  -h, --help       show this help message and exit
+  --sprint SPRINT
+  --dry-run
+```
+
 #### `cs-state add`
 
 ```text
@@ -1461,7 +1614,8 @@ options:
 #### `cs-state drop`
 
 Descarta a task por decisão humana: delegação `ESCALATED`/`ABSTAINED`/`REJECTED` → `DROPPED` e task → `DROPPED`
-(fechada; não segura `session verify`/`report`). `--reason` obrigatório; `DROPPED` é terminal.
+(fechada; não segura `session verify`/`report`). Também retira a task NÃO INICIADA (sem delegação), por exemplo uma
+planejada que não vale mais. `--reason` obrigatório; `DROPPED` é terminal.
 
 ```text
 
@@ -1915,8 +2069,9 @@ Camada fina: cada alvo chama o script e nada mais. Variáveis: `ID=<task>`, `FEA
 |---|---|
 | `next` | `cs-state next` |
 | `board` | `cs-state board` |
-| `add-epic` / `add-feature` / `add-story` | `cs-state add epic $(ARGS)` / `cs-state add feature $(ARGS)` / `cs-state add story $(ARGS)` |
-| `sprint-plan` / `sprint-start` / `sprint-review` / `sprint-close` | `cs-state sprint plan $(ARGS)` / `cs-state sprint start $(ARGS)` / `cs-state sprint review $(ARGS)` / `cs-state sprint close $(ARGS)` |
+| `new-epic` / `new-sprint` / `new-feature` / `new-story` / `new-task` | `cs-state new epico $(ARGS)` / `cs-state new sprint $(ARGS)` / `cs-state new feature $(ARGS)` / `cs-state new story $(ARGS)` / `cs-state new task $(ARGS)` |
+| `plan` | `cs-state plan $(ARGS)` (`ARGS='<id> --sprint SPR-nnn'`) |
+| `sprint-start` / `sprint-review` / `sprint-close` | `cs-state sprint start $(ARGS)` / `cs-state sprint review $(ARGS)` / `cs-state sprint close $(ARGS)` |
 | `brief ID=` | `cs-state brief --task $(ID) $(ARGS)` |
 | `dispatch ID=` | `cs-state dispatch --task $(ID) --manual $(ARGS)` (plataforma sem hook `pre-agent`; no Claude Code despache pela ferramenta Agent) |
 | `verify ID=` | `cs-state verify --task $(ID)` |

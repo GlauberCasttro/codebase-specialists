@@ -352,7 +352,7 @@ Regras:
 - Story REJECTED volta ao BACKLOG com os achados; reabrir story DONE exige BUG novo, nunca editar a antiga.
 - Sprint fecha mesmo com stories não entregues — elas voltam ao backlog com motivo (sem "quase pronto").
 - `cs-state board` mostra a árvore com rollup (% DONE por nível, bloqueios, orçamento gasto).
-- O PO cria épicos/features/stories por `cs-state add epic|feature|story --type us|bug|fix` (nunca editando o JSON).
+- O PO cria épicos/features/stories por `cs-state new epico|sprint|feature|story|task` (`--tipo US|BUG|FIX|CHORE`) e `cs-state plan <story|task> --sprint SPR-nnn` (nunca editando o JSON).
 - Modo autônomo: mandato por **Feature** (ou Story); o loop percorre as stories da feature sprint a sprint.
 
 Gate **G12 processo**: DoR e DoD recusam com mensagem acionável quando faltam; Bug sem teste que falha
@@ -364,7 +364,7 @@ não vira READY; Fix sem `fixes:` não vira READY; feature não fecha com story 
   motor Python `cs-state` — único dono das regras. Nada edita `board.json5`/`events.jsonl` à mão; o
   validador detecta edição manual pela cadeia de hashes.
 - **Automação**: Makefile como camada fina — cada alvo chama o script e nada mais (sem lógica duplicada).
-  Alvos mínimos: `next`, `board`, `add-epic`, `add-feature`, `add-story`, `sprint-plan|start|review|close`,
+  Alvos mínimos: `next`, `board`, `new-epic`, `new-sprint`, `new-feature`, `new-story`, `new-task`, `plan`, `sprint-start|review|close`,
   `brief ID=`, `dispatch ID=`, `verify ID=`, `review ID=`, `accept ID=`, `reject ID=`, `abstain ID=`,
   `session-save`, `session-load`, `mem Q=`, `autonomy-start FEAT=`, `autonomy-status`, `selftest`,
   `validate`, `drift`. Variáveis passadas como argumentos (`ID=`, `FEAT=`, `Q=`), com `help` listando todos.

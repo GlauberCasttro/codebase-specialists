@@ -20,29 +20,27 @@ arquivos sujos da skill: 4
 # RESUME — codebase-specialists (desenvolvimento)
 
 ## Escopo autorizado e limites
-- Autorizado: nenhuma feature em execução (IDLE). A iter24 foi aceita pelo founder ("ok", 2026-10-13), fechada e
-  instalada (0.12.2).
-- NÃO autorizado: abrir a próxima feature sem o founder escolher; liberar a troca de branch do principal (D-30/E1,
-  resto do B-47); push; publicar o pacote (B-08); `claude -p` sem confirmar custo (D-09).
-- Aguardando decisão: próxima feature — recriar a iter23 (e se B-48, B-49, B-50 entram) ou um hotfix 0.12.3 com B-54;
-  B-56 (`--force-with-lease` em branch própria) mantido como está no aceite.
+- Autorizado: nenhuma feature em execução (IDLE). A iter23 (0.13.0) foi aceita pelo founder ("ok", 2026-10-14) e
+  fechada; commit da feature + commit da mudança oficial do oráculo iter10 (D-35) autorizados ("ok", 2026-10-14).
+- NÃO autorizado: abrir a próxima feature sem o founder escolher; push; publicar o pacote (B-08); `claude -p` sem
+  confirmar custo (D-09); troca de branch do principal (resto do B-47).
+- Aguardando decisão: próxima feature (candidatas: B-50 P0 perda de dados + B-48/B-49; B-61 oráculos antigos; B-54).
 
 ## Onde paramos
-- 0.12.2 entregue (iter24, b757d1f) e instalada nesta máquina (dist, origem b757d1f): guard sem portas laterais;
-  oráculo 9/22 → 22/22; 02 em 3 ciclos (a revisão da feature reabriu portas por variantes). Estado IDLE.
-- BACKLOG: B-44/45/46 entregues; B-47 parcial; B-17 subiu a P1; novos B-54..B-58.
-- `campanhas/README.md` atualizado depois do commit da feature (iter22 da30e17 GO, iter24 b757d1f GO) — fora do estado.
+- 0.13.0 entregue (iter23): fluxo da árvore sem beco sem saída (D1–D6 da cobaia .NET). Oráculo 16/41 → 41/41; portão
+  VERDE nos 2 Pythons; iter10/iter15 sem regressão (D-35). Estado IDLE.
+- BACKLOG: B-19, B-28, B-39..B-43, B-59, B-60 entregues; novos B-61 (oráculos antigos vermelhos), B-62 (menores),
+  B-63 (fechar sprint com task BRIEFED).
 
 ## Próximos passos
-1. Upgrade da cobaia para 0.12.2 (`cs.py upgrade` e `upgrade --apply --allow-outside` lá) e aviso à sessão de lá.
-2. Founder escolhe a próxima: `/tech-lead` (IDLE ⇒ pergunta) — recriar a iter23 a partir de local/criar-iter23/ ou
-   hotfix B-54.
-3. Commitar `campanhas/README.md` (não é do save: entra no próximo commit de feature ou à parte, a pedido).
+1. `/install` (instala a 0.13.0 nesta máquina) e avisar a sessão da cobaia .NET: upgrade, depois `drop` das duplicadas,
+   `amend`/start das completáveis, aceitar/escalar SPR-001/07 e /08 (B-63) e fechar a SPR-001; `drop` da SPR-002.
+2. Founder escolhe a próxima feature.
 
 ## Estado do ambiente
-- Fora do commit: `campanhas/README.md` (linhas de entrega iter22/iter24; a linha da iter19 ainda diz "em andamento",
-  não conferida). Cópias local/work/iter19, iter21, iter22, iter24 e local/portao-iter24 podem ser apagadas.
-  Evidências da iter24 em local/tech-lead/iter24/ e local/fechar-iter24/.
+- Cópias de trabalho e portões em local/work/iter23, local/portao-iter23, local/tech-lead/iter23 (evidências) e as
+  antigas local/work/iter19, iter21, iter22, iter24 podem ser apagadas. A linha da iter19 em campanhas/README.md ainda
+  diz "em andamento" (não conferida).
 - Sessões da cobaia .NET mandam achados por SendMessage para esta sessão (nomes das sessões em local/).
 
 ## Ponteiros

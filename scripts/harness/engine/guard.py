@@ -180,6 +180,16 @@ def decide_write(root, board, cfg, actor, path, base=None, tool_name=None, tool_
     if not isinstance(path, str) or not path:
         return "path ausente no payload"
     lex, real = hcore.resolve_target(root, path, base)
+    if (lex is None or real is None) and actor["main"] and hcore.in_auto_memory(root, path, base):
+        mreal = os.path.realpath(path if os.path.isabs(path) else os.path.join(base or root, path))
+        try:
+            nlink = os.lstat(mreal).st_nlink if os.path.lexists(mreal) else 1
+        except OSError:
+            return "%s: auto-memória não verificável (lstat falhou) — fail-closed" % path
+        if nlink > 1:
+            return ("%s é hardlink (nlink=%d) dentro da auto-memória: escrita bloqueada (pode alterar arquivo "
+                    "protegido do projeto) — fail-closed" % (path, nlink))
+        return None  # auto-memória do Claude Code: SÓ do agente principal e SÓ a memory/ do próprio projeto
     if lex is None or real is None:
         return "escrita fora do projeto (%s → %s)" % (path, os.path.realpath(path if os.path.isabs(path) else os.path.join(base or root, path)))
     rels = sorted({lex, real})
@@ -271,8 +281,8 @@ STATE_SUB = {"main": {"init", "add", "epic", "feature", "story", "sprint", "sess
                       "accept", "reject", "retry", "escalate", "block", "reroute", "delegate", "amend", "brief", "status", "drop", "reverify",
                       "board", "next", "why", "autonomy", "ask", "consult", "validate", "show",
                       "new", "start", "plan", "move", "park", "promote", "close", "reopen", "find", "tree", "check",
-                      "migrate"},
-             "any": {"status", "board", "next", "why", "brief", "validate", "find", "tree", "check", "show"}}
+                      "migrate", "version"},
+             "any": {"status", "board", "next", "why", "brief", "validate", "find", "tree", "check", "show", "version"}}
 
 
 def _subcmd(argv):

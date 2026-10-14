@@ -111,7 +111,7 @@ def run(root, strict=True, allow_empty=False):
         for r in s.get("reviews") or []:
             if r.get("verdict") not in verdicts:
                 E.append("sessão %s: veredito fora do enum" % s["id"])
-    total = sum(len(board[l]) for l in hcore.BOARD_LISTS.values())
+    total = sum(len(board[l]) for l in hcore.BOARD_LISTS.values()) + len(board.get("tree") or {})
     if strict and total == 0 and not allow_empty:
         E.append("estado vazio: board sem nenhuma entidade (use --allow-empty só logo após o install)")
     # replay (transições de histórico reconhecidas por harness.legacy_ack valem só para eventos ANTERIORES ao ack)

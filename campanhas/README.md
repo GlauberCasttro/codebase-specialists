@@ -35,5 +35,6 @@ vivo do desenvolvimento está em `.claude/state/`.
 Nova campanha: skill `new-front` (cria `campanhas/<frente>/` pelo `ac.py init`); acrescente a linha aqui ao abrir e
 preencha commit/decisão no `close-front`.
 | iter19 | Estado legível em JSON, chaves em inglês, amend refletido no arquivo, cs-state show e migração automática | — | em andamento |
-| iter22 | cs-state show liberado no guard do alvo, varredura que impede subcomando sem regra no guard, versão 0.12.1 | — | em andamento |
-| iter24 | Hotfix de segurança do guard do harness gerado — fechar as portas confirmadas pela auditoria da cobaia (B-44, B-45, B-46, B-47) | — | em andamento |
+| iter22 | cs-state show liberado no guard do alvo, varredura que impede subcomando sem regra no guard, versão 0.12.1 | da30e17 | GO |
+| iter24 | Hotfix de segurança do guard do harness gerado — fechar as portas confirmadas pela auditoria da cobaia (B-44, B-45, B-46, B-47) | b757d1f | GO |
+| iter23 | Fluxo da árvore — descartar e emendar task não iniciada, sprint que fecha, uma sprint aberta por épico (e descarte de sprint), DoR na criação, sprint ↔ story na árvore, textos emitidos com `new`, auto-memória do Claude Code e versão visível no alvo | — | em andamento |

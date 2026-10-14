@@ -182,6 +182,7 @@ def build_parser():
         if name == "brief":
             p.add_argument("--phase", choices=["implement", "verify", "review"])
             p.add_argument("--agent")
+    sub.add_parser("version", help="SÓ LEITURA: versão do harness instalado (MANIFEST.json5) e da skill que o gerou (run.json5)")
     p = sub.add_parser("legacy-ack", help="HUMANO: reconhece na cadeia o histórico de motor antigo/hotfix (validate --strict)")
     p.add_argument("--reason", required=True)
     p = sub.add_parser("ask", help="faixa consulta: delegação SÓ LEITURA a um especialista, sem task/story")
@@ -332,6 +333,47 @@ def _tree_amend(root, actor, a):
     return ["emendado %s (%s, item da árvore ainda não iniciado): cs-state check %s" % (it["id"], a.field, it["id"])]
 
 
+def _tree_drop(root, actor, a):
+    """`drop` de item da árvore NUNCA iniciado (task sem M2, sprint). None = segue para a M2 (task iniciada/delegação)."""
+    import tree
+    try:
+        tv = tree.load_view(root)
+    except (hcore.StateError, hcore.Refused):
+        return None
+    it = tv.get(_tid(a))
+    if it is None or it.get("kind") not in ("task", "sprint"):
+        return None
+    if it["kind"] == "task" and tv.m2(it) is not None:
+        return None
+    if not (a.reason or "").strip():
+        raise hcore.Refused("drop %s exige --reason '<motivo do descarte>'" % it["id"])
+    tree.run_build(root, actor, lambda t: tree.drop(t, it["id"], a.reason))
+    return ["descartado %s (%s) → archive/ como DROPPED: %s" % (it["id"], it["kind"], a.reason)]
+
+
+def _version_lines(root):
+    """`cs-state version`: `version` do MANIFEST.json5 do harness; sem o campo, `skill_version` do run.json5."""
+    def _read(path):
+        try:
+            d = hcore.read_any(path)
+        except (OSError, ValueError):
+            return {}
+        return d if isinstance(d, dict) else {}
+    sp = os.path.join(root, hcore.STATE_DIR)
+    manifest = _read(os.path.join(sp, "harness", "MANIFEST.json5")).get("version")
+    run = _read(hcore.state_paths(root)["run"]).get("skill_version")
+    v = manifest or run
+    if not v:
+        raise hcore.Refused("versão desconhecida: nem MANIFEST.json5 (version) nem run.json5 (skill_version) a trazem — "
+                            "rode cs.py harness install")
+    out = ["codebase-specialists %s" % v,
+           "  harness (MANIFEST.json5 version): %s" % (manifest or "ausente (instalado por skill anterior)"),
+           "  alvo (run.json5 skill_version): %s" % (run or "ausente")]
+    if manifest and run and manifest != run:
+        out.append("  atenção: harness e alvo divergem — cs.py upgrade --apply")
+    return out
+
+
 def _plan_out(plan, verb):
     out = ["criado %s em %s" % (i, p) for i, p in zip(plan["ids"], plan["criar"])]
     out += ["%s %s: %s → %s" % (verb, m.get("id_anterior") or m["id"], m["de"], m["para"]) +
@@ -457,12 +499,22 @@ def run(a):
     tree_mode = hcore.tree_mode(root)
     if c in TREE_CMDS or (tree_mode and (c == "board" or (c == "feature" and a.transition == "drop"))):
         return run_tree(root, actor, a)
+    if tree_mode and c == "drop":
+        r = _tree_drop(root, actor, a)
+        if r is not None:
+            return r
+    if tree_mode and c == "sprint" and a.transition == "plan":
+        raise hcore.Refused(["`sprint plan` é do estado plano (legado); este alvo está em árvore:",
+                             "criar a sprint: cs-state new sprint --meta '<meta>' [--epico EPC-nnn]",
+                             "planejar: cs-state plan <story|task> --sprint SPR-nnn (uma chamada por item)"])
     if tree_mode and c == "amend":
         r = _tree_amend(root, actor, a)
         if r is not None:
             return r
     if tree_mode and c in TREE_M2:
         _tree_m2_ids(root, a)
+    if c == "version":
+        return _version_lines(root)
     if c == "init":
         import tree
         r = tree.init(root)
@@ -705,7 +757,9 @@ def run(a):
             import session
             import tree
             out += session.tree_session_lines(root)  # mesma orientação de sessão M1 do caminho plano
-            out += session._steps(tree.load_view(root))
+            tv_next = tree.load_view(root)
+            out += session._steps(tv_next)
+            out += tree.planned_lines(tv_next)
         else:
             out += views.next_lines(engine.Ctx(root, hcore.load_board(root)))
     elif c == "why":

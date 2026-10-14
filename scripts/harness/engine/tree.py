@@ -402,10 +402,25 @@ def new_epico(tv, title, objetivo, metrica=None):
     return [tv.event("new", eid, {"kind": "epico"})]
 
 
+def _open_sprints_of(tv, epico_id, skip=None):
+    """Sprints do épico ainda não fechadas (backlog ou state): no máximo UMA por épico."""
+    return [x for x in tv.by_kind("sprint") if x.get("epico") == epico_id and zone_of(x["path"]) != "archive"
+            and x["id"] != skip]
+
+
+def _one_open_sprint(tv, epico_id, skip=None):
+    abertas = _open_sprints_of(tv, epico_id, skip)
+    if abertas:
+        a = abertas[0]
+        raise Refused("o épico %s já tem a sprint aberta %s (UMA sprint aberta por épico): feche (cs-state close %s "
+                      "--summary ...) ou descarte (cs-state drop %s --reason ...) antes" % (epico_id, a["id"], a["id"], a["id"]))
+
+
 def new_sprint(tv, meta, epico=None):
     if epico:
         _parent_folder(tv, epico, ("epico",))
         epico = tv.get(epico)["id"]
+        _one_open_sprint(tv, epico)
     n = tv.counter("seq.SPR")
     sid = "SPR-%03d" % n
     it = new_item("sprint", sid, meta, "backlog/sprints/%s/sprint.json" % sid, tv.actor, meta=meta, epico=epico)
@@ -517,6 +532,10 @@ def new_task(tv, spec):
     if not title.strip():
         raise Refused("--title obrigatório")
     it = add_task_item(tv, spec, title, pk, pv if pk not in ("avulsa", "backlog") else None)
+    P = task_dor(tv, it, run=False, territorio=False)  # DoR ESTÁTICO na criação; a parte dinâmica fica no start
+    if P:
+        raise Refused(["task não criada — DoR estático incompleto:"] + P,
+                      hint="complete os campos no cs-state new task (nada foi criado)")
     return [tv.event("new", it["id"], {"kind": "task", "tipo": it["tipo"]})]
 
 
@@ -563,7 +582,7 @@ def new_story(tv, spec):
 
 
 # ================================================================ DoR (check e start usam a MESMA regra)
-def task_dor(tv, it, run=True):
+def task_dor(tv, it, run=True, territorio=True):
     P = []
     tipo = it.get("tipo")
     if tipo == "US":
@@ -601,14 +620,20 @@ def task_dor(tv, it, run=True):
         P.append("task sem --verify-cmd (prova executável)")
     if not it.get("allowed_paths"):
         P.append("task sem --allowed-path (território da escrita)")
-    terr = tv.ctx.territory(it["agent"]) if it.get("agent") and tv.ctx.team else []
+    for p in it.get("allowed_paths") or []:
+        if hcore.is_reserved(p):
+            P.append("allowed_path %s está em área reservada do harness (.claude/, .swarm/, .git/, ...): o subagente "
+                     "não escreve ali — use um caminho do produto (cs-state amend %s --field allowed_paths ...)"
+                     % (p, it["id"]))
+    terr = tv.ctx.territory(it["agent"]) if territorio and it.get("agent") and tv.ctx.team else []
     for p in it.get("allowed_paths") or []:
         if terr and engine.whole_territory(p, terr):  # R7: escopo = território inteiro não inicia
             P.append(engine.whole_territory_problem(it["id"], p, it["agent"], terr))
     return P
 
 
-TREE_AMENDABLE = ("allowed_paths", "acceptance_criteria")
+DOR_FIELDS = ("motivo", "reproducao", "como", "quero", "para", "verify_cmd", "fixes", "teste")
+TREE_AMENDABLE = ("allowed_paths", "acceptance_criteria") + DOR_FIELDS
 
 
 def ac_view(criterios):
@@ -659,7 +684,7 @@ def mirror_amend(board, ev, m2_id, actor, field, new_t, reason):
 
 
 def amend(tv, ident, field, after, reason):
-    """Emenda de task da árvore AINDA NÃO INICIADA (sem M2 em curso): hoje só allowed_paths (a dica do DoR do R7).
+    """Emenda de task da árvore AINDA NÃO INICIADA (sem M2 em curso): allowed_paths, critérios e os campos do DoR.
     Iniciada → a emenda vale na task M2 (cs-state amend <id> ... sobre a M2)."""
     it = tv.need(ident, ("task",))
     if zone_of(it["path"]) == "archive":
@@ -670,6 +695,20 @@ def amend(tv, ident, field, after, reason):
     if field not in TREE_AMENDABLE:
         raise Refused("campo não emendável em task da árvore não iniciada: %s (permitidos: %s)"
                       % (field, ", ".join(TREE_AMENDABLE)))
+    if field in DOR_FIELDS:
+        if not isinstance(after, str) or not after.strip():
+            raise Refused("--after de %s: texto não vazio" % field)
+        if field in ("como", "quero", "para") and it.get("tipo") == "CHORE":
+            raise Refused("CHORE é manutenção técnica sem valor de usuário: sem %s (use motivo)" % field)
+        new_v = after.strip()
+        before = it.get(field)
+        if new_v == before:
+            return []
+        it = tv.items[it["id"]]
+        it[field] = new_v
+        tv.note(it, "amend", reason, field=field, before=before, after=new_v)
+        tv.put(it)
+        return [tv.event("amend", it["id"], {"field": field, "before": before, "after": new_v, "reason": reason})]
     if field == "acceptance_criteria":
         if not isinstance(after, list) or not after or not all(
                 isinstance(a, dict) and isinstance(a.get("id"), str) and a["id"].strip()
@@ -872,6 +911,7 @@ def start(tv, ident):
                 raise Refused("sprint %s pertence ao épico %s, que não está em execução: cs-state start %s" % (
                     it["id"], ep["id"], ep["id"]))
             dest = "%s/sprints/%s" % (tv.folder(ep), it["id"])
+            _one_open_sprint(tv, ep["id"], skip=it["id"])
         tv.move_subtree(it, dest)
     elif k == "feature":
         act = [f for f in tv.by_kind("feature", "state") if f["id"] != it["id"]]
@@ -1042,9 +1082,11 @@ def close(tv, ident, summary, devolver=False, reason=None):
         feats = [x for x in tv.descendants(it) if x["kind"] == "feature" and not x.get("closed")]
         bfeats = [x for x in tv.by_kind("feature", "backlog") if x.get("sprint") == it["id"]]
         tasks = [x for x in tv.descendants(it) if x["kind"] == "task" and not x.get("closed")
-                 and tv.container_of(x) and tv.container_of(x)["id"] == it["id"]]
+                 and tv.container_of(x) and tv.container_of(x)["id"] == it["id"]
+                 and tv.m2_status(x)[0] != "DROPPED"]  # task DROPPED no M2 não conta como aberta
+        stories = _planned_stories(tv, it)
         busy = [x["id"] for x in tv.descendants(it) if x["kind"] == "task" and tv.in_progress(x)]
-        pend = [x["id"] for x in feats + bfeats + tasks]
+        pend = [x["id"] for x in feats + bfeats + tasks + stories]
         if pend and (not devolver or busy):
             raise Refused(["sprint %s tem itens abertos:" % it["id"]] + (busy or pend),
                           hint="feche-os, ou cs-state close %s --summary ... --devolver --reason ... (devolve ao backlog o "
@@ -1069,6 +1111,12 @@ def close(tv, ident, summary, devolver=False, reason=None):
             devolvido.append({"id": f["id"], "reason": reason})
         for x in tasks:
             devolvido.append({"id": x["id"], "novo_id": _to_backlog_task(tv, x, reason), "reason": reason})
+        for x in stories:
+            x = tv.items[x["id"]]
+            x["sprint"] = None
+            tv.note(x, "devolvido", reason)
+            tv.put(x)
+            devolvido.append({"id": x["id"], "reason": reason})
         n = len(tv.same_rest(it, "task"))
         _to_archive(tv, it, _closed(tv, summary, devolvido=devolvido, metricas={"tasks": n}))
         return [tv.event("close", it["id"], {"kind": "sprint", "devolvido": devolvido})]
@@ -1081,6 +1129,12 @@ def close(tv, ident, summary, devolver=False, reason=None):
         _to_archive(tv, it, _closed(tv, summary, metricas={"sprints": len(tv.same_rest(it, "sprint"))}))
         return [tv.event("close", it["id"], {"kind": "epico"})]
     raise Refused("close não se aplica a %s" % k)
+
+
+def _planned_stories(tv, sp):
+    """Stories (fora da pasta da sprint) planejadas nela por `cs-state plan <story> --sprint` e ainda abertas."""
+    return [x for x in tv.by_kind("story") if x.get("sprint") == sp["id"] and zone_of(x["path"]) != "archive"
+            and not x.get("closed")]
 
 
 def _busy_under(tv, it):
@@ -1123,6 +1177,36 @@ def feature_drop(tv, ident, reason):
     tv.note(it, "drop", reason)
     tv.put(it)
     return [tv.event("drop", it["id"], {"reason": reason})]
+
+
+def drop(tv, ident, reason):
+    """Descarta task ou sprint NUNCA iniciada (archive/ como DROPPED, motivo no histórico). Task iniciada segue o
+    fluxo da M2 (cs-state drop sobre a delegação); feature segue `cs-state feature drop`."""
+    if not (reason or "").strip():
+        raise Refused("drop exige --reason (o motivo do descarte vai para o histórico do item)")
+    it = tv.need(ident, ("task", "sprint"))
+    if zone_of(it["path"]) == "archive":
+        raise Refused("%s já está fechado (archive/)" % it["id"])
+    if it["kind"] == "task":
+        if tv.m2(it) is not None:
+            raise Refused("%s já foi iniciada (M2): o descarte segue o fluxo da M2 (escale, rejeite ou drope a delegação)"
+                          % it["id"])
+        _to_archive(tv, it, _closed(tv, "descartada: " + reason, metricas={"descartada": True}))
+    else:
+        if zone_of(it["path"]) != "backlog":
+            raise Refused("%s já foi iniciada: feche com cs-state close %s --summary ..." % (it["id"], it["id"]))
+        pend = [x["id"] for x in tv.descendants(it) if x["kind"] in ("task", "story", "feature") and not x.get("closed")]
+        pend += [x["id"] for x in tv.by_kind("feature", "backlog") if x.get("sprint") == it["id"]]
+        pend += [x["id"] for x in _planned_stories(tv, it)]
+        if pend:
+            raise Refused(["sprint %s tem itens abertos — descarte ou devolva antes:" % it["id"]] + pend)
+        _to_archive(tv, it, _closed(tv, "descartada: " + reason, metricas={"descartada": True}))
+    it = tv.items[it["id"]]
+    it["closed"]["status"] = "DROPPED"
+    it["dropped"] = {"at": hcore.now_iso(), "by": tv.actor, "reason": reason}
+    tv.note(it, "drop", reason)
+    tv.put(it)
+    return [tv.event("drop", it["id"], {"reason": reason, "kind": it["kind"]})]
 
 
 def reopen(tv, ident, reason):
@@ -1190,6 +1274,7 @@ def move(tv, ident, to=None, avulsa=False):
     if k == "sprint":
         if tgt["kind"] != "epico":
             raise Refused("sprint só vai dentro de épico (não dentro de %s %s)" % (tgt["kind"], tgt["id"]))
+        _one_open_sprint(tv, tgt["id"], skip=it["id"])
         if zone_of(it["path"]) == "state":
             if zone_of(tgt["path"]) != "state":
                 raise Refused("épico %s não está em execução: cs-state start %s" % (tgt["id"], tgt["id"]))
@@ -1228,11 +1313,36 @@ def move(tv, ident, to=None, avulsa=False):
 
 
 def plan(tv, ident, sprint):
-    it = tv.need(ident, ("task",))
+    it = tv.need(ident, ("task", "story"))
+    if it["kind"] == "story":
+        return _plan_story(tv, it, sprint)
     _not_started(tv, it)
     sp = _parent_folder(tv, sprint, ("sprint",))
     nx = _rehome_task(tv, it, "sprint", sp["id"], "plan")
     return [tv.event("plan", ident, {"para": nx["id"], "sprint": sp["id"]})]
+
+
+def _plan_story(tv, st, sprint):
+    """Story composta continua dentro da feature; o vínculo é por REFERÊNCIA (story.sprint + sprint.stories)."""
+    if zone_of(st["path"]) == "archive":
+        raise Refused("%s está fechada: nada a planejar" % st["id"])
+    sp = _parent_folder(tv, sprint, ("sprint",))
+    st = tv.items[st["id"]]
+    if st.get("sprint") == sp["id"]:
+        return []
+    if st.get("sprint"):
+        antiga = tv.get(st["sprint"])
+        if antiga is not None and antiga["id"] != sp["id"]:
+            antiga = tv.items[antiga["id"]]
+            antiga["stories"] = [x for x in antiga.get("stories") or [] if x != st["id"]]
+            tv.put(antiga)
+    st["sprint"] = sp["id"]
+    tv.note(st, "plan", sprint=sp["id"])
+    tv.put(st)
+    sp = tv.items[sp["id"]]
+    sp["stories"] = [x for x in sp.get("stories") or [] if x != st["id"]] + [st["id"]]
+    tv.put(sp)
+    return [tv.event("plan", st["id"], {"sprint": sp["id"], "kind": "story"})]
 
 
 def promote(tv, ident):
@@ -1268,6 +1378,8 @@ def load_view(root):
 def status_of(tv, it):
     z = zone_of(it["path"])
     if z == "archive":
+        if (it.get("closed") or {}).get("status") == "DROPPED" or it.get("dropped"):
+            return "descartado" if it["kind"] != "task" else "descartada"
         return "fechado" if it["kind"] != "task" else "fechada"
     if z == "backlog":
         return "backlog"
@@ -1426,8 +1538,10 @@ def board_text(tv):
     for key, title in (("state", "em execução (state/)"), ("backlog", "backlog/"), ("fechados", "fechados recentes (archive/)")):
         L.append("%s:" % title)
         rows = bj[key]
-        L += ["  %s [%s] %s%s" % (n["id"], n["status"], n.get("title") or "",
-                                  (" — %s" % n["agent"]) if n.get("agent") else "") for n in rows] or ["  nenhum"]
+        L += ["  %s [%s] %s%s%s" % (n["id"], n["status"], n.get("title") or "",
+                                    (" — %s" % n["agent"]) if n.get("agent") else "",
+                                    (" → %s" % n["sprint"]) if n["kind"] == "story" and n.get("sprint") else "")
+              for n in rows] or ["  nenhum"]
     return "\n".join(L)
 
 
@@ -1741,3 +1855,15 @@ def migrate_format(root, actor="lead", dry_run=False):
         return [engine.Event("arvore.format", None, ops, {"de": "json5", "para": "json", "paths": paths})]
     engine.commit(root, actor, build, post=False)
     return ["migrado: %s em 1 evento encadeado (arvore.format)" % head]
+
+
+def planned_lines(tv):
+    """`cs-state next`: stories planejadas em sprint (vínculo por referência) que ainda não têm passo próprio."""
+    out = []
+    for sp in tv.by_kind("sprint"):
+        if zone_of(sp["path"]) == "archive":
+            continue
+        for st in _planned_stories(tv, sp):
+            out.append("planejada na %s: %s (%s) — inicie cada task da story (cs-state show %s)"
+                       % (sp["id"], st["id"], st.get("title") or "", st["id"]))
+    return out

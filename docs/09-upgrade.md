@@ -262,3 +262,17 @@ A entrada `to: "0.12.2"` do catálogo declara só `harness`. O que ela faz:
   `unzip -d`, `dotnet -o`), inline/stdin com flags combinadas e git que desliga proteção (`core.hooksPath`,
   `--no-verify`, push forçado ou com refspec protegido, `branch -D`, `remote set-url/add`, `reflog expire`);
 - não refaz entrevista, roster, cartões, memória nem board.
+
+## Migração 0.13.0: itens presos apontados, nunca descartados sozinhos
+
+A entrada `to: "0.13.0"` do catálogo declara `harness` e `emit`. O que ela faz:
+
+- reinstala o motor do harness no alvo (traz `cs-state drop <id> --reason` e `cs-state amend <id> --field <campo>
+  --after <valor> --reason` para task não iniciada, o DoR conferido na criação e uma sprint aberta por épico) e
+  reemite os artefatos com os textos novos;
+- o plano (`cs.py upgrade`) e o relatório do `--apply` LISTAM as tasks e sprints não iniciadas que não passam no DoR
+  do motor novo (e as sprints que passam de uma aberta por épico), cada uma com o motivo e o comando
+  `cs-state drop <id> --reason '...'` ou `cs-state amend <id> --field ... --after ... --reason '...'`;
+- o upgrade NÃO descarta nem altera nenhum desses itens: a decisão é sua, item a item; rodar de novo mostra a mesma
+  lista enquanto houver pendência (idempotente);
+- não refaz entrevista, roster, cartões, memória nem board.

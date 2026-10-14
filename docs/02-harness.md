@@ -211,7 +211,7 @@ estado sem saída a não ser declarado em `terminal`; épico/feature/sprint/stor
 | `escalate` | PLANNED…REJECTED → ESCALATED | `reason_present` |
 | `reroute` | REJECTED/PLANNED/BRIEFED/ESCALATED/ABSTAINED → REROUTED | `reason_present` (ou `--decision`), `new_agent_valid` |
 | `abstain` | BRIEFED/DISPATCHED/RETURNED → ABSTAINED | `reason_present`, `abstain_kind_valid` |
-| `drop` | ESCALATED/ABSTAINED/REJECTED → DROPPED | `reason_present` |
+| `drop` | ESCALATED/ABSTAINED/REJECTED → DROPPED (ou task não iniciada, sem delegação) | `reason_present` |
 | `reverify` | REJECTED/ESCALATED → RETURNED (e roda o verify) | `reverify_allowed` (submission da tentativa atual; de REJECTED só se a falha foi de AMBIENTE) |
 | `waive_verify` | REJECTED/ESCALATED → VERIFIED | `reason_present`, `evidence_present`, `waiver_by_human` (`--by` ≠ ator, ≠ agente do time, ≠ lead/orchestrator), `verify_failed_by_environment` (último verify da tentativa é AMBIENTE e a evidência cita a ferramenta ausente), `tree_unchanged` |
 
@@ -309,8 +309,8 @@ roda o mesmo validador (só leitura; exit 1 se reprovar).
 
 ## 6. Processo — Épico → Feature → Sprint → Story
 
-Toda task pertence a uma Story; toda transição de processo é feita por `cs-state` (o PO cria com `cs-state add
-epic|feature|story`, nunca editando o JSON). `cs-state board` mostra a árvore com rollup.
+Toda task pertence a uma Story; toda transição de processo é feita por `cs-state` (o PO cria com `cs-state new
+epico|sprint|feature|story|task` e planeja com `cs-state plan <id> --sprint`, nunca editando o JSON). `cs-state board` mostra a árvore com rollup.
 
 ```text
  Épico   PROPOSED ──activate──▶ ACTIVE ──done──▶ DONE          drop ─▶ DROPPED (de PROPOSED/ACTIVE)
@@ -477,7 +477,7 @@ Sempre com consentimento: `--dry-run` lista o bloco `outside`; sem `--allow-outs
 
 O Makefile do alvo nunca é sobrescrito: se existe, ganha só o bloco gerenciado; alvo com colisão de nome ganha
 prefixo `cs-`. Alvos de `specialists.mk` (`scripts/harness/install.py → MAKE_TARGETS`): `next`, `board`,
-`add-epic`, `add-feature`, `add-story`, `sprint-plan`, `sprint-start`, `sprint-review`, `sprint-close`,
+`new-epic`, `new-sprint`, `new-feature`, `new-story`, `new-task`, `plan`, `sprint-start`, `sprint-review`, `sprint-close`,
 `brief ID=`, `dispatch ID=`, `verify ID=`, `review ID=`, `accept ID=`, `reject ID=`, `abstain ID=`,
 `session-save`, `session-load`, `mem Q=`, `autonomy-start FEAT=`, `autonomy-status`, `selftest`, `validate`,
 `drift`, e `help`; argumentos extras em `ARGS='…'`.
