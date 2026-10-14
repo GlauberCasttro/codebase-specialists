@@ -110,6 +110,24 @@ Riscos Windows (o bashscan modela shell POSIX): `os.path.normpath` no Windows tr
 `:MAIN`) é o padrão no Windows — tratar caixa antes de portar; comandos PowerShell (`Copy-Item`, `New-Item
 -ItemType HardLink`, `Out-File`) não são modelados.
 
+## 0.13.0 — iter23 · commit `933012d` (+ `1d3d78d` oráculo iter10) (2026-10-14) · B-19, B-28, B-39..B-43, B-59, B-60
+
+Fluxo da árvore: `drop`/`amend` de task não iniciada, sprint fecha com DROPPED, uma sprint aberta por épico, DoR
+estático no `new task`, `plan <story> --sprint`, textos emitidos e Makefile com `new`/`plan`/`drop` (`new-epic`),
+auto-memória do Claude Code liberada ao principal, `cs-state version` + `version` no MANIFEST, upgrade que aponta
+itens presos.
+Arquivos para cherry-pick (26): `scripts/harness/engine/{tree,state,guard,hcore,validate}.py`,
+`scripts/harness/tests/{test_iter23_arvore,test_iter19_estado}.py`, `scripts/harness/install.py`,
+`scripts/emit/{render,platforms}.py`, `scripts/emit/tests/test_iter23_emit.py`,
+`assets/templates/{orchestrator,product-process,plan-sprint}.md`, `docs/{02-harness,06-referencia-cli,09-upgrade}.md`,
+`references/{harness.md,ARCHITECTURE.md,migrations.json5}`, `scripts/upgrade/core.py`,
+`scripts/upgrade/tests/test_iter23_upgrade.py`, `VERSION`, `README.md`; oráculos `campanhas/iter23` e a mudança
+oficial em `campanhas/iter10`.
+Riscos Windows: o slug da auto-memória é derivado do realpath com todo [^A-Za-z0-9] → '-' (no Windows o caminho tem
+`C:\` — conferir como o Claude Code nomeia a pasta lá antes de portar o `in_auto_memory`); `os.lstat().st_nlink`
+funciona no NTFS (Python 3.9+); `stuck_items` roda `sys.executable -I -c` com o caminho do alvo em argv (sem shell —
+ok com espaços); `HOME` vs `USERPROFILE` para achar `~/.claude/projects/`.
+
 ## Pendentes no BACKLOG que também afetarão o Windows
 
 B-19 (descarte de task não iniciada), B-21 (chaves do mandato em inglês), B-25, B-26, B-27, B-28 (`cs-state add` →
