@@ -287,9 +287,9 @@ def _tree_parsers(sub):
     p.add_argument("--json", action="store_true")
     p = sub.add_parser("check", help="SÓ LEITURA: DoR/pré-condições do item (exit 0 pronto, 1 lista o que falta)")
     p.add_argument("id")
-    p = sub.add_parser("migrate", help="state-tree: board plano → árvore; state-format: estado .json5 → .json (um evento)")
-    p.add_argument("what", choices=["state-tree", "state-format"])
-    p.add_argument("--dry-run", action="store_true", help="state-format: lista o que muda e não escreve nada")
+    p = sub.add_parser("migrate", help="state-tree: board plano → árvore; state-format: estado .json5 → .json (um evento); item-status: grava o status derivado em cada item (sem evento)")
+    p.add_argument("what", choices=["state-tree", "state-format", "item-status"])
+    p.add_argument("--dry-run", action="store_true", help="state-format/item-status: lista o que muda e não escreve nada")
 
 
 TREE_M2 = ("ready", "dispatch", "submit", "return", "verify", "review", "accept", "reject", "retry", "escalate", "block",
@@ -389,8 +389,10 @@ def run_tree(root, actor, a):
     if c == "migrate":
         if a.what == "state-format":
             return tree.migrate_format(root, actor, dry)
+        if a.what == "item-status":
+            return tree.migrate_item_status(root, dry)
         if dry:
-            raise hcore.Refused("--dry-run só vale em migrate state-format")
+            raise hcore.Refused("--dry-run só vale em migrate state-format e item-status")
         return [tree.migrate(root, actor)]
     if c == "find":
         tv = tree.load_view(root)

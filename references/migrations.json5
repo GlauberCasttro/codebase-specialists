@@ -22,7 +22,7 @@
 // Nunca refeito num upgrade (salvo migração explícita): entrevista, roster aprovado, cartões aprovados,
 // memória de lições, board/eventos.
 {
- version: "0.13.0",
+ version: "0.13.1",
  migrations: [
   {
    to: "0.5.0",
@@ -119,6 +119,14 @@
    actions: [
     {kind: "harness"},
     {kind: "emit"}
+   ]
+  },
+  {
+   to: "0.13.1",
+   why: "status no item (campanha-iter25): cada item do estado (épico, sprint, feature, story, task; backlog, state e archive) passa a gravar no próprio arquivo o `status` canônico derivado do ciclo de vida (TODO, BACKLOG, ACTIVE, DONE, DROPPED e o par M2 `<STATUS>/<DELEG>`), para que ler um item diga em que pé ele está sem consultar a árvore; a exibição segue em português. Reinstala o motor e regrava os itens existentes com `status` (`cs-state migrate item-status`: só regrava o arquivo cujo texto difere, não anexa evento, não muda outro campo, idempotente); o plano e o relatório do apply dizem quantos itens mudam. Sem refazer entrevista, roster, cartões, memória nem board",
+   actions: [
+    {kind: "harness"},
+    {kind: "item-status"}
    ]
   }
  ]

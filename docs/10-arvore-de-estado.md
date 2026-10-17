@@ -28,6 +28,11 @@ Desde a 0.11.0 o estado de entidade é **JSON padrão** (`.json`), não mais JSO
 - **Chaves em inglês, na ordem de leitura**: `id, kind, type, title, agent, allowed_paths, protected_paths, as_a,
   i_want, so_that, acceptance_criteria, verify_cmd, status, wave, route, created_at, created_by, started_at, closed,
   m2, aliases, path, parent`; o resto em ordem alfabética e o `history` por último.
+- **O campo `status`** (0.13.1): todo item grava o próprio estado canônico (vocabulário D-37): `TODO`, `BACKLOG`,
+  `ACTIVE`, `DONE`, `DROPPED` e, para o par M2, `<STATUS>/<DELEG>`. É derivado do ciclo de vida (zona, início,
+  fechamento, descarte) e regravado pelo `cs-state` a cada mudança; um item antigo ganha o campo pelo
+  `cs-state migrate item-status` (o upgrade da 0.13.1 roda). A exibição (`cs-state tree`, `show`, board) segue em
+  português.
 - **O mapa de chaves** (antigo → novo), por caminho — a mesma palavra pode ter outro destino em outro nível:
 
 | Onde | Antes (pt) | Agora (en) |

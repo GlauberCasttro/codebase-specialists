@@ -52,6 +52,11 @@
    "id": "iter23",
    "fechada_em": "2026-10-14T20:00:55-0300",
    "archive": ".claude/state/archive/iter23/iter23.md"
+  },
+  {
+   "id": "iter25",
+   "fechada_em": "2026-10-17T00:01:00-0300",
+   "archive": ".claude/state/archive/iter25/iter25.md"
   }
  ]
 }

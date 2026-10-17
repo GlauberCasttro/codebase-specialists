@@ -1,0 +1,54 @@
+# base iter25 (mudança oficial 01, D-37) — HEAD 3eed3b4 (VERSION 0.13.0), 2026-10-14T23:44:10Z
+# alvos em TMPDIR do sistema; skill antiga (CA-05) = git archive 3eed3b4 (0.13.0); D falham por asserção (FAIL, 0 ERROR)
+## python3 (Python 3.13.3)
+CA-01 R ok    TestCA01.test_ca01_controle_derivado_continua
+CA-01 R ok    TestCA01.test_ca01_controle_exibicao_continua_em_portugues
+CA-01 D FAIL  TestCA01.test_ca01_literais_no_arquivo
+CA-01 D FAIL  TestCA01.test_ca01_status_no_arquivo_igual_ao_derivado
+CA-02 R ok    TestCA02.test_ca02_controle_derivado_muda_a_cada_passo
+CA-02 D FAIL  TestCA02.test_ca02_so_o_status_mudou_regrava
+CA-02 D FAIL  TestCA02.test_ca02_status_acompanha_cada_transicao_m2
+CA-03 D FAIL  TestCA03.test_ca03_close_de_sprint_fechado
+CA-03 D FAIL  TestCA03.test_ca03_close_de_task_aceita_fechada
+CA-03 D FAIL  TestCA03.test_ca03_drop_de_sprint_vazia_descartado
+CA-03 D FAIL  TestCA03.test_ca03_drop_de_task_nao_iniciada_descartada
+CA-04 R ok    TestCA04.test_ca04_controle_sem_edicao_valida
+CA-04 D FAIL  TestCA04.test_ca04_status_editado_a_mao_acusado
+CA-04 D FAIL  TestCA04.test_ca04_status_fora_do_vocabulario_acusado
+CA-05 D FAIL  TestCA05.test_ca05_apply_grava_status_em_todos_os_itens
+CA-05 R ok    TestCA05.test_ca05_apply_outros_campos_e_eventos_intacta
+CA-05 R ok    TestCA05.test_ca05_controle_fixture_sem_status
+CA-05 D FAIL  TestCA05.test_ca05_plano_lista_0131
+CA-05 R ok    TestCA05.test_ca05_segundo_apply_continua_idempotente
+CA-05 R ok    TestCA05.test_ca05_validate_strict_continua_depois_do_upgrade
+CA-05 D FAIL  TestCA05.test_ca05_version_e_catalogo_0131
+placar: CA-01 2/4  CA-02 1/3  CA-03 0/4  CA-04 1/3  CA-05 4/7
+por tipo (passam/total): CA-01 D 0/2 R 2/2  CA-02 D 0/2 R 1/1  CA-03 D 0/4 R 0/0  CA-04 D 0/2 R 1/1  CA-05 D 0/3 R 4/4
+total: 8/21 passam
+rc=0
+## /usr/bin/python3 (Python 3.9.6)
+CA-01 R ok    TestCA01.test_ca01_controle_derivado_continua
+CA-01 R ok    TestCA01.test_ca01_controle_exibicao_continua_em_portugues
+CA-01 D FAIL  TestCA01.test_ca01_literais_no_arquivo
+CA-01 D FAIL  TestCA01.test_ca01_status_no_arquivo_igual_ao_derivado
+CA-02 R ok    TestCA02.test_ca02_controle_derivado_muda_a_cada_passo
+CA-02 D FAIL  TestCA02.test_ca02_so_o_status_mudou_regrava
+CA-02 D FAIL  TestCA02.test_ca02_status_acompanha_cada_transicao_m2
+CA-03 D FAIL  TestCA03.test_ca03_close_de_sprint_fechado
+CA-03 D FAIL  TestCA03.test_ca03_close_de_task_aceita_fechada
+CA-03 D FAIL  TestCA03.test_ca03_drop_de_sprint_vazia_descartado
+CA-03 D FAIL  TestCA03.test_ca03_drop_de_task_nao_iniciada_descartada
+CA-04 R ok    TestCA04.test_ca04_controle_sem_edicao_valida
+CA-04 D FAIL  TestCA04.test_ca04_status_editado_a_mao_acusado
+CA-04 D FAIL  TestCA04.test_ca04_status_fora_do_vocabulario_acusado
+CA-05 D FAIL  TestCA05.test_ca05_apply_grava_status_em_todos_os_itens
+CA-05 R ok    TestCA05.test_ca05_apply_outros_campos_e_eventos_intacta
+CA-05 R ok    TestCA05.test_ca05_controle_fixture_sem_status
+CA-05 D FAIL  TestCA05.test_ca05_plano_lista_0131
+CA-05 R ok    TestCA05.test_ca05_segundo_apply_continua_idempotente
+CA-05 R ok    TestCA05.test_ca05_validate_strict_continua_depois_do_upgrade
+CA-05 D FAIL  TestCA05.test_ca05_version_e_catalogo_0131
+placar: CA-01 2/4  CA-02 1/3  CA-03 0/4  CA-04 1/3  CA-05 4/7
+por tipo (passam/total): CA-01 D 0/2 R 2/2  CA-02 D 0/2 R 1/1  CA-03 D 0/4 R 0/0  CA-04 D 0/2 R 1/1  CA-05 D 0/3 R 4/4
+total: 8/21 passam
+rc=0

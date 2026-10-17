@@ -20,10 +20,13 @@ Separa "atualizar o mecanismo" de "refazer o conhecimento": só as ações das m
                   a events.jsonl; idempotente; recusa se o validate não passa). O apply roda `harness validate
                   --strict` ANTES (reprovou → recusa sem escrever) e o VERIFY roda de novo DEPOIS; o plano usa o
                   --dry-run do motor e lista os pares antigo → novo sem escrever.
+  item-status   → python3 <skill>/scripts/harness/engine/state.py --root <alvo> --actor lead migrate item-status (o motor
+                  grava em cada item .json o `status` canônico derivado, D-37; NÃO anexa evento nem muda outro campo;
+                  idempotente; roda depois do state-format). O plano usa o --dry-run do motor e diz quantos itens mudam.
 Nunca refeito (salvo migração explícita): entrevista, roster aprovado, cartões aprovados, memória/lições, board/eventos.
 
 Ordem canônica das ações consolidadas (cada uma roda UMA vez mesmo que várias migrações a peçam):
-rename-dir → schema → scan → facts-refresh → harness → state-tree → state-format → emit → cards → probes.
+rename-dir → schema → scan → facts-refresh → harness → state-tree → state-format → item-status → emit → cards → probes.
 
 Backup (U-2): `<pasta>/tmp/` (clones de exame) e todo `.git` aninhado ficam FORA do backup e são listados em
 `manifest.json5` (`excluded`); `.git/hooks/pre-commit` (raiz de fora) é guardado sob outro nome (`stored_as`).
@@ -43,7 +46,7 @@ from stage import engine as stage_engine
 from . import version as V
 
 CS_PY = os.path.join(V.HERE, "cs.py")
-ORDER = ("rename-dir", "schema", "scan", "facts-refresh", "harness", "state-tree", "state-format", "emit", "cards", "probes")
+ORDER = ("rename-dir", "schema", "scan", "facts-refresh", "harness", "state-tree", "state-format", "item-status", "emit", "cards", "probes")
 ADVISORY = ("cursor", "copilot", "codex")
 LEGACY = paths.LEGACY_STATE_DIR
 NEW = paths.STATE_DIR
@@ -516,6 +519,9 @@ def describe(a):
         return ("state-format: converte todo estado .json5 (backlog, state, archive, .engine) em .json num único "
                 "evento encadeado (`cs-state migrate state-format`; só anexa a events.jsonl; idempotente; "
                 "`harness validate --strict` roda antes e depois)")
+    if k == "item-status":
+        return ("item-status: grava o `status` canônico (TODO, BACKLOG, ACTIVE, DONE, DROPPED, par M2) em cada item "
+                "do estado (`cs-state migrate item-status`; não anexa evento nem muda outro campo; idempotente)")
     if k == "state-tree":
         return ("state-tree: converte o board plano legado (%s/state/board.json5) em árvore de pastas "
                 "(`cs-state migrate state-tree`; idempotente, backup do board/events em %s/backups/)" % (NEW, NEW))
@@ -603,12 +609,15 @@ def build_plan(target):
     try:
         _dry_runs(plan, root, run, kinds)
         sf_lines = _plan_state_format(plan, root, kinds) if "state-format" in kinds else []
+        is_lines = _plan_item_status(plan, root, kinds) if "item-status" in kinds else []
     finally:
         if sim_tmp:
             shutil.rmtree(sim_tmp, ignore_errors=True)
     for a in plan["actions"]:
         if a["kind"] == "state-format":
             plan["inside"] += sf_lines
+        elif a["kind"] == "item-status":
+            plan["inside"] += is_lines
         elif a["kind"] == "scan":
             plan["inside"] += ["%s/facts/<camadas %s>.json5 + index.json5" % (NEW, ",".join(a["layers"]))]
         elif a["kind"] == "schema":
@@ -730,6 +739,11 @@ def render_plan(plan):
         L.append("  AVISO: esta migração mexe em cartões/sondas — haverá reexame")
     if plan.get("renaming"):
         L.append("  pasta gerada: %s/ → %s/ (rename-dir; o restante do plano já vale para %s/)" % (LEGACY, NEW, NEW))
+    # itens presos (exigem ação do dono) vêm antes da regravação automática
+    if plan.get("stuck_deferred"):
+        L.append("  itens presos serão listados depois do rename (rode `cs.py upgrade` de novo após o apply)")
+    elif "stuck" in plan:
+        L += render_stuck(plan["stuck"])
     L.append("  muda dentro de %s (%d):" % (here, len(plan["inside"])))
     for p in plan["inside"] or ["(nada)"]:
         L.append("    " + p)
@@ -740,10 +754,6 @@ def render_plan(plan):
     L.append("  backup: %s" % plan["backup"])
     L.append("  verificação: cs.py harness selftest; cs.py harness validate --strict --allow-empty; "
              "cs.py emit validate (falhou → restaura o backup, exit 1)")
-    if plan.get("stuck_deferred"):
-        L.append("  itens presos serão listados depois do rename (rode `cs.py upgrade` de novo após o apply)")
-    elif "stuck" in plan:
-        L += render_stuck(plan["stuck"])
     if plan["conflict"]:
         L.append("  BLOQUEIO: " + plan["conflict"])
     L.append("  próximo: cs.py upgrade --apply%s" % (" --allow-outside" if plan["outside"] else ""))
@@ -1031,6 +1041,53 @@ def do_state_format(target, say):
     return True, ""
 
 
+def _item_status_cmd(root, dry):
+    """(rc, stdout, stderr) de `cs-state migrate item-status [--dry-run]` com o motor DA SKILL."""
+    env = dict(os.environ, CLAUDE_PROJECT_DIR=root)
+    env.pop("CS_GUARD_OFF", None)
+    cmd = [sys.executable, STATE_PY, "--root", root, "--actor", "lead", "migrate", "item-status"]
+    if dry:
+        cmd.append("--dry-run")
+    try:
+        p = subprocess.run(cmd, cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                           timeout=CMD_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        return 124, "", "cs-state migrate item-status: timeout (%ds)" % CMD_TIMEOUT
+    return p.returncode, p.stdout.decode("utf-8", "replace"), p.stderr.decode("utf-8", "replace")
+
+
+def _plan_item_status(plan, root, kinds):
+    """Linhas do plano para a ação item-status, pelo --dry-run do motor (não escreve)."""
+    has_tree = os.path.isfile(os.path.join(paths.specialists_dir(root), "events.jsonl"))
+    if not has_tree:
+        return ["item-status: sem estado em árvore ainda; nada a regravar (o que o state-tree/state-format criar já "
+                "nasce com `status`)"]
+    rc, out, err = _item_status_cmd(root, True)
+    if rc != 0:
+        return ["item-status: a contagem exata sai na aplicação (dry-run do motor: exit %d)" % rc]
+    lines = [l.rstrip() for l in out.splitlines() if l.strip()]
+    pend = "state-format" in kinds
+    head = "item-status: " + (lines[0] if lines else "nada a regravar")
+    if pend:
+        head += " (estimativa antes do state-format; a contagem final sai na aplicação)"
+    # só a contagem: os ids ficam fora do plano (o bloco de itens presos é o único que cita id, junto do comando)
+    skipped = [l for l in lines[1:] if "pulados" in l]
+    if skipped:
+        n = len([x for x in skipped[0].split(":", 1)[-1].split(",") if x.strip()])
+        head += "; %d item(ns) sem .json pulado(s) (o state-format converte antes)" % n
+    return [head]
+
+
+def do_item_status(target, say):
+    """Ação item-status: orquestra `cs-state migrate item-status` do motor DA SKILL (regrava só o que difere; sem
+    evento; idempotente). Falhou → False (o apply restaura o backup)."""
+    rc, out, err = _item_status_cmd(target, False)
+    if rc != 0:
+        return False, "cs-state migrate item-status → exit %d\n%s" % (rc, _tail(err or out))
+    say("    cs-state migrate item-status: ok%s" % ((" — " + out.strip().splitlines()[0]) if out.strip() else ""))
+    return True, ""
+
+
 def _run_action(target, run, a, allow_outside, say, record=None):
     k = a["kind"]
     if k == "rename-dir":
@@ -1039,6 +1096,8 @@ def _run_action(target, run, a, allow_outside, say, record=None):
         return do_state_tree(target, say)
     if k == "state-format":
         return do_state_format(target, say)
+    if k == "item-status":
+        return do_item_status(target, say)
     if k == "harness":
         steps = [_harness_argv(target, run, allow_outside=allow_outside)]
     elif k == "emit":

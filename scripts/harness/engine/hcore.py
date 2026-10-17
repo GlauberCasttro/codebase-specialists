@@ -382,10 +382,19 @@ def write_json(path, obj, header, plain_sorted=True):
     return path
 
 
-def write_item_json(path, item, header):
+def item_file_text(item, header, status=None):
+    """Texto do arquivo `.json` do item; `status` (código canônico, D-37) é DERIVADO e não faz parte da projeção."""
+    en = item_to_en(item)
+    if status is not None:
+        en = dict(en)
+        en["status"] = status
+    return json_text(with_generated_by(order_item(en), header))
+
+
+def write_item_json(path, item, header, status=None):
     """Grava um item (forma interna) em `.json`, chaves em inglês e ordem de leitura."""
     path = json_twin(path)
-    atomic_write_bytes(path, json_text(with_generated_by(order_item(item_to_en(item)), header)).encode("utf-8"))
+    atomic_write_bytes(path, item_file_text(item, header, status).encode("utf-8"))
     with contextlib.suppress(OSError):
         os.unlink(path + "5")
     return path

@@ -276,3 +276,17 @@ A entrada `to: "0.13.0"` do catálogo declara `harness` e `emit`. O que ela faz:
 - o upgrade NÃO descarta nem altera nenhum desses itens: a decisão é sua, item a item; rodar de novo mostra a mesma
   lista enquanto houver pendência (idempotente);
 - não refaz entrevista, roster, cartões, memória nem board.
+
+## Migração 0.13.1: status gravado em cada item
+
+A entrada `to: "0.13.1"` do catálogo declara `harness` e a ação `item-status`. O que ela faz:
+
+- reinstala o motor do harness no alvo (o motor novo grava `status` em todo item que escreve);
+- a ação `item-status` (depois do `state-format`, se houver) roda `cs-state migrate item-status` com o motor da
+  skill: grava em cada item `.json` do estado (`backlog`, `state` e `archive`) o `status` canônico derivado do
+  ciclo de vida (TODO, BACKLOG, ACTIVE, DONE, DROPPED ou o par M2 `<STATUS>/<DELEG>`); só regrava o arquivo cujo
+  texto difere;
+- o plano (`cs.py upgrade`) e o relatório do `--apply` dizem quantos itens mudam (e quais);
+- NÃO muda nenhum outro campo do item, NÃO anexa evento (`events.jsonl` fica idêntico em bytes) e é idempotente:
+  rodar de novo não altera nada;
+- não refaz entrevista, roster, cartões, memória nem board.

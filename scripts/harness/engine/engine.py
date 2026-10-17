@@ -1587,6 +1587,10 @@ def commit(root, actor, build, post=True):
     with hcore.file_lock(p["lock"]):
         board = hcore.load_board(root)
         tree_before = copy_tree(board) if p.get("tree") else None
+        status_before = None
+        if p.get("tree"):
+            import tree  # status derivado antes: transição de M2 muda o board, não o item (regrava o arquivo)
+            status_before = tree.status_codes(root, board) if tree_before else {}
         lh = hcore.last_hash(p["events"])
         if lh != board["last_event_hash"]:
             raise StateError("board×events divergentes (último hash %s ≠ board %s): rode validate --strict" % (lh[:12], board["last_event_hash"][:12]))
@@ -1609,7 +1613,7 @@ def commit(root, actor, build, post=True):
             hcore.save_board(root, board)
             if p.get("tree"):
                 import tree  # materializa as pastas (backlog/state/archive) e o INDEX.md a partir da projeção
-                tree.materialize(root, tree_before or {}, board)
+                tree.materialize(root, tree_before or {}, board, status_before)
             if any(str(r["type"]).startswith("mandato.") for r in written):
                 import auto  # visão do mandato (M5): mandato.json5, plano.vN.json5, pacotes de escalada, relatório
                 auto.materialize(root, board)

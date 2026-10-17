@@ -20,22 +20,25 @@ arquivos sujos da skill: 4
 # RESUME — codebase-specialists (desenvolvimento)
 
 ## Escopo autorizado e limites
-- Autorizado: nenhuma feature em execução (IDLE). A iter23 (0.13.0) foi aceita pelo founder ("ok", 2026-10-14) e
-  fechada; commit da feature + commit da mudança oficial do oráculo iter10 (D-35) autorizados ("ok", 2026-10-14).
+- Autorizado: nenhuma feature em execução (IDLE). A iter25 (0.13.1) foi aceita pelo founder ("sim", 2026-10-16) e
+  fechada; commit da feature + commit à parte da mudança oficial 02 do oráculo iter23 (D-39), como na iter10.
 - NÃO autorizado: abrir a próxima feature sem o founder escolher; push; publicar o pacote (B-08); `claude -p` sem
-  confirmar custo (D-09); troca de branch do principal (resto do B-47).
-- Aguardando decisão: próxima feature (candidatas: B-50 P0 perda de dados + B-48/B-49; B-61 oráculos antigos; B-54).
+  confirmar custo (D-09); troca de branch do principal (resto do B-47); editar a v8 daqui (ajustes vão pela sessão
+  da v8, que já recebeu local/ajustes-v8.md).
+- Aguardando decisão: próxima feature. Sequência recomendada ao founder (2026-10-14): iter26 canonização + limpeza de
+  campos mortos + telemetria barata → iter27 task melhor (brief com contexto/DoD, matriz de casos, vermelho pelo motivo
+  certo por caso, checks do revisor por script; story/feature/épico no mesmo padrão) → iter28 métricas (`cs-state
+  metrics`) → B-50/B-48/B-49.
 
 ## Onde paramos
-- 0.13.0 entregue (iter23): fluxo da árvore sem beco sem saída (D1–D6 da cobaia .NET). Oráculo 16/41 → 41/41; portão
-  VERDE nos 2 Pythons; iter10/iter15 sem regressão (D-35). Estado IDLE.
-- BACKLOG: B-19, B-28, B-39..B-43, B-59, B-60 entregues; novos B-61 (oráculos antigos vermelhos), B-62 (menores),
-  B-63 (fechar sprint com task BRIEFED).
+- 0.13.1 entregue (iter25, B-64): status canônico gravado no arquivo de cada item da árvore, sempre em dia, conferido
+  pelo validate, preenchido pelo upgrade (`cs-state migrate item-status`). Oráculo 8/21 → 21/21; portão VERDE nos 2.
+- A sessão da cobaia .NET vigia a VERSION instalada e roda o upgrade sozinha ao ver 0.13.1 (autorização do dono lá).
+- BACKLOG: B-64 entregue; novos B-65 (menores da 0.13.1), B-66 (sufixo SUBMITTED/RETURNED).
 
 ## Próximos passos
-1. `/install` (instala a 0.13.0 nesta máquina) e avisar a sessão da cobaia .NET: upgrade, depois `drop` das duplicadas,
-   `amend`/start das completáveis, aceitar/escalar SPR-001/07 e /08 (B-63) e fechar a SPR-001; `drop` da SPR-002.
-2. Founder escolhe a próxima feature.
+1. `/install` (instala a 0.13.1) — a cobaia .NET roda o upgrade e manda divergências por mensagem.
+2. Founder escolhe a próxima feature (sequência recomendada acima).
 
 ## Estado do ambiente
 - Cópias de trabalho e portões em local/work/iter23, local/portao-iter23, local/tech-lead/iter23 (evidências) e as

@@ -37,4 +37,5 @@ preencha commit/decisão no `close-front`.
 | iter19 | Estado legível em JSON, chaves em inglês, amend refletido no arquivo, cs-state show e migração automática | — | em andamento |
 | iter22 | cs-state show liberado no guard do alvo, varredura que impede subcomando sem regra no guard, versão 0.12.1 | da30e17 | GO |
 | iter24 | Hotfix de segurança do guard do harness gerado — fechar as portas confirmadas pela auditoria da cobaia (B-44, B-45, B-46, B-47) | b757d1f | GO |
-| iter23 | Fluxo da árvore — descartar e emendar task não iniciada, sprint que fecha, uma sprint aberta por épico (e descarte de sprint), DoR na criação, sprint ↔ story na árvore, textos emitidos com `new`, auto-memória do Claude Code e versão visível no alvo | — | em andamento |
+| iter23 | Fluxo da árvore — descartar e emendar task não iniciada, sprint que fecha, uma sprint aberta por épico (e descarte de sprint), DoR na criação, sprint ↔ story na árvore, textos emitidos com `new`, auto-memória do Claude Code e versão visível no alvo | 933012d | GO |
+| iter25 | Hotfix 0.13.1 — o arquivo JSON de cada item da árvore carrega o próprio `status`, sempre em dia, conferido pelo validate e preenchido pelo upgrade nos itens existentes | — | em andamento |

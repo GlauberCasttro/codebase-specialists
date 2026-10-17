@@ -1,0 +1,249 @@
+--- a/campanhas/iter25/oraculo/test_iter25.py
++++ b/campanhas/iter25/oraculo/test_iter25.py
+@@ -6,10 +6,12 @@
+ MESMO motor que gravou: `tree.status_of(tree.load_view(alvo), item)` importado de `<alvo>/.swarm/harness/` num
+ subprocesso (nunca o motor da skill do oráculo).
+ 
+-  CA-01  épico/sprint/feature/story/task (sprint e backlog): `status` no arquivo == derivado (+ literais).
+-  CA-02  start, dispatch, submit, verify, review, accept: depois de CADA comando, arquivo == derivado.
+-  CA-03  drop ⇒ archive "descartada"/"descartado"; close ⇒ "fechada"/"fechado"; == derivado.
+-  CA-04  `status` trocado à mão ⇒ `validate --strict` ≠ 0 citando item e valor certo; sem edição ⇒ 0.
++  CA-01  épico/sprint/feature/story/task (sprint e backlog): `status` no arquivo == CANON(derivado) (+ literais en,
++         D-37: TODO/BACKLOG/ACTIVE/DONE/DROPPED; `<M2>/<despacho>` igual); a exibição continua em português.
++  CA-02  start, dispatch, submit, verify, review, accept: depois de CADA comando, arquivo == CANON(derivado).
++  CA-03  drop ⇒ archive DROPPED (exibe "descartada"/"descartado"); close ⇒ DONE ("fechada"/"fechado").
++  CA-04  `status` trocado à mão ⇒ `validate --strict` ≠ 0 citando item e valor certo (código en);
++         valor fora do vocabulário (ex. "a fazer" gravado) acusado; sem edição ⇒ 0.
+   CA-05  alvo 0.13.0 real (`git archive 3eed3b4` ou $CS_OLD_SKILL_DIR): upgrade grava `status` em TODOS os itens,
+          nenhum outro campo muda, events.jsonl idêntico (bytes), validate ok, 2º apply idempotente, VERSION ≥ 0.13.1.
+ 
+@@ -203,15 +205,31 @@
+     return derived_all(root)[iid]
+ 
+ 
++# D-37 (mudança oficial 01): o `status` GRAVADO no arquivo é o código canônico em inglês; a exibição
++# (`tree.status_of`, board/next/show) continua em português. Mapa definido AQUI, no oráculo (não no produto).
++CANON_MAP = {"a fazer": "TODO", "backlog": "BACKLOG", "ativo": "ACTIVE", "fechada": "DONE", "fechado": "DONE",
++             "descartada": "DROPPED", "descartado": "DROPPED"}
++CANON_VOCAB = {"TODO", "BACKLOG", "ACTIVE", "DONE", "DROPPED"}
++
++
++def CANON(shown):
++    """exibição pt → código gravado en; `<M2>/<despacho>` (já inglês) fica igual; desconhecido → None (falha)."""
++    if shown in CANON_MAP:
++        return CANON_MAP[shown]
++    if isinstance(shown, str) and "/" in shown:
++        return shown
++    return None
++
++
+ def mismatches(root, ids=None):
+-    """['ID: arquivo=X derivado=Y'] — vazio quando o arquivo de todos os itens tem `status` igual ao derivado."""
+-    der = derived_all(root)
++    """['ID: arquivo=X esperado=CANON(derivado)'] — vazio quando o arquivo de todos os itens tem `status` canônico."""
++    der = {k: CANON(v) for k, v in derived_all(root).items()}
+     items = all_items(root)
+     bad = []
+     for iid in sorted(ids or der):
+         f = items.get(iid, (None, None, {}))[2].get("status")
+         if f != der.get(iid):
+-            bad.append("%s: arquivo=%r derivado=%r" % (iid, f, der.get(iid)))
++            bad.append("%s: arquivo=%r esperado=%r" % (iid, f, der.get(iid)))
+     return bad
+ 
+ 
+@@ -382,12 +400,12 @@
+ 
+     def test_ca01_status_no_arquivo_igual_ao_derivado(self):
+         bad = mismatches(self.root, [self.ids[k] for k in ("epc", "spr", "fea", "story", "task", "task2", "bkl")])
+-        self.assertEqual(bad, [], "o arquivo de cada item deveria ter `status` == tree.status_of:\n  "
++        self.assertEqual(bad, [], "o arquivo de cada item deveria ter `status` == CANON(tree.status_of):\n  "
+                          + "\n  ".join(bad))
+ 
+     def test_ca01_literais_no_arquivo(self):
+-        want = {"epc": "ativo", "spr": "ativo", "fea": "ativo", "task": "a fazer", "task2": "a fazer",
+-                "bkl": "backlog"}
++        want = {"epc": "ACTIVE", "spr": "ACTIVE", "fea": "ACTIVE", "task": "TODO", "task2": "TODO",
++                "bkl": "BACKLOG"}
+         bad = ["%s (%s): arquivo=%r esperado=%r" % (self.ids[k], k, disk(self.root, self.ids[k]), v)
+                for k, v in sorted(want.items()) if disk(self.root, self.ids[k]) != v]
+         self.assertEqual(bad, [], "literais de `status` no arquivo:\n  " + "\n  ".join(bad))
+@@ -399,7 +417,20 @@
+         for k, v in want.items():
+             self.assertEqual(der.get(self.ids[k]), v, "%s derivado" % k)
+ 
++    def test_ca01_controle_exibicao_continua_em_portugues(self):
++        """controle (D-37): só o dado gravado muda; board e show continuam exibindo em português."""
++        code, out, err = st(self.root, "board")
++        self.assertEqual(code, 0, out + err)
++        tid = self.ids["task"]
++        lines = [ln for ln in out.splitlines() if tid in ln]
++        self.assertTrue(any("a fazer" in ln for ln in lines), "board deveria exibir %s 'a fazer': %s" % (tid, out))
++        self.assertTrue(any("backlog" in ln for ln in out.splitlines() if self.ids["bkl"] in ln), out)
++        self.assertNotIn("[TODO]", out, "board não deveria exibir o código en")
++        code, out, err = st(self.root, "show", tid)
++        self.assertEqual(code, 0, out + err)
++        self.assertIn("a fazer", out, "show deveria exibir 'a fazer': %s" % out)
+ 
++
+ # ================================================================================================ CA-02
+ class TestCA02(unittest.TestCase):
+     def test_ca02_status_acompanha_cada_transicao_m2(self):
+@@ -408,9 +439,9 @@
+         bad = []
+ 
+         def step(name):
+-            f, d = disk(root, tid), derived(root, tid)
++            f, d = disk(root, tid), CANON(derived(root, tid))
+             if f != d:
+-                bad.append("depois de %s: arquivo=%r derivado=%r" % (name, f, d))
++                bad.append("depois de %s: arquivo=%r esperado=%r" % (name, f, d))
+         run_m2(root, tid, step)
+         self.assertEqual(bad, [], "status de %s no arquivo deveria acompanhar o M2:\n  " % tid + "\n  ".join(bad))
+ 
+@@ -421,9 +452,9 @@
+         seen = []
+ 
+         def step(name):
+-            seen.append((name, disk(root, tid), derived(root, tid)))
++            seen.append((name, disk(root, tid), CANON(derived(root, tid))))
+         run_m2(root, tid, step)
+-        bad = ["%s: arquivo=%r derivado=%r" % s for s in seen if s[0] in ("dispatch", "verify", "review", "accept")
++        bad = ["%s: arquivo=%r esperado=%r" % s for s in seen if s[0] in ("dispatch", "verify", "review", "accept")
+                and s[1] != s[2]]
+         self.assertEqual(bad, [], "transição só de M2 deveria regravar o `status` do arquivo:\n  " + "\n  ".join(bad))
+ 
+@@ -444,7 +475,7 @@
+         st_ok(root, "drop", ids["task2"], "--reason", "fora do escopo da Ana")
+         zone, _, d = item(root, ids["task2"])
+         self.assertEqual(zone, "archive")
+-        self.assertEqual((d.get("status"), derived(root, ids["task2"])), ("descartada", "descartada"))
++        self.assertEqual((d.get("status"), derived(root, ids["task2"])), ("DROPPED", "descartada"))
+ 
+     def test_ca03_close_de_task_aceita_fechada(self):
+         root, ids = fresh("ca03b")
+@@ -452,7 +483,7 @@
+         st_ok(root, "close", ids["task"], "--summary", "entregue")
+         zone, _, d = item(root, ids["task"])
+         self.assertEqual(zone, "archive")
+-        self.assertEqual((d.get("status"), derived(root, ids["task"])), ("fechada", "fechada"))
++        self.assertEqual((d.get("status"), derived(root, ids["task"])), ("DONE", "fechada"))
+ 
+     def test_ca03_drop_de_sprint_vazia_descartado(self):
+         root, ids = fresh("ca03c")
+@@ -460,7 +491,7 @@
+         st_ok(root, "drop", spr, "--reason", "nao vai acontecer")
+         zone, _, d = item(root, spr)
+         self.assertEqual(zone, "archive")
+-        self.assertEqual((d.get("status"), derived(root, spr)), ("descartado", "descartado"))
++        self.assertEqual((d.get("status"), derived(root, spr)), ("DROPPED", "descartado"))
+ 
+     def test_ca03_close_de_sprint_fechado(self):
+         root, ids = fresh("ca03d")
+@@ -471,7 +502,7 @@
+         st_ok(root, "close", spr, "--summary", "encerrada")
+         zone, _, d = item(root, spr)
+         self.assertEqual(zone, "archive")
+-        self.assertEqual((d.get("status"), derived(root, spr)), ("fechado", "fechado"))
++        self.assertEqual((d.get("status"), derived(root, spr)), ("DONE", "fechado"))
+         self.assertEqual(mismatches(root), [], "toda a árvore coerente depois dos fechamentos")
+ 
+ 
+@@ -490,16 +521,30 @@
+         root, ids = fresh("ca04a")
+         tid = ids["task"]
+         _, path, d = item(root, tid)
+-        self.assertEqual(d.get("status"), "a fazer", "pré-condição: o arquivo tem o status certo")
+-        _edit_status(path, "aceita")
++        self.assertEqual(d.get("status"), "TODO", "pré-condição: o arquivo tem o status canônico certo")
++        _edit_status(path, "DONE")
+         code, out, err = st(root, "validate", "--strict")
+         self.assertNotEqual(code, 0, "validate --strict deveria acusar o status editado à mão: %s" % out)
+         txt = out + err
+         lines = [ln for ln in txt.splitlines() if tid in ln]
+         self.assertTrue(lines, "a saída deveria citar %s: %s" % (tid, txt[-1500:]))
+-        self.assertTrue(any("a fazer" in ln for ln in lines) or "a fazer" in txt,
+-                        "a saída deveria citar o valor certo 'a fazer': %s" % txt[-1500:])
++        self.assertTrue(any("TODO" in ln for ln in lines) or "TODO" in txt,
++                        "a saída deveria citar o valor certo 'TODO': %s" % txt[-1500:])
+ 
++    def test_ca04_status_fora_do_vocabulario_acusado(self):
++        """D-37: valor de exibição pt gravado no arquivo ("a fazer") não é código canônico ⇒ validate acusa."""
++        root, ids = fresh("ca04c")
++        tid = ids["task"]
++        _, path, d = item(root, tid)
++        self.assertIn(d.get("status"), CANON_VOCAB, "pré-condição: o arquivo tem código canônico")
++        _edit_status(path, "a fazer")
++        code, out, err = st(root, "validate", "--strict")
++        self.assertNotEqual(code, 0, "validate --strict deveria acusar 'a fazer' gravado no arquivo: %s" % out)
++        txt = out + err
++        self.assertTrue([ln for ln in txt.splitlines() if tid in ln],
++                        "a saída deveria citar %s: %s" % (tid, txt[-1500:]))
++        self.assertIn("TODO", txt, "a saída deveria citar o valor certo 'TODO': %s" % txt[-1500:])
++
+     def test_ca04_controle_sem_edicao_valida(self):
+         root, ids = fresh("ca04b")
+         code, out, err = st(root, "validate", "--strict")
+@@ -574,7 +619,7 @@
+         r = upgraded()
+         self.assertEqual(r["apply"][0], 0, r["apply"][1][-1500:] + r["apply"][2][-1500:])
+         self.assertEqual(set(r["items1"]), set(r["items0"]), "o upgrade não cria nem remove item")
+-        self.assertEqual(mismatches(r["root"]), [], "depois do upgrade todo item tem `status` == derivado")
++        self.assertEqual(mismatches(r["root"]), [], "depois do upgrade todo item tem `status` == CANON(derivado)")
+         zs = {z for z, _, _ in r["items1"].values()}
+         self.assertEqual(zs, {"state", "backlog", "archive"})
+ 
+--- a/campanhas/iter25/oraculo/ESPEC.md
++++ b/campanhas/iter25/oraculo/ESPEC.md
+@@ -12,26 +12,32 @@
+   árvore + task iniciada (state/), task e sprint vazia descartadas (archive/), task no backlog. A fixture confere
+   que há itens nas 3 zonas. Depois: `cs.py upgrade` e `upgrade --apply --allow-outside` (2×) pela skill sob teste.
+ 
++CANON (D-37, mudança oficial 01, definido no oráculo): o `status` GRAVADO é o código canônico em inglês; a exibição
++(`tree.status_of`, board/next/show) segue em português. Mapa: "a fazer"→`TODO`, "backlog"→`BACKLOG`,
++"ativo"→`ACTIVE`, "fechada"/"fechado"→`DONE`, "descartada"/"descartado"→`DROPPED`, `<M2>/<despacho>`→igual.
++
+ Tipo: D = defeito (falha no HEAD 3eed3b4 / 0.13.0, passa com a entrega); R = controle (passa sempre; nome com
+ `controle|continua|intacta`). Versão sempre relativa (≥ 0.13.1).
+ 
+ | CA | Teste | Tipo | Critério |
+ |---|---|---|---|
+-| CA-01 | test_ca01_status_no_arquivo_igual_ao_derivado | D | épico, sprint, feature, story, task da sprint e do backlog: `status` do arquivo == derivado |
+-| CA-01 | test_ca01_literais_no_arquivo | D | task na sprint "a fazer"; backlog "backlog"; épico/sprint/feature "ativo" |
+-| CA-01 | test_ca01_controle_derivado_continua | R | a derivação de hoje dá esses literais (a referência do oráculo não é vácua) |
+-| CA-02 | test_ca02_status_acompanha_cada_transicao_m2 | D | start, dispatch (`--manual --model sonnet`), submit (`--actor dev-billing`), verify, review (`--by reviewer --verdict PASS`), accept: depois de CADA comando, arquivo == derivado |
++| CA-01 | test_ca01_status_no_arquivo_igual_ao_derivado | D | épico, sprint, feature, story, task da sprint e do backlog: `status` do arquivo == CANON(derivado) |
++| CA-01 | test_ca01_literais_no_arquivo | D | task na sprint `TODO`; backlog `BACKLOG`; épico/sprint/feature `ACTIVE` |
++| CA-01 | test_ca01_controle_derivado_continua | R | a derivação (exibição pt) de hoje dá "ativo"/"a fazer"/"backlog" (a referência do oráculo não é vácua) |
++| CA-01 | test_ca01_controle_exibicao_continua_em_portugues | R | `board` mostra a task "a fazer" e o backlog "backlog" (sem `[TODO]`); `show` da task mostra "a fazer" — só o dado mudou |
++| CA-02 | test_ca02_status_acompanha_cada_transicao_m2 | D | start, dispatch (`--manual --model sonnet`), submit (`--actor dev-billing`), verify, review (`--by reviewer --verdict PASS`), accept: depois de CADA comando, arquivo == CANON(derivado) |
+ | CA-02 | test_ca02_so_o_status_mudou_regrava | D | nas transições que só mudam o M2 (dispatch/verify/review/accept) o arquivo é regravado |
+ | CA-02 | test_ca02_controle_derivado_muda_a_cada_passo | R | o derivado assume ≥ 4 valores `<M2>/<despacho>` no fluxo |
+-| CA-03 | test_ca03_drop_de_task_nao_iniciada_descartada | D | `drop --reason` ⇒ archive/, arquivo "descartada" == derivado |
+-| CA-03 | test_ca03_close_de_task_aceita_fechada | D | M2 até accept + `close --summary` ⇒ archive/, "fechada" == derivado |
+-| CA-03 | test_ca03_drop_de_sprint_vazia_descartado | D | sprint vazia `drop` ⇒ archive/, "descartado" == derivado |
+-| CA-03 | test_ca03_close_de_sprint_fechado | D | sprint com task descartada `close` ⇒ archive/, "fechado" == derivado; árvore toda coerente |
+-| CA-04 | test_ca04_status_editado_a_mao_acusado | D | arquivo com "a fazer" trocado para "aceita" ⇒ `validate --strict` ≠ 0, saída cita o ID e o valor certo "a fazer" |
++| CA-03 | test_ca03_drop_de_task_nao_iniciada_descartada | D | `drop --reason` ⇒ archive/, arquivo `DROPPED`, derivado "descartada" |
++| CA-03 | test_ca03_close_de_task_aceita_fechada | D | M2 até accept + `close --summary` ⇒ archive/, arquivo `DONE`, derivado "fechada" |
++| CA-03 | test_ca03_drop_de_sprint_vazia_descartado | D | sprint vazia `drop` ⇒ archive/, arquivo `DROPPED`, derivado "descartado" |
++| CA-03 | test_ca03_close_de_sprint_fechado | D | sprint com task descartada `close` ⇒ archive/, arquivo `DONE`, derivado "fechado"; árvore toda coerente |
++| CA-04 | test_ca04_status_editado_a_mao_acusado | D | arquivo com `TODO` trocado para `DONE` (código válido, errado) ⇒ `validate --strict` ≠ 0, saída cita o ID e o valor certo `TODO` |
++| CA-04 | test_ca04_status_fora_do_vocabulario_acusado | D | arquivo com "a fazer" (exibição pt, fora do vocabulário) ⇒ `validate --strict` ≠ 0, saída cita o ID e `TODO` |
+ | CA-04 | test_ca04_controle_sem_edicao_valida | R | sem edição (e depois de M2 + drop) `validate --strict` sai 0 — o campo novo não vira falso "edição à mão" |
+ | CA-05 | test_ca05_version_e_catalogo_0131 | D | VERSION ≥ 0.13.1; exatamente uma entrada `to: "0.13.1"` em references/migrations.json5 |
+ | CA-05 | test_ca05_plano_lista_0131 | D | `cs.py upgrade` ⇒ 0, cita "0.13.1", não altera nenhum arquivo |
+-| CA-05 | test_ca05_apply_grava_status_em_todos_os_itens | D | apply ⇒ 0; mesmo conjunto de itens; TODO item (3 zonas) com `status` == derivado |
++| CA-05 | test_ca05_apply_grava_status_em_todos_os_itens | D | apply ⇒ 0; mesmo conjunto de itens; TODO item (3 zonas) com `status` == CANON(derivado) |
+ | CA-05 | test_ca05_apply_outros_campos_e_eventos_intacta | R | nenhum item muda de lugar nem de campo além de `status`; `.swarm/events.jsonl` idêntico em BYTES |
+ | CA-05 | test_ca05_validate_strict_continua_depois_do_upgrade | R | `validate --strict` sai 0 depois do apply |
+ | CA-05 | test_ca05_segundo_apply_continua_idempotente | R | 2º apply ⇒ 0 e não altera item nem events.jsonl |
+@@ -44,7 +50,7 @@
+ 
+ Calibração (base.txt, 2 Pythons): no HEAD todos os D falham por ASSERÇÃO (FAIL, 0 ERROR), os R passam.
+ Mutação simulada (cópia da skill em TMPDIR, `hcore.write_item_json` grava `status` só pela zona/tipo, ignorando o
+-M2 — "status só na criação"): CA-01 e CA-03 passam, CA-02 continua FAIL nos 2 D (status do arquivo fica "a fazer"
++M2 — "status só na criação"): CA-01 e CA-03 passam, CA-02 continua FAIL nos 2 D (status do arquivo fica `TODO`
+ enquanto o derivado é `<M2>/<despacho>`), CA-04 falha (validate acusa o campo) e CA-05 falha (sem migração).
+ 
+ Rodar: `cd campanhas/iter25/oraculo && python3 medir.py` (ou `python3 -m unittest -v test_iter25`).

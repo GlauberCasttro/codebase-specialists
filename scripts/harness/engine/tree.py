@@ -339,8 +339,9 @@ def init(root):
 
 
 # ================================================================ materialização (só o motor chama, sob o lock)
-def materialize(root, before, board):
+def materialize(root, before, board, before_status=None):
     after = board.get("tree") or {}
+    codes = status_codes(root, board) if after else {}
     base = tree_root(root)
     removed_dirs = set()
     for iid, it in before.items():
@@ -350,12 +351,19 @@ def materialize(root, before, board):
                 if os.path.isfile(q):
                     os.remove(q)
             removed_dirs.add(os.path.dirname(p))
+    unchanged = [iid for iid, it in after.items() if iid in before and before[iid] == it
+                 and (before_status is None or before_status.get(iid) == codes.get(iid))]
+    # alvo não migrado (D-37): se UM item intocado não tem `status`, regrava todos — o motor nunca deixa o alvo
+    # pela metade. Indício barato: lê só o primeiro arquivo intocado; a varredura completa só no alvo não migrado.
+    complete = bool(unchanged) and _lacks_status(os.path.join(base, after[unchanged[0]]["path"]))
     for iid, it in after.items():
-        if iid in before and before[iid] == it:
-            continue
+        if iid in before and before[iid] == it and (before_status is None or before_status.get(iid) == codes.get(iid)):
+            p = os.path.join(base, it["path"])
+            if not (complete and os.path.isfile(p) and _lacks_status(p, codes.get(iid))):
+                continue  # nem o item nem o status derivado (M2 muda o board, não o item) mudaram
         p = os.path.join(base, it["path"])
         os.makedirs(os.path.dirname(p), exist_ok=True)
-        hcore.write_item_json(p, it, HEADER)
+        hcore.write_item_json(p, it, HEADER, codes.get(iid))
     stops = {os.path.join(base, z) for z in ZONES}
     for d in sorted(removed_dirs, key=len, reverse=True):
         cur = d
@@ -365,6 +373,17 @@ def materialize(root, before, board):
     for z in ZONES:
         os.makedirs(os.path.join(base, z), exist_ok=True)
     write_index(root, board)
+
+
+def _lacks_status(p, want=None):
+    """True se o `.json` do item não tem `status` (ou, com `want`, tem outro). `.json5` legado: False (state-format)."""
+    if not p.endswith(".json") or not os.path.isfile(p):
+        return False
+    try:
+        got = hcore.read_any(p).get("status")
+    except (OSError, ValueError, AttributeError):
+        return False
+    return got is None or (want is not None and got != want)
 
 
 def write_index(root, board):
@@ -1375,20 +1394,48 @@ def load_view(root):
     return T(engine.Ctx(root, board), dry=True)
 
 
-def status_of(tv, it):
+STATUS_VOCAB = ("TODO", "BACKLOG", "ACTIVE", "DONE", "DROPPED")  # D-37: código canônico gravado no arquivo do item
+_STATUS_PT = {"TODO": "a fazer", "BACKLOG": "backlog", "ACTIVE": "ativo"}
+
+
+def status_code(tv, it):
+    """Status CANÔNICO (en) do item — a ÚNICA fonte; `status_of` (exibição pt) deriva dele. Task com M2: `<M2>/<despacho>`."""
     z = zone_of(it["path"])
     if z == "archive":
         if (it.get("closed") or {}).get("status") == "DROPPED" or it.get("dropped"):
-            return "descartado" if it["kind"] != "task" else "descartada"
-        return "fechado" if it["kind"] != "task" else "fechada"
+            return "DROPPED"
+        return "DONE"
     if z == "backlog":
-        return "backlog"
+        return "BACKLOG"
     if it["kind"] != "task":
-        return "ativo"
+        return "ACTIVE"
     st, ds = tv.m2_status(it)
     if st is None:
-        return "a fazer"
+        return "TODO"
     return "%s/%s" % (st, ds)
+
+
+def status_of(tv, it):
+    """Exibição em português (board/next/show); o dado gravado é `status_code`."""
+    code = status_code(tv, it)
+    if code in _STATUS_PT:
+        return _STATUS_PT[code]
+    if code in ("DONE", "DROPPED"):
+        fem = it["kind"] == "task"
+        if code == "DROPPED":
+            return "descartada" if fem else "descartado"
+        return "fechada" if fem else "fechado"
+    return code
+
+
+def status_codes(root, board):
+    """{id: status canônico} de toda a árvore de `board` (o que o arquivo de cada item deve ter)."""
+    tv = T(engine.Ctx(root, board), dry=True)
+    return {iid: status_code(tv, it) for iid, it in tv.items.items()}
+
+
+def status_ok(code):
+    return code in STATUS_VOCAB or (isinstance(code, str) and "/" in code)
 
 
 def node(tv, it):
@@ -1571,6 +1618,22 @@ def validate(root):
     if hcore.canonical(replay.get("tree_meta") or {}) != hcore.canonical(board.get("tree_meta") or {}):
         E.append("projeção × events.jsonl divergem nos contadores da árvore")
     disk = disk_items(root)
+    try:
+        codes = status_codes(root, board)
+    except Exception as e:  # noqa: BLE001 — o status derivado não derruba o validate, mas não some em silêncio
+        codes = {}
+        E.append("status não verificável: %s: %s" % (type(e).__name__, e))
+    # D-37: alvo migrado (ao menos um .json com `status`) exige o campo em todo .json; nenhum ⇒ upgrade pendente
+    migrated = False
+    for _it in items.values():
+        _ap = os.path.join(tree_root(root), _it["path"])
+        if _ap.endswith(".json") and os.path.isfile(_ap):
+            try:
+                if "status" in dict(hcore.read_any(_ap)):
+                    migrated = True
+                    break
+            except (OSError, ValueError, AttributeError, TypeError):
+                pass
     known = {}
     for iid, it in sorted(items.items()):
         known[it["path"]] = iid
@@ -1580,10 +1643,11 @@ def validate(root):
         if not os.path.isfile(ap):
             E.append("item %s sem arquivo: %s (removido à mão?)" % (iid, sd_rel(it["path"])))
             continue
+        got_status = None
         try:
-            raw = hcore.read_any(ap)
+            raw = dict(hcore.read_any(ap))
+            got_status = raw.pop("status", None)  # derivado (D-37): conferido à parte, não é projeção
             if ap.endswith(".json"):  # .json é só inglês: chave pt (ou en renomeada para pt) é edição à mão
-                raw = dict(raw)
                 raw.pop(hcore.GENERATED_BY, None)
                 data = hcore.canonical(raw)
                 want = hcore.canonical(hcore.item_to_en(it))
@@ -1595,6 +1659,16 @@ def validate(root):
         if data != want:
             E.append("edição à mão em %s (%s): o arquivo difere do que o motor gravou — desfaça e use cs-state" % (
                 sd_rel(it["path"]), iid))
+        if got_status is None and migrated and ap.endswith(".json") and iid in codes:
+            E.append("status ausente em %s (%s) — %s esperado (alvo já migrado; edição à mão?)" % (
+                sd_rel(it["path"]), iid, codes.get(iid)))
+        if got_status is not None and iid in codes:
+            if not status_ok(got_status):
+                E.append("status fora do vocabulário em %s (%s): %r — %s esperado" % (
+                    sd_rel(it["path"]), iid, got_status, codes.get(iid)))
+            elif got_status != codes.get(iid):
+                E.append("status divergente em %s (%s): %r no arquivo — %s esperado (derivado; edição à mão?)" % (
+                    sd_rel(it["path"]), iid, got_status, codes.get(iid)))
         z = zone_of(it["path"])
         if z != "archive" and it.get("closed"):
             E.append("item fechado fora de archive/: %s (%s)" % (iid, sd_rel(it["path"])))
@@ -1835,6 +1909,7 @@ def migrate_format(root, actor="lead", dry_run=False):
 
     def build(ctx):
         items = ctx.board.get("tree") or {}
+        codes = status_codes(root, ctx.board)
         ops = [["tput", iid, None, copy.deepcopy(it)] for iid, it in sorted(items.items(), key=lambda kv: kv[1]["path"])]
         # arquivos: dentro do lock do commit (o evento é a prova do mapa; a projeção o commit regrava como .json)
         for old, new in plan:
@@ -1847,7 +1922,7 @@ def migrate_format(root, actor="lead", dry_run=False):
                                  "carimbo de sessão (cs-session save) — 8 blocks; não editar")
             else:
                 it = items.get(next((i for i, x in items.items() if x["path"] == new), None))
-                hcore.write_item_json(os.path.join(base, new), it, HEADER)
+                hcore.write_item_json(os.path.join(base, new), it, HEADER, codes.get(it["id"]))
         for old, new in plan:
             if old.startswith(hcore.TREE_RUNTIME + "/") and not old.endswith("projection.json5"):
                 d = hcore.read_state(os.path.join(base, old))
@@ -1855,6 +1930,36 @@ def migrate_format(root, actor="lead", dry_run=False):
         return [engine.Event("arvore.format", None, ops, {"de": "json5", "para": "json", "paths": paths})]
     engine.commit(root, actor, build, post=False)
     return ["migrado: %s em 1 evento encadeado (arvore.format)" % head]
+
+
+def migrate_item_status(root, dry_run=False):
+    """Regrava em cada arquivo `.json` de item o `status` canônico derivado (D-37) — SEM evento (o `status` não é
+    projeção; events.jsonl e board ficam intactos). Idempotente; `.json5` legado é pulado (rode state-format antes).
+    dry_run: lista e não escreve."""
+    need_tree(root)
+    with hcore.file_lock(hcore.state_paths(root)["lock"]):
+        board = hcore.load_board(root)
+        codes = status_codes(root, board)
+        base = tree_root(root)
+        todo, skipped = [], []
+        for iid, it in sorted((board.get("tree") or {}).items(), key=lambda kv: kv[1]["path"]):
+            p = os.path.join(base, it["path"])
+            if not os.path.isfile(p):
+                skipped.append(iid)
+                continue
+            want = hcore.item_file_text(it, HEADER, codes[iid])
+            with open(p, encoding="utf-8") as f:
+                if f.read() != want:
+                    todo.append((iid, p, it))
+        if not dry_run:
+            for iid, p, it in todo:
+                hcore.write_item_json(p, it, HEADER, codes[iid])
+    out = ["item-status%s: %d item(ns) a regravar, %d ja em dia" % (
+        " (dry-run)" if dry_run else "", len(todo), len(codes) - len(todo) - len(skipped))]
+    out += ["  %s → %s" % (iid, codes[iid]) for iid, _, _ in todo]
+    if skipped:
+        out.append("  pulados (sem .json; rode migrate state-format antes): %s" % ", ".join(skipped))
+    return out
 
 
 def planned_lines(tv):
