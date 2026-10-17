@@ -1,0 +1,42 @@
+--- a/test_iter23.py
++++ b/test_iter23.py
+@@ -875,13 +875,38 @@
+         if bad and os.path.isfile(rep):
+             bad = self._lists_stuck(read_text(rep), r["ids"])
+         self.assertEqual(bad, [], "o relatório do apply deveria apontar os itens presos:\n  " + "\n  ".join(bad))
++        # Mudança oficial 02 (D-39): o item preso fica no MESMO caminho e o JSON, sem `status` e sem `_generated_by`,
++        # é igual ao de antes; se `status` existir depois, é código do vocabulário canônico (D-37).
++        canon = re.compile(r"^(TODO|BACKLOG|ACTIVE|DONE|DROPPED)(/[A-Za-z0-9_-]+)?$")
++
++        def _strip(raw):
++            obj = json.loads(raw.decode("utf-8") if isinstance(raw, bytes) else raw)
++            if isinstance(obj, dict):
++                obj = dict((kk, vv) for kk, vv in obj.items() if kk not in ("status", "_generated_by"))
++            return obj
++
+         changed = []
+         for k in r["ids"]["stuck"]:
+             iid = r["ids"][k]
+             for p, data in r["before"].items():
+                 if p.endswith(".json") and ('"id": "%s"' % iid).encode() in data:
+-                    if r["after_apply"].get(p) != data:
++                    after = r["after_apply"].get(p)
++                    if after is None:
++                        changed.append(p + " (sumiu ou mudou de lugar)")
++                        continue
++                    if after == data:
++                        continue
++                    try:
++                        obj_after = json.loads(after.decode("utf-8") if isinstance(after, bytes) else after)
++                        same = _strip(after) == _strip(data)
++                    except ValueError:
++                        changed.append(p + " (JSON inválido depois)")
++                        continue
++                    if not same:
+                         changed.append(p)
++                    elif isinstance(obj_after, dict) and "status" in obj_after and \
++                            not canon.match(str(obj_after["status"])):
++                        changed.append("%s (status fora do vocabulário: %r)" % (p, obj_after["status"]))
+         self.assertEqual(changed, [], "o upgrade não pode alterar os itens presos: %s" % changed)
+ 
+     def test_ca08_controle_upgrade_aplica(self):
