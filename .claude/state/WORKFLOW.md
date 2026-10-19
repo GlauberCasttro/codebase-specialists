@@ -1,14 +1,14 @@
 # WORKFLOW — codebase-specialists
 
 <!-- features:inicio (gerado por .claude/tools/feature.py; não edite à mão) -->
-**Estado:** IDLE
-**Features ativas:** nenhuma
+**Estado:** IN_PROGRESS
+**Features ativas:** iter27 (criar-feature)
 **Última entrega:** iter26 (2026-10-19T15:24:10-0300) — .claude/state/archive/iter26/iter26.md
 <!-- features:fim -->
 
 Feature = campanha no motor embutido, em `campanhas/<feature>/` (oráculo versionado; `.auto-correcao/` local).
 O estado mecânico é do `feature.py status` e do `ac.py status`; aqui fica o porquê e a ordem.
-Atualizado em 2026-10-13.
+Atualizado em 2026-10-19.
 
 ## Sequência de features
 
@@ -19,7 +19,7 @@ Atualizado em 2026-10-13.
 - [x] iter25 — 0.13.1: status canônico no arquivo do item (B-64) · `633a307` (+ `bac0e0f` oráculo iter23)
 - [x] iter26 — 0.14.0: modelo de itens canônico, telemetria por tentativa, tokens no guard, B-49, B-67 · `8401adc`
   (+ oráculos `244006a`, `d12e026`, `58ebdc9`, `e920288`)
-- [ ] 1. iter27 — CLI e motor inteiros em inglês (B-72 + B-68 + B-71)
+- [ ] 1. iter27 — CLI e motor inteiros em inglês (B-72 + B-68 + B-71) · ABERTA 2026-10-19 · 0/8 tasks · alvo 0.15.0
   porquê agora: o uso real mostrou o inglês pela metade; a task melhor precisa de vocabulário fechado.
 - [ ] 2. iter28 — task melhor (brief com contexto/DoD, matriz de casos, vermelho por caso, checks do revisor por script)
 - [ ] 3. iter29 — métricas (`cs-state metrics`); depois B-61, B-50, B-48, B-70.

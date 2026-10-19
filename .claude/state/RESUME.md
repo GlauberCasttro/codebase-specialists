@@ -1,10 +1,10 @@
 <!-- resume-stamp
-FEATURES: —
+FEATURES: iter27
 BRANCH: release/desenv-mac
-HEAD: e920288
+HEAD: 9e908e0
 PRODUTO: 6da785c653a66f951dbbeb4d0d3ff81225315133
-ESTADO: 289d2e5ac0d512f76fb53ae29e41d9c031a5fa6d
-GATE: —
+ESTADO: 47f9122d4b450482fb5c62325ecaf882e0f2d11e
+GATE: PENDENTE
 -->
 
 <!-- carimbo:inicio (gerado por tools/carimbo.sh --write; não edite à mão) -->
@@ -20,24 +20,31 @@ arquivos sujos da skill: 4
 # RESUME — codebase-specialists (desenvolvimento)
 
 ## Escopo autorizado e limites
-- Autorizado: nenhuma feature em execução (IDLE). A iter26 (0.14.0) foi aceita pelo founder ("ok", 2026-10-19) e
-  fechada; instalada nesta máquina; a cobaia .NET já está na 0.14.0. O founder aceitou (2026-10-19, "pode seguir sua
-  recomendacao") abrir a próxima feature como iter27 = CLI e motor inteiros em inglês (B-72 + B-68 + B-71), antes da
-  task melhor.
-- NÃO autorizado: iniciar a criação sem o founder invocar `/criar-feature`; push; publicar o pacote (B-08); `claude -p`
-  sem confirmar custo (D-09); editar a v8 daqui; rodar o portão dentro de subagente (B-70).
-- Aguardando decisão: as perguntas da E1 da iter27.
+- Autorizado: iter27 (CLI e motor inteiros em inglês — B-72 + B-68 + B-71) ABERTA em 2026-10-19 pelo
+  `/criar-feature` (E1 "sim", E2–E5 "ok"; D-47). Próximo trabalho permitido: a task 01-TASK-ORACULO por agente
+  separado (persona oraculista via /rh) e o `oracle freeze`; depois GERAR o script de aprovação
+  (`script-aprovacao.sh iter27`) para o founder rodar com a senha.
+- NÃO autorizado: correção (tasks 02–06) antes da aprovação do founder no script (`ac.py check intake.3`); rodar o
+  script de aprovação ou pedir a senha; push; publicar o pacote (B-08); `claude -p` sem confirmar custo (D-09);
+  editar a v8 daqui; rodar o portão dentro de subagente (B-70); os subcomandos pt `senha/conferir/anular` (B-73).
+- Aguardando decisão: nada pendente além da aprovação do oráculo (depois que ele existir).
 
 ## Onde paramos
-- 0.14.0 entregue (iter26): `8401adc` + mudanças oficiais de oráculo iter10 `244006a`, iter13 `d12e026`, iter19
-  `58ebdc9`, iter23 `e920288`. Oráculo 15/51 → 51/51; portão VERDE nos 2 Pythons; D-35 sem regressão.
-- Cobaia .NET: upgrade 0.14.0 OK (validate --strict OK, events intacto, commit do alvo bc1b31c); B-49 ainda não provado
-  no uso real (exige task despachada). Achados viraram B-71 e B-72.
+- iter27 aberta (nada commitado): 8 tasks, CA-01..CA-09, campanha `campanhas/iter27/` em `intake`, 35 globs de
+  escopo, alvo VERSION 0.15.0. Proposta e medição: `.claude/state/features/iter27/` (FEATURE.md, TASKS/, propostas/);
+  rascunhos em `local/criar-iter27/`.
+- E2 mediu: 28 nomes de flag pt sem en (35 linhas), 311 citações pt nos textos, 28 chaves pt + `kind: "epico"` na
+  forma interna, cs-auto fora do doctest; oráculos antigos não leem a forma interna (nenhuma mudança oficial prevista
+  com alias).
+- 0.14.0 (iter26) entregue e instalada; cobaia .NET na 0.14.0 (B-49 ainda não provado no uso real).
 
 ## Próximos passos
-1. Founder: `/criar-feature iter27 — CLI e motor inteiros em inglês (B-72 + B-68 + B-71)`. Na E2, medir produto +
-   oráculos antigos + doctests (lição da iter26, B-70c).
-2. Depois: iter28 task melhor; iter29 métricas (`cs-state metrics`); B-61, B-50, B-48, B-70.
+1. `/tech-lead iter27` → 01-TASK-ORACULO por agente separado (oraculista), conferência e `oracle freeze` (3 arquivos:
+   ESPEC.md, test_iter27.py, base.txt).
+2. Gerar o script de aprovação (`bash .claude/tools/script-aprovacao.sh iter27`); o founder roda no terminal com a
+   senha.
+3. Correção: 02 (G1) ∥ 04 (G2) → 03 e 05 → 06 → QA (portão sob o tech-lead com caffeinate) → REVIEW. Depois: iter28
+   task melhor; iter29 métricas.
 
 ## Estado do ambiente
 - Cópias e portões em local/work/iter26, local/portao-iter26, local/tech-lead/iter26, local/mo10, local/mo13,
@@ -46,5 +53,5 @@ arquivos sujos da skill: 4
 - Sessões da cobaia .NET mandam achados por SendMessage para esta sessão (nomes em local/).
 
 ## Ponteiros
-- archive/iter26/iter26.md · LAST_DELIVERY.md · BACKLOG B-68..B-72 · DECISIONS D-40..D-45 · PORTE-WINDOWS.md
+- features/iter27/ · archive/iter26/iter26.md · LAST_DELIVERY.md · BACKLOG B-68..B-73 · DECISIONS D-40..D-47 · PORTE-WINDOWS.md
   (0.13.1, 0.14.0)

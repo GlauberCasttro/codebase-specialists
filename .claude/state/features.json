@@ -1,6 +1,13 @@
 {
  "schema": 1,
- "ativas": [],
+ "ativas": [
+  {
+   "id": "iter27",
+   "origem": "criar-feature",
+   "aberta_em": "2026-10-19T18:19:38-0300",
+   "campanha": "campanhas/iter27"
+  }
+ ],
  "entregues": [
   {
    "id": "iter18",
