@@ -54,7 +54,7 @@ from emit.common import GEN_TOKEN, FrontmatterError, parse_frontmatter  # noqa: 
 # (nome, só-humano?, binário, subcomando principal que o corpo tem de citar como `.swarm/bin/<bin> <sub>`)
 SKILLS = (
     ("board", False, "cs-state", "board"),
-    ("new-epic", False, "cs-state", "new epico"),
+    ("new-epic", False, "cs-state", "new epic"),   # 0.14.0 (iter26): `new epic` (também casa `new epico`)
     ("new-sprint", False, "cs-state", "new sprint"),
     ("new-feature", False, "cs-state", "new feature"),
     ("new-task", False, "cs-state", "new task"),
