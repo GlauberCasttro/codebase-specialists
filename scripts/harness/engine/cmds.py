@@ -351,7 +351,11 @@ def add_task(root, actor, spec, ready=False):
         br = dict(spec.get("briefing") or {})
         br["invariants"] = engine.required_invariants(ctx, ap) if ap else []
         br.setdefault("references", [])
-        br.setdefault("scope", {"in": [], "out": []})
+        sc = dict(br.get("scope") or {})
+        sc.pop("in", None)
+        sc.setdefault("out", [])
+        br["scope"] = sc
+        br.pop("context", None)
         t = {
             "id": tid, "story": story["id"], "sprint": spec.get("sprint"), "session": sid, "agent": spec["agent"],
             "title": spec.get("title", ""), "goal": spec.get("goal", ""), "class": spec.get("class"),
@@ -359,10 +363,9 @@ def add_task(root, actor, spec, ready=False):
             "flags": spec.get("flags") or {"hot_path": False, "security_gate": False},
             "readonly": bool(spec.get("readonly")),
             "allowed_paths": ap, "protected_paths": pp, "briefing": br,
-            "acceptance_criteria": _ac_list(spec.get("acceptance_criteria")), "dod": list(spec.get("dod") or []),
+            "acceptance_criteria": _ac_list(spec.get("acceptance_criteria")),
             "verification_command": engine.with_protection(spec.get("verification_command") or "", pp),
-            "knowledge_context": knowledge_context(root, spec, ap), "handoff": spec.get("handoff") or {},
-            "status": "DRAFT", "attempts": 0, "amendments": [], "submission": None, "reviews": [],
+                        "status": "DRAFT", "attempts": 0, "amendments": [], "submission": None, "reviews": [],
             "gate_report": {"build": None, "verdict": None, "by": None, "at": None},
             "created_at": _now(), "updated_at": _now(),
         }
@@ -588,6 +591,8 @@ def return_(root, actor, tid, reason="protocol_failure: retorno sem submission")
         def extra(to, probs):
             ops = [["set", ref("task", t["id"]), "reject_reason", reason]]
             if not phantom:
+                ops.append(["append", ref("task", t["id"]), "rejections",
+                            {"attempt": t["attempts"], "reason": reason, "by": "gate", "at": _now()}])
                 return ops + _block_if_exhausted(ctx, t, d, to)
             ops += [["inc", ref("task", t["id"]), "attempts", -1],
                     ["set", ref("deleg", d["id"]), "phantom_dispatch",
@@ -653,10 +658,16 @@ def verify(root, actor, tid):
             if to == "REJECTED" and fkind:
                 gr["failure_kind"] = fkind
                 gr["missing_tools"] = ftools
-            ops = [["set", ref("task", tid), "gate_report", gr]]
+            ops = [["set", ref("task", tid), "gate_report", gr],
+                   ["append", ref("task", tid), "gate_history",
+                    {"attempt": build_run.get("attempt"), "exit_code": build_run.get("exit_code"),
+                     "output_sha256": build_run.get("output_sha256"), "tree_sha256": build_run.get("tree_sha256"),
+                     "at": build_run.get("at") or _now()}]]
             if to == "REJECTED":
                 pre = "verify (AMBIENTE: %s ausente): " % ", ".join(ftools) if fkind == envfail.ENVIRONMENT else "verify: "
                 ops.append(["set", ref("task", tid), "reject_reason", pre + "; ".join(probs)[:1500]])
+                ops.append(["append", ref("task", tid), "rejections",
+                            {"attempt": t["attempts"], "reason": (pre + "; ".join(probs))[:1500], "by": "gate", "at": _now()}])
                 ops += _block_if_exhausted(ctx, t, d, to)
             return ops
         ev = transition(ctx, "deleg", d["id"], "verify", {"_gate": gate}, extra)
@@ -739,6 +750,33 @@ def waive_verify(root, actor, tid, reason, by, evidence):
     return engine.commit(root, actor, build)
 
 
+def notebook_harness_write_ok(ctx, task, f):
+    """B-49: o caderno `.claude/agent-memory/<a>/MEMORY.md` regravado pelo PRÓPRIO harness (cs-mem notebook/correct/
+    add/retract ou upgrade) não é escrita da task. Aceita só se o bloco gerado == render atual do cs-mem (mesma
+    conferência do guard: notebook_text_problems; sem cs-mem = fail-closed). Caderno de OUTRO agente: a área livre
+    também tem de ser igual à do HEAD (o guard só deixa o dono escrever nela)."""
+    owner = hcore.notebook_owner(f)
+    if not owner:
+        return False
+    try:
+        import guard
+        import mem
+    except ImportError:
+        return False
+    txt = guard._read_text(os.path.join(ctx.root, f))
+    if txt is None or guard.notebook_text_problems(ctx.root, owner, txt):
+        return False
+    if owner == task.get("agent"):
+        return True
+    norm = lambda t: (t or "").replace("\r\n", "\n").lstrip("\ufeff")
+    code, head = engine.git(ctx.root, ["show", "HEAD:" + f])
+    free_now = mem.split_notebook(norm(txt))[1]
+    if code != 0:
+        return not (free_now or "").strip()
+    free_head = mem.split_notebook(norm(head))[1]
+    return (free_now or "").strip() == (free_head or "").strip()
+
+
 def diff_check(ctx, task, deleg, files_changed):
     """files_changed × git × allowed_paths — nada fora. Território: desde a base da TASK (1º dispatch, D-0-13);
     fora dele: desde o baseline do dispatch desta delegação."""
@@ -788,6 +826,8 @@ def diff_check(ctx, task, deleg, files_changed):
     for f in sorted(changed):
         if f.startswith(hcore.STATE_DIR + "/") or hcore.matches_any(f, lead_ok):
             continue
+        if notebook_harness_write_ok(ctx, task, f):
+            continue
         # D-1-03: protected_paths provados contra o que ESTA delegação mudou (não contra a árvore inteira): trabalho
         # de task-irmã em voo dentro do protected não é culpa desta; mudança desta delegação no protected reprova.
         if prot and hcore.matches_any(f, prot) and not any(hcore.matches_any(f, o["allowed_paths"]) for o in others):
@@ -830,7 +870,9 @@ def reject(root, actor, tid, reason):
         t, d = _deleg(ctx, resolve_task_id(ctx, tid), "reject")
 
         def extra(to, probs):
-            return [["set", ref("task", t["id"]), "reject_reason", reason]] + _block_if_exhausted(ctx, t, d, to)
+            return [["set", ref("task", t["id"]), "reject_reason", reason],
+                    ["append", ref("task", t["id"]), "rejections",
+                     {"attempt": t["attempts"], "reason": reason, "by": ctx.actor, "at": _now()}]] + _block_if_exhausted(ctx, t, d, to)
         return [transition(ctx, "deleg", d["id"], "reject", {"reason": reason}, extra)]
     return engine.commit(root, actor, build)
 

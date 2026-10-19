@@ -138,8 +138,8 @@ COMMAND_SKILLS = (
 STATE_SKILLS = (
     ("board", False, "[--json]", ("board", "tree", "find"),
      "Mostra o quadro de trabalho (épicos, sprints, features, stories, tasks) via `cs-state board`/`tree --json`."),
-    ("new-epic", False, "<título> -- <objetivo> [-- <métrica>]", ("new epico", "board"),
-     "Cria um épico via `cs-state new epico` (mostra antes com --dry-run). Use quando o usuário pedir um épico novo."),
+    ("new-epic", False, "<título> -- <objetivo> [-- <métrica>]", ("new epic", "board"),
+     "Cria um épico via `cs-state new epic` (mostra antes com --dry-run). Use quando o usuário pedir um épico novo."),
     ("new-sprint", False, "<meta> [<EPC>]", ("new sprint", "board"),
      "Cria uma sprint via `cs-state new sprint` (mostra antes com --dry-run). Use quando o usuário pedir uma sprint nova."),
     ("new-feature", False, "<título> <SPR|--backlog> <comando de aceite>", ("new feature", "check", "board"),

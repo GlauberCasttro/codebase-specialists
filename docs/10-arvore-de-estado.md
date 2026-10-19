@@ -7,7 +7,7 @@ Resumo para humanos do que a campanha iter10 entregou; o passo a passo de uso es
   escreve nas zonas; o guard bloqueia o modelo e `cs-state validate` pega edição à mão e órfãos.
 - **Stories**: 1 agente = task tipada; 2 ou mais = story composta (pasta + uma task por agente); `promote` converte.
 - **Tipos e DoR** (`cs-state check <id>`): US (como/quero/para + critério), BUG (teste de reprodução que falha),
-  FIX (`--fixes` + `--teste`), CHORE (`--motivo` + `--verify-cmd`).
+  FIX (`--fixes` + `--teste`), CHORE (`--reason` + `--verify-cmd`).
 - **Regras**: uma feature ativa por vez; tasks que colidem em arquivo ficam em ondas (`wave`) diferentes.
 - **Subcomandos**: new, start, plan, move, park, promote, close, reopen, feature drop, find, tree, board, validate,
   check, migrate state-tree. `--dry-run` nos que mudam estado; `--json` em `tree` e `board`.
@@ -53,6 +53,13 @@ Desde a 0.11.0 o estado de entidade é **JSON padrão** (`.json`), não mais JSO
 - **Não mudam** (continuam como estavam): os logs JSONL canônicos (`events.jsonl`, harness-ledger, aprovações,
   `model-router.jsonl`), a config JSON5 (`team`, `run`, `harness/config`, `machines`, `routing`, `migrations`), a
   memória do `cs-mem` e as chaves do mandato M5 (em português).
+
+### `kind: epic` e `repro_steps` (0.14.0)
+
+- O épico novo grava `kind: "epic"` (era `"epico"`); a leitura aceita os dois, sem migração dos itens antigos.
+- `repro_steps` (passos para reproduzir) é um campo próprio do bug, separado de `failing_test` (o teste que falha);
+  `cs-state show` imprime os dois.
+- O histórico por tentativa fica em `rejections` e `gate_history`; os tokens do despacho, em `delegation.usage`.
 
 ### `cs-state show` e o `amend` refletido
 

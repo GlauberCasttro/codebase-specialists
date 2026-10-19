@@ -139,7 +139,7 @@ A entrada `to: "0.9.0"` do catálogo declara `harness` e `emit`. As skills gerad
 
 Só o nome muda: política (`disable-model-invocation`, "só o humano executa" no Codex), `argument-hint`,
 `allowed-tools` e os comandos `.swarm/bin/cs-*` citados ficam iguais. Os subcomandos do motor também ficam
-(`cs-state new epico`, `cs-mem correct`).
+(`cs-state new epic`, `cs-mem correct`).
 
 O `emit` da migração gera as pastas novas e poda as antigas pelo manifesto (`.swarm/emit/manifest.json5`): sai só a
 `SKILL.md` que o emit gerou e que ainda tem o marcador `codebase-specialists:generated`; a pasta sai quando fica vazia.
@@ -289,4 +289,20 @@ A entrada `to: "0.13.1"` do catálogo declara `harness` e a ação `item-status`
 - o plano (`cs.py upgrade`) e o relatório do `--apply` dizem quantos itens mudam (e quais);
 - NÃO muda nenhum outro campo do item, NÃO anexa evento (`events.jsonl` fica idêntico em bytes) e é idempotente:
   rodar de novo não altera nada;
+- não refaz entrevista, roster, cartões, memória nem board.
+
+## Migração 0.14.0: CLI em inglês, rastro por tentativa
+
+A entrada `to: "0.14.0"` do catálogo declara `harness` e `emit`. O que ela faz:
+
+- reinstala o motor do harness no alvo e reemite os artefatos: os textos emitidos passam a citar só as flags em
+  inglês (`--type`, `--as-a`, `--i-want`, `--so-that`, `--reason`, `--failing-test`) e `new epic`;
+- os aliases em português (`--tipo`, `--como`, `--quero`, `--para`, `--motivo`, `--reproducao`, `new epico`)
+  seguem funcionando, depreciados, com aviso;
+- o épico novo grava `kind: "epic"`; o valor `"epico"` dos itens antigos segue lido;
+- `repro_steps` fica separado de `failing_test`; a rejeição e o gate gravam histórico por tentativa
+  (`rejections`, `gate_history`); os tokens por despacho vão em `delegation.usage` (`NOT_RUN` ou `ERROR` quando
+  não medidos);
+- `cs-state verify` não acusa o caderno regravado pelo harness; saída do `close` orienta `git add .swarm` e o orquestrador emitido, `git add -A .swarm`;
+- campos mortos dos itens antigos são tolerados sem migração: o upgrade NÃO regrava nenhum item;
 - não refaz entrevista, roster, cartões, memória nem board.

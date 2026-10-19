@@ -101,12 +101,12 @@ protected): o brief_valid a recusa, o sufixo legado é removido na geração/ame
 
 ```
 cs-state init | next | board | status [--task] | why <id> | brief --task T [--phase implement|verify|review] [--agent]
-cs-state new epico --title --objetivo [--metrica]
+cs-state new epic --title --objetivo [--metrica]
 cs-state new sprint --meta [--epico EPC-n]
 cs-state new feature --title --aceite <cmd> (--sprint SPR-n | --backlog)
-cs-state new story --tipo US|BUG|FIX|CHORE --feature F --agents A… --title [--como --quero --para --criterio 'AC-1|Dado…Quando…Então…|<test>']
-                   [--reproducao … --teste <test>] [--fixes BUG-n] [--motivo …] [--allowed-path P… --verify-cmd C]
-cs-state new task --tipo … --agent A --title … (--story S | --avulsa | --backlog) [--feature F --sprint SPR-n]   (mesmos campos da story)
+cs-state new story --type US|BUG|FIX|CHORE --feature F --agents A… --title [--as-a --i-want --so-that --criterio 'AC-1|Dado…Quando…Então…|<test>']
+                   [--repro … --failing-test <test>] [--fixes BUG-n --teste <test>] [--reason …] [--allowed-path P… --verify-cmd C]
+cs-state new task --type … --agent A --title … (--story S | --avulsa | --backlog) [--feature F --sprint SPR-n]   (mesmos campos da story)
 cs-state plan <story|task> --sprint SPR-n [--dry-run]         (move para a sprint; uma chamada por item)
 cs-state add task --story S --agent A --title --goal --allowed-path P… [--protected-path] --verify-cmd C --ac 'AC-1|crit|verified_by'…
                   --ref arq:linha… --out '…' [--in] [--wave --depends-on --class --hot-path --security-gate --type BE… --from brief.json5] [--ready]

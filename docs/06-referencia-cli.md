@@ -1032,25 +1032,25 @@ usage: cs-state init [-h]
 
 #### `cs-state new`
 
-Cria itens da árvore (modo árvore, o padrão do alvo instalado): `new epico|sprint|feature|story|task`. É o comando que os textos emitidos (CLAUDE.md, orchestrator, `/plan-sprint`, Makefile) citam; `add epic|feature|story` é o caminho legado (alvos antigos) e `add task --quick` continua para a task avulsa.
+Cria itens da árvore (modo árvore, o padrão do alvo instalado): `new epic|sprint|feature|story|task`. É o comando que os textos emitidos (CLAUDE.md, orchestrator, `/plan-sprint`, Makefile) citam; `add epic|feature|story` é o caminho legado (alvos antigos) e `add task --quick` continua para a task avulsa.
 
 ```text
-usage: cs-state new [-h] {epico,sprint,feature,task,story} ...
+usage: cs-state new [-h] {epic,sprint,feature,task,story} ...
 
 positional arguments:
-  {epico,sprint,feature,task,story}
+  {epic,sprint,feature,task,story}
 
 options:
   -h, --help            show this help message and exit
 ```
 
-#### `cs-state new epico`
+#### `cs-state new epic`
 
 Épico com objetivo e métrica opcional.
 
 ```text
-usage: cs-state new epico [-h] --title TITLE --objetivo OBJETIVO
-                          [--metrica METRICA] [--dry-run]
+usage: cs-state new epic [-h] --title TITLE --objetivo OBJETIVO
+                         [--metrica METRICA] [--dry-run]
 
 options:
   -h, --help           show this help message and exit
@@ -1099,28 +1099,29 @@ options:
 Story US, BUG, FIX ou CHORE numa feature.
 
 ```text
-usage: cs-state new story [-h] --tipo {US,BUG,FIX,CHORE} --title TITLE
+usage: cs-state new story [-h] --type {US,BUG,FIX,CHORE} --title TITLE
                           [--allowed-path ALLOWED_PATH]
-                          [--verify-cmd VERIFY_CMD] [--como COMO]
-                          [--quero QUERO] [--para PARA]
-                          [--reproducao REPRODUCAO] [--fixes FIXES]
-                          [--teste TESTE] [--motivo MOTIVO]
-                          [--criterio CRITERIO] --feature FEATURE
-                          --agents AGENTS [--dry-run]
+                          [--verify-cmd VERIFY_CMD] [--as-a AS_A]
+                          [--i-want I_WANT] [--so-that SO_THAT]
+                          [--repro REPRO] [--failing-test FAILING_TEST]
+                          [--reason REASON] [--fixes FIXES] [--teste TESTE]
+                          [--criterio CRITERIO] --feature FEATURE --agents
+                          AGENTS [--dry-run]
 
 options:
   -h, --help            show this help message and exit
-  --tipo {US,BUG,FIX,CHORE}
+  --type {US,BUG,FIX,CHORE}
   --title TITLE
   --allowed-path ALLOWED_PATH
   --verify-cmd VERIFY_CMD
-  --como COMO
-  --quero QUERO
-  --para PARA
-  --reproducao REPRODUCAO
+  --as-a AS_A
+  --i-want I_WANT
+  --so-that SO_THAT
+  --repro REPRO
+  --failing-test FAILING_TEST
+  --reason REASON
   --fixes FIXES
   --teste TESTE
-  --motivo MOTIVO
   --criterio CRITERIO
   --feature FEATURE
   --agents AGENTS
@@ -1133,29 +1134,29 @@ options:
 Task numa story, avulsa (`--avulsa`) ou no backlog (`--backlog`).
 
 ```text
-usage: cs-state new task [-h] --tipo {US,BUG,FIX,CHORE} --title TITLE
+usage: cs-state new task [-h] --type {US,BUG,FIX,CHORE} --title TITLE
                          [--allowed-path ALLOWED_PATH]
-                         [--verify-cmd VERIFY_CMD] [--como COMO]
-                         [--quero QUERO] [--para PARA]
-                         [--reproducao REPRODUCAO] [--fixes FIXES]
-                         [--teste TESTE] [--motivo MOTIVO]
-                         [--criterio CRITERIO] --agent AGENT
-                         [--feature FEATURE] [--sprint SPRINT] [--story STORY]
-                         [--avulsa] [--backlog] [--dry-run]
+                         [--verify-cmd VERIFY_CMD] [--as-a AS_A]
+                         [--i-want I_WANT] [--so-that SO_THAT] [--repro REPRO]
+                         [--failing-test FAILING_TEST] [--reason REASON]
+                         [--fixes FIXES] [--teste TESTE] [--criterio CRITERIO]
+                         --agent AGENT [--feature FEATURE] [--sprint SPRINT]
+                         [--story STORY] [--avulsa] [--backlog] [--dry-run]
 
 options:
   -h, --help            show this help message and exit
-  --tipo {US,BUG,FIX,CHORE}
+  --type {US,BUG,FIX,CHORE}
   --title TITLE
   --allowed-path ALLOWED_PATH
   --verify-cmd VERIFY_CMD
-  --como COMO
-  --quero QUERO
-  --para PARA
-  --reproducao REPRODUCAO
+  --as-a AS_A
+  --i-want I_WANT
+  --so-that SO_THAT
+  --repro REPRO
+  --failing-test FAILING_TEST
+  --reason REASON
   --fixes FIXES
   --teste TESTE
-  --motivo MOTIVO
   --criterio CRITERIO
   --agent AGENT
   --feature FEATURE
@@ -2069,7 +2070,7 @@ Camada fina: cada alvo chama o script e nada mais. Variáveis: `ID=<task>`, `FEA
 |---|---|
 | `next` | `cs-state next` |
 | `board` | `cs-state board` |
-| `new-epic` / `new-sprint` / `new-feature` / `new-story` / `new-task` | `cs-state new epico $(ARGS)` / `cs-state new sprint $(ARGS)` / `cs-state new feature $(ARGS)` / `cs-state new story $(ARGS)` / `cs-state new task $(ARGS)` |
+| `new-epic` / `new-sprint` / `new-feature` / `new-story` / `new-task` | `cs-state new epic $(ARGS)` / `cs-state new sprint $(ARGS)` / `cs-state new feature $(ARGS)` / `cs-state new story $(ARGS)` / `cs-state new task $(ARGS)` |
 | `plan` | `cs-state plan $(ARGS)` (`ARGS='<id> --sprint SPR-nnn'`) |
 | `sprint-start` / `sprint-review` / `sprint-close` | `cs-state sprint start $(ARGS)` / `cs-state sprint review $(ARGS)` / `cs-state sprint close $(ARGS)` |
 | `brief ID=` | `cs-state brief --task $(ID) $(ARGS)` |

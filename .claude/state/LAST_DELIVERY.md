@@ -1,6 +1,6 @@
 # LAST_DELIVERY
 
-**Feature-ID:** iter25
-- Fechada em: 2026-10-17T00:00:51-0300
-- Archive: .claude/state/archive/iter25/iter25.md
-- HEAD no fechamento: 3eed3b4
+**Feature-ID:** iter26
+- Fechada em: 2026-10-19T15:23:53-0300
+- Archive: .claude/state/archive/iter26/iter26.md
+- HEAD no fechamento: bac0e0f

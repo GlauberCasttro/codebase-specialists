@@ -127,10 +127,10 @@ task é `<id do pai>/<nn>` (o `nn` nunca é reaproveitado).
 
 | Tipo | Pronto para começar quando |
 |---|---|
-| `US` | tem `--como --quero --para` e ao menos um `--criterio` |
-| `BUG` | tem `--reproducao` (teste que **falha hoje**; se já passa, o `check` reprova) |
+| `US` | tem `--as-a --i-want --so-that` e ao menos um `--criterio` |
+| `BUG` | tem `--failing-test` (teste que **falha hoje**; se já passa, o `check` reprova) |
 | `FIX` | tem `--fixes` (id do BUG) e `--teste`; só fecha com o teste do BUG verde |
-| `CHORE` | manutenção sem valor de usuário: tem `--motivo` e `--verify-cmd`; o `close` roda o verify de novo |
+| `CHORE` | manutenção sem valor de usuário: tem `--reason` e `--verify-cmd`; o `close` roda o verify de novo |
 
   A feature só nasce com `--aceite` (teste de aceite que ainda não passa); épico pede `--objetivo`, sprint `--meta`.
 - **Uma feature ativa por vez.** `cs-state start` da segunda é recusado até `park` (volta ao `backlog/` com motivo)
@@ -145,7 +145,7 @@ imprime JSON `{ids, criar, mover, eventos}` e **não escreve nada** (uma operaç
 
 | Comando | O que faz |
 |---|---|
-| `cs-state new epico --title T --objetivo O --dry-run` | cria épico (também `new sprint --meta M`, `new feature --title T --sprint SPR-001 --aceite "<cmd>"`, `new task --tipo US ...`, `new story --tipo US --feature FEA-001 --agents a,b ...`); saída `criado <ID> em <caminho>` |
+| `cs-state new epic --title T --objetivo O --dry-run` | cria épico (também `new sprint --meta M`, `new feature --title T --sprint SPR-001 --aceite "<cmd>"`, `new task --type US ...`, `new story --type US --feature FEA-001 --agents a,b ...`); saída `criado <ID> em <caminho>` |
 | `cs-state start <id>` | `backlog/` → `state/` (move a subárvore) ou início de task, conferindo o DoR |
 | `cs-state plan <task> --sprint SPR-001` | task do backlog entra numa sprint |
 | `cs-state move <id> --to <pai>` · `move <id> --avulsa` | troca o pai; sprint→feature e épico→sprint são recusados; o id antigo continua resolvendo em `find` |
@@ -160,7 +160,7 @@ imprime JSON `{ids, criar, mover, eventos}` e **não escreve nada** (uma operaç
 | `cs-state migrate state-tree` | converte o board plano legado em árvore (idempotente, com backup) |
 
 Escrever produto sem task em andamento é bloqueado e a mensagem do guard já traz o comando
-(`cs-state new task --tipo FIX --avulsa ...`).
+(`cs-state new task --type FIX --avulsa ...`).
 
 ### Carimbo de sessão de 8 blocos
 
@@ -196,7 +196,7 @@ Tabela gerada do código (`scripts/emit/platforms.py`): `cs.py skills-guide --wr
 | `/plan-sprint` | Planeja a próxima sprint com stories que passam no DoR, via `.swarm/bin/cs-state sprint plan`. | só o humano | `[--dry-run]` |
 | `/feature-autonoma` | Inicia o modo autônomo de uma feature: aprovação única de spec, testes de aceite, classe e orçamento; depois `.swarm/bin/cs-state next` até o relatório. | só o humano | `<feature-id> <arquivo-spec>` |
 | `/board` | Mostra o quadro de trabalho (épicos, sprints, features, stories, tasks) via `cs-state board`/`tree --json`. | o modelo pode chamar sozinho | `[--json]` |
-| `/new-epic` | Cria um épico via `cs-state new epico` (mostra antes com --dry-run). Use quando o usuário pedir um épico novo. | o modelo pode chamar sozinho | `<título> -- <objetivo> [-- <métrica>]` |
+| `/new-epic` | Cria um épico via `cs-state new epic` (mostra antes com --dry-run). Use quando o usuário pedir um épico novo. | o modelo pode chamar sozinho | `<título> -- <objetivo> [-- <métrica>]` |
 | `/new-sprint` | Cria uma sprint via `cs-state new sprint` (mostra antes com --dry-run). Use quando o usuário pedir uma sprint nova. | o modelo pode chamar sozinho | `<meta> [<EPC>]` |
 | `/new-feature` | Cria uma feature via `cs-state new feature` com teste de aceite (mostra antes com --dry-run; DoR por `cs-state check`). | o modelo pode chamar sozinho | `<título> <SPR\|--backlog> <comando de aceite>` |
 | `/new-task` | Cria uma task US/BUG/FIX/CHORE via `cs-state new task` (mostra antes com --dry-run; DoR por `cs-state check`). Use antes de qualquer alteração de produto sem task em andamento. | o modelo pode chamar sozinho | `<US\|BUG\|FIX\|CHORE> <pai> <título>` |

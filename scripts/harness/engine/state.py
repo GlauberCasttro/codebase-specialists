@@ -94,17 +94,17 @@ def build_parser():
     t.add_argument("--verify-cmd")
     t.add_argument("--ac", action="append", default=[], help="'AC-n|critério|verification_command|test:<id>|reviewer'")
     t.add_argument("--ref", action="append", default=[])
-    t.add_argument("--in", dest="scope_in", action="append", default=[])
+    t.add_argument("--in", dest="scope_in", action="append", default=[], help=argparse.SUPPRESS)  # morto: aceito e ignorado
     t.add_argument("--out", dest="scope_out", action="append", default=[])
     t.add_argument("--subtask", action="append", default=[])
     t.add_argument("--assume", action="append", default=[])
-    t.add_argument("--context", default="")
-    t.add_argument("--dod", action="append", default=[])
+    t.add_argument("--context", default="", help=argparse.SUPPRESS)  # morto: aceito e ignorado
+    t.add_argument("--dod", action="append", default=[], help=argparse.SUPPRESS)  # morto: aceito e ignorado
     t.add_argument("--hot-path", action="store_true")
     t.add_argument("--security-gate", action="store_true")
     t.add_argument("--readonly", action="store_true")
-    t.add_argument("--handoff-to")
-    t.add_argument("--scenario", action="append", default=[])
+    t.add_argument("--handoff-to", help=argparse.SUPPRESS)  # morto: aceito e ignorado
+    t.add_argument("--scenario", action="append", default=[], help=argparse.SUPPRESS)  # morto: aceito e ignorado
     t.add_argument("--ready", action="store_true")
     for lvl, trans in (("epic", ["activate", "done", "drop"]), ("feature", ["ready", "start", "done", "drop"]),
                        ("story", ["ready", "start", "review", "done", "reject", "requeue"])):
@@ -221,7 +221,7 @@ def build_parser():
 def _tree_parsers(sub):
     """Estado em árvore: new/start/plan/move/park/promote/close/reopen/find/tree/check/migrate (+ feature drop)."""
     new = sub.add_parser("new", help="cria item da árvore (saída: `criado <ID> em <caminho>`)").add_subparsers(dest="what")
-    e = new.add_parser("epico")
+    e = new.add_parser("epic")
     e.add_argument("--title", required=True)
     e.add_argument("--objetivo", required=True)
     e.add_argument("--metrica")
@@ -236,11 +236,14 @@ def _tree_parsers(sub):
     t = new.add_parser("task")
     st = new.add_parser("story")
     for p in (t, st):
-        p.add_argument("--tipo", required=True, type=str.upper, choices=["US", "BUG", "FIX", "CHORE"])
+        p.add_argument("--type", dest="tipo", required=True, type=str.upper, choices=["US", "BUG", "FIX", "CHORE"])
         p.add_argument("--title", required=True)
         p.add_argument("--allowed-path", action="append", default=[])
         p.add_argument("--verify-cmd")
-        for k in ("como", "quero", "para", "reproducao", "fixes", "teste", "motivo"):
+        for flag, dest in (("as-a", "como"), ("i-want", "quero"), ("so-that", "para"), ("repro", "repro_steps"),
+                           ("failing-test", "failing_test"), ("reason", "motivo")):
+            p.add_argument("--" + flag, dest=dest, metavar=flag.upper().replace("-", "_"))
+        for k in ("fixes", "teste"):
             p.add_argument("--" + k)
         p.add_argument("--criterio", action="append", default=[])
     t.add_argument("--agent", required=True)
@@ -418,7 +421,7 @@ def run_tree(root, actor, a):
         return ["pronto: %s (%s) — DoR ok; `cs-state start %s` passa pela mesma regra" % (it["id"], it["kind"], it["id"])]
     if c == "new":
         w = a.what
-        if w == "epico":
+        if w == "epic":
             b = lambda tv: tree.new_epico(tv, a.title, a.objetivo, a.metrica)  # noqa: E731
         elif w == "sprint":
             b = lambda tv: tree.new_sprint(tv, a.meta, a.epico)  # noqa: E731
@@ -428,7 +431,8 @@ def run_tree(root, actor, a):
             b = lambda tv: tree.new_feature(tv, a.title, a.aceite, a.sprint)  # noqa: E731
         elif w in ("task", "story"):
             spec = {"tipo": a.tipo, "title": a.title, "allowed_paths": _csv(a.allowed_path), "verify_cmd": a.verify_cmd,
-                    "como": a.como, "quero": a.quero, "para": a.para, "criterio": a.criterio, "reproducao": a.reproducao,
+                    "como": a.como, "quero": a.quero, "para": a.para, "criterio": a.criterio, "failing_test": a.failing_test,
+                    "repro_steps": a.repro_steps,
                     "fixes": a.fixes, "teste": a.teste, "motivo": a.motivo, "feature": a.feature}
             if w == "task":
                 spec.update({"agent": a.agent, "sprint": a.sprint, "story": a.story, "avulsa": a.avulsa, "backlog": a.backlog})
@@ -437,7 +441,7 @@ def run_tree(root, actor, a):
                 spec["agents"] = a.agents
                 b = lambda tv: tree.new_story(tv, spec)  # noqa: E731
         else:
-            raise hcore.Refused("new epico|sprint|feature|task|story")
+            raise hcore.Refused("new epic|sprint|feature|task|story")
         plan, _ = tree.run_build(root, actor, b, dry)
         return [json.dumps(plan, ensure_ascii=False)] if dry else _plan_out(plan, "movido")
     if c in ("start", "plan", "move", "park", "promote", "close", "reopen") or (c == "feature" and a.transition == "drop"):
@@ -465,6 +469,10 @@ def run_tree(root, actor, a):
         if dry:
             return [json.dumps(plan, ensure_ascii=False)]
         out = ["%s %s ok" % ("feature drop" if c == "feature" else c, a.id)] + _plan_out(plan, "movido")
+        if c == "close" and any("archive/" in (m.get("para") or "") for m in plan["mover"]):
+            out.append("orientação: o fechamento moveu arquivos para %s/archive/ — antes do commit rode `git add %s` "
+                       "(a pasta inteira, não só os arquivos que você editou) para o commit levar o que foi movido"
+                       % (hcore.STATE_DIR, hcore.STATE_DIR))
         if c == "start" and tv is not None:
             it = tv.get(a.id)
             if it and it.get("kind") == "task" and it.get("m2"):
@@ -552,9 +560,8 @@ def run(a):
                    "sprint": a.sprint, "session": a.session, "class": a.klass, "wave": a.wave,
                    "depends_on": _csv(a.depends_on), "allowed_paths": _csv(a.allowed_path),
                    "protected_paths": _csv(a.protected_path), "verification_command": a.verify_cmd,
-                   "acceptance_criteria": a.ac, "dod": a.dod, "readonly": a.readonly,
-                   "flags": {"hot_path": a.hot_path, "security_gate": a.security_gate},
-                   "handoff": {"to": a.handoff_to, "scenarios": a.scenario} if a.handoff_to or a.scenario else None}
+                   "acceptance_criteria": a.ac, "readonly": a.readonly,
+                   "flags": {"hot_path": a.hot_path, "security_gate": a.security_gate}}
             for k, v in cli.items():
                 if v not in (None, [], "", {}) and not (k == "wave" and v == 1 and "wave" in spec):
                     spec[k] = v
@@ -562,10 +569,8 @@ def run(a):
             for k, v in (("references", a.ref), ("subtasks", a.subtask), ("assumptions", a.assume)):
                 if v:
                     br[k] = v
-            if a.context:
-                br["context"] = a.context
-            if a.scope_in or a.scope_out:
-                br["scope"] = {"in": a.scope_in, "out": a.scope_out}
+            if a.scope_out:
+                br["scope"] = {"out": a.scope_out}
             spec["briefing"] = br
             if a.quick:
                 spec["quick"] = True
@@ -805,9 +810,48 @@ def run(a):
     return out
 
 
+# flags pt aceitas (depreciadas) em `new task|story` e o subcomando `new epico`: valem como a flag en, com aviso
+PT_NEW_FLAGS = {"--tipo": "--type", "--como": "--as-a", "--quero": "--i-want", "--para": "--so-that",
+                "--motivo": "--reason", "--reproducao": "--failing-test"}
+
+
+def _deprecated_aliases(argv):
+    """Reescreve `new epico` e as flags pt de `new task|story` para o nome en e avisa (stderr) que o nome pt é
+    depreciado. Se o nome en também veio na linha, o en vence e o pt (com o valor) é descartado. Não aparece no help."""
+    argv = list(sys.argv[1:] if argv is None else argv)
+    start = next((i + 1 for i in range(len(argv) - 1)
+                  if argv[i] == "new" and argv[i + 1] in ("epico", "epic", "task", "story", "sprint", "feature")), None)
+    if start is None:
+        return argv
+    if argv[start] == "epico":
+        sys.stderr.write("cs-state: aviso: `new epico` está depreciado (obsoleto); use `new epic`\n")
+        argv[start] = "epic"
+    if argv[start] not in ("task", "story"):
+        return argv
+    present = set(x.split("=", 1)[0] for x in argv[start:] if x.startswith("--"))
+    out = argv[:start + 1]
+    i = start + 1
+    while i < len(argv):
+        tok = argv[i]
+        name, eq, val = tok.partition("=")
+        if name in PT_NEW_FLAGS:
+            en = PT_NEW_FLAGS[name]
+            if en in present:
+                sys.stderr.write("cs-state: aviso: %s está depreciada (obsoleta) e foi ignorada: %s também foi dado e vale\n"
+                                 % (name, en))
+                i += 1 if eq else 2
+                continue
+            sys.stderr.write("cs-state: aviso: %s está depreciada (obsoleta); use %s\n" % (name, en))
+            out.append(en + eq + val)
+        else:
+            out.append(tok)
+        i += 1
+    return out
+
+
 def main(argv=None):
     ap = build_parser()
-    a = ap.parse_args(argv)
+    a = ap.parse_args(_deprecated_aliases(argv))
     if not a.cmd:
         ap.print_help(sys.stderr)
         return 2

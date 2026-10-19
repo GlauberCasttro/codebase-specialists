@@ -352,7 +352,7 @@ Regras:
 - Story REJECTED volta ao BACKLOG com os achados; reabrir story DONE exige BUG novo, nunca editar a antiga.
 - Sprint fecha mesmo com stories não entregues — elas voltam ao backlog com motivo (sem "quase pronto").
 - `cs-state board` mostra a árvore com rollup (% DONE por nível, bloqueios, orçamento gasto).
-- O PO cria épicos/features/stories por `cs-state new epico|sprint|feature|story|task` (`--tipo US|BUG|FIX|CHORE`) e `cs-state plan <story|task> --sprint SPR-nnn` (nunca editando o JSON).
+- O PO cria épicos/features/stories por `cs-state new epic|sprint|feature|story|task` (`--type US|BUG|FIX|CHORE`) e `cs-state plan <story|task> --sprint SPR-nnn` (nunca editando o JSON).
 - Modo autônomo: mandato por **Feature** (ou Story); o loop percorre as stories da feature sprint a sprint.
 
 Gate **G12 processo**: DoR e DoD recusam com mensagem acionável quando faltam; Bug sem teste que falha

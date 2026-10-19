@@ -86,7 +86,7 @@ def dispatched_for(board, agent_type):
     return out
 
 
-MIN_TASK_HINT = "cs-state new task --tipo FIX --avulsa"
+MIN_TASK_HINT = "cs-state new task --type FIX --avulsa"
 
 
 def task_hint(board, rel, agent=None):
@@ -553,6 +553,54 @@ def _measure_model(payload):
     return None
 
 
+def _measure_usage(payload):
+    """Tokens reais do despacho: soma do `usage` das mensagens `assistant` (ids distintos).
+    Sem transcript ou sem usage: NOT_RUN com motivo (nunca zero). Só usage inválido: ERROR."""
+    p = payload.get("agent_transcript_path")
+    if not p or not os.path.isfile(p):
+        return {"status": "NOT_RUN", "reason": "sem transcript do subagente (agent_transcript_path ausente ou inexistente)"}
+    keys = ("input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")
+    tot = dict((k, 0) for k in keys)
+    vistos, validas, invalidas = set(), 0, 0
+    try:
+        with open(p, "r", encoding="utf-8", errors="replace") as f:
+            for ln in f:
+                if '"usage"' not in ln:
+                    continue
+                try:
+                    e = json.loads(ln)
+                except ValueError:
+                    invalidas += 1
+                    continue
+                m = e.get("message") if isinstance(e, dict) else None
+                if not isinstance(m, dict) or e.get("type") != "assistant" or "usage" not in m:
+                    continue
+                u = m["usage"]
+                if not isinstance(u, dict) or any(
+                        u.get(k) is not None and (isinstance(u.get(k), bool) or not isinstance(u.get(k), int))
+                        for k in keys):
+                    invalidas += 1
+                    continue
+                mid = m.get("id")
+                if mid:
+                    if mid in vistos:
+                        continue
+                    vistos.add(mid)
+                validas += 1
+                for k in keys:
+                    tot[k] += u.get(k) or 0
+    except OSError as e:
+        return {"status": "ERROR", "reason": "falha ao ler o transcript para o usage: %s" % type(e).__name__}
+    if validas:
+        tot["procedencia"] = "medida"
+        if invalidas:
+            tot["linhas_invalidas"] = invalidas
+        return tot
+    if invalidas:
+        return {"status": "ERROR", "reason": "usage inválido/corrompido no transcript (%d linha(s))" % invalidas}
+    return {"status": "NOT_RUN", "reason": "transcript sem mensagens assistant com usage"}
+
+
 def mode_subagent_stop(root, payload):
     import cmds
     import engine
@@ -570,19 +618,25 @@ def mode_subagent_stop(root, payload):
         return
     t, d = ds[0]
     tier = _measure_model(payload)
-    if tier:
+    usage = _measure_usage(payload)
+    if tier or usage:
         try:
-            import router
-            router.measured(root, d["id"], tier)
-            declared = (d.get("model") or {}).get("name")
+            ops = []
+            if tier:
+                import router
+                router.measured(root, d["id"], tier)
+                declared = (d.get("model") or {}).get("name")
+                ops.append(["set", engine.ref("deleg", d["id"]), "model",
+                            {"name": tier, "procedencia": "medida", "declared": declared}])
+            if usage:
+                ops.append(["set", engine.ref("deleg", d["id"]), "usage", usage])
 
             def build(ctx):
-                return [engine.Event("delegation.measure_model", d["id"], [
-                    ["set", engine.ref("deleg", d["id"]), "model", {"name": tier, "procedencia": "medida",
-                                                                     "declared": declared}]])]
+                return [engine.Event("delegation.measure_model", d["id"], ops)]
             engine.commit(root, "hook", build, post=False)
-        except Exception:
-            pass
+        except Exception as e:  # a medição não derruba o hook (fail-closed do resto), mas a falha fica visível
+            ledger(root, {"kind": "usage_measure_failed", "task": t["id"], "agent_type": at,
+                          "error": "%s: %s" % (type(e).__name__, str(e)[:200])})
     if payload.get("stop_hook_active"):
         cmds.return_(root, "hook", t["id"], "protocol_failure: subagente %s encerrou sem submission" % at)
         ledger(root, {"kind": "protocol_failure", "task": t["id"], "agent_type": at})

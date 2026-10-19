@@ -479,12 +479,12 @@ def task_fields(spec):
     """Campos tipados da task (spec: dict do CLI)."""
     tipo = (spec.get("tipo") or "US").upper()
     if tipo not in TIPOS:
-        raise Refused("--tipo deve ser %s" % "|".join(TIPOS))
+        raise Refused("--type deve ser %s" % "|".join(TIPOS))
     f = {"tipo": tipo, "agent": spec.get("agent"), "allowed_paths": [hcore.norm_rel(p) for p in spec.get("allowed_paths") or []],
          "verify_cmd": (spec.get("verify_cmd") or "").strip() or None}
     if tipo == "CHORE":
         if any(spec.get(k) for k in ("como", "quero", "para")):
-            raise Refused("CHORE é manutenção técnica sem valor de usuário: sem --como/--quero/--para (use --motivo)")
+            raise Refused("CHORE é manutenção técnica sem valor de usuário: sem --as-a/--i-want/--so-that (use --reason)")
         f["motivo"] = (spec.get("motivo") or "").strip() or None
     else:
         for k in ("como", "quero", "para"):
@@ -493,8 +493,11 @@ def task_fields(spec):
         crit = _criterios(spec.get("criterio"))
         if crit:
             f["criterios"] = crit
-        if spec.get("reproducao"):
-            f["reproducao"] = spec["reproducao"]
+        ft = spec.get("failing_test") or spec.get("reproducao")   # em memória `reproducao`; no disco `failing_test`
+        if ft:
+            f["reproducao"] = ft
+        if spec.get("repro_steps"):
+            f["repro_steps"] = spec["repro_steps"]
         if spec.get("fixes"):
             f["fixes"] = spec["fixes"]
         if spec.get("teste"):
@@ -591,7 +594,7 @@ def new_story(tv, spec):
     st = new_item("story", stid, title, "%s/stories/%s-%s/story.json" % (tv.folder(feat), stid, slugify(title)), tv.actor,
                   tipo=tipo, agents=agents, como=fields.get("como"), quero=fields.get("quero"), para=fields.get("para"),
                   criterios=fields.get("criterios"), verify_cmd=fields.get("verify_cmd"),
-                  reproducao=fields.get("reproducao"), fixes=fields.get("fixes"), teste=fields.get("teste"))
+                  reproducao=fields.get("reproducao"), repro_steps=fields.get("repro_steps"), fixes=fields.get("fixes"), teste=fields.get("teste"))
     tv.note(st, "criado")
     tv.put(st)
     for a in agents:
@@ -613,7 +616,7 @@ def task_dor(tv, it, run=True, territorio=True):
     elif tipo == "BUG":
         r = it.get("reproducao")
         if not r:
-            P.append("BUG sem --reproducao <test-id>: o teste de reprodução precisa FALHAR hoje")
+            P.append("BUG sem --failing-test <test-id> (antes --reproducao): o teste de reprodução precisa FALHAR hoje")
         elif run:
             res = run_test(tv.root, tv.ctx.cfg, r)
             if res["exit_code"] == 0:
@@ -632,7 +635,7 @@ def task_dor(tv, it, run=True, territorio=True):
             P.append("FIX sem --teste <test-id> (o teste que prova a correção)")
     elif tipo == "CHORE":
         if not it.get("motivo"):
-            P.append("CHORE sem motivo: --motivo '<por que a manutenção técnica é necessária>'")
+            P.append("CHORE sem motivo: --reason '<por que a manutenção técnica é necessária>'")
         if not it.get("verify_cmd"):
             P.append("CHORE sem verify-cmd: --verify-cmd '<prova executável da manutenção>'")
     if tipo != "CHORE" and not it.get("verify_cmd"):
@@ -651,7 +654,7 @@ def task_dor(tv, it, run=True, territorio=True):
     return P
 
 
-DOR_FIELDS = ("motivo", "reproducao", "como", "quero", "para", "verify_cmd", "fixes", "teste")
+DOR_FIELDS = ("motivo", "reproducao", "repro_steps", "como", "quero", "para", "verify_cmd", "fixes", "teste")
 TREE_AMENDABLE = ("allowed_paths", "acceptance_criteria") + DOR_FIELDS
 
 
@@ -705,6 +708,7 @@ def mirror_amend(board, ev, m2_id, actor, field, new_t, reason):
 def amend(tv, ident, field, after, reason):
     """Emenda de task da árvore AINDA NÃO INICIADA (sem M2 em curso): allowed_paths, critérios e os campos do DoR.
     Iniciada → a emenda vale na task M2 (cs-state amend <id> ... sobre a M2)."""
+    field = {"failing_test": "reproducao"}.get(field, field)    # nome en do campo (disco: failing_test)
     it = tv.need(ident, ("task",))
     if zone_of(it["path"]) == "archive":
         raise Refused("%s está fechada: cs-state reopen %s --reason ..." % (it["id"], it["id"]))
@@ -843,10 +847,10 @@ def _m2_task(tv, it, wave):
          "agent": it["agent"], "title": it["title"], "goal": goal, "class": "pequena", "wave": wave, "depends_on": [],
          "flags": {"hot_path": False, "security_gate": False}, "readonly": False, "allowed_paths": ap,
          "protected_paths": [], "work_type": it["tipo"],
-         "briefing": {"references": [], "scope": {"in": [it["title"]], "out": []},
-                      "invariants": engine.required_invariants(ctx, ap) if ap else [], "context": story_txt},
-         "acceptance_criteria": acs, "dod": [], "verification_command": it.get("verify_cmd") or "",
-         "knowledge_context": [], "handoff": {}, "status": "DRAFT", "attempts": 0, "amendments": [], "submission": None,
+         "briefing": {"references": [], "scope": {"out": []},
+                      "invariants": engine.required_invariants(ctx, ap) if ap else []},
+         "acceptance_criteria": acs, "verification_command": it.get("verify_cmd") or "",
+         "status": "DRAFT", "attempts": 0, "amendments": [], "submission": None,
          "reviews": [], "gate_report": {"build": None, "verdict": None, "by": None, "at": None},
          "created_at": now, "updated_at": now}
     d = {"id": "%s.d1" % mid, "agent": it["agent"], "state": "PLANNED", "retries": 0, "created_at": now}
@@ -1380,7 +1384,7 @@ def promote(tv, ident):
     st = new_item("story", stid, it["title"], "%s/stories/%s-%s/story.json" % (tv.folder(par), stid, slugify(it["title"])),
                   tv.actor, tipo=tipo, agents=[it.get("agent")], como=it.get("como"), quero=it.get("quero"),
                   para=it.get("para"), criterios=it.get("criterios"), verify_cmd=it.get("verify_cmd"),
-                  reproducao=it.get("reproducao"), fixes=it.get("fixes"), teste=it.get("teste"), promovida_de=it["id"])
+                  reproducao=it.get("reproducao"), repro_steps=it.get("repro_steps"), fixes=it.get("fixes"), teste=it.get("teste"), promovida_de=it["id"])
     tv.note(st, "promote", de=it["id"])
     tv.put(st)
     nx = _rehome_task(tv, it, "story", stid, "promote")
@@ -1486,6 +1490,13 @@ def show_md(tv, ident):
         L.append("- verificação: `%s`" % it["verify_cmd"])
     if it.get("aceite"):
         L.append("- aceite: `%s`" % it["aceite"])
+    steps, ftest = it.get("repro_steps"), it.get("reproducao")
+    if not steps and ftest and re.search(r"\s", str(ftest)):
+        steps, ftest = ftest, None      # BUG antigo: os passos foram gravados em failing_test
+    if steps:
+        L.append("- passos de reprodução: %s" % ("; ".join(steps) if isinstance(steps, list) else steps))
+    if ftest:
+        L.append("- teste que falha (failing_test): %s" % ftest)
     for k, lab in (("como", "como"), ("quero", "quero"), ("para", "para")):
         if it.get(k):
             L.append("- %s: %s" % (lab, it[k]))
@@ -1649,6 +1660,8 @@ def validate(root):
             got_status = raw.pop("status", None)  # derivado (D-37): conferido à parte, não é projeção
             if ap.endswith(".json"):  # .json é só inglês: chave pt (ou en renomeada para pt) é edição à mão
                 raw.pop(hcore.GENERATED_BY, None)
+                if raw.get("kind") in hcore.KIND_EN:   # arquivo antigo (`kind: "epico"`) é lido como o canônico
+                    raw["kind"] = hcore.KIND_EN[raw["kind"]]
                 data = hcore.canonical(raw)
                 want = hcore.canonical(hcore.item_to_en(it))
             else:  # .json5 legado: lido com a tradução
@@ -1784,7 +1797,7 @@ def migrate_plan(root, board, actor):
         crit = [{"id": c.get("id") or "AC-%d" % (i + 1), "gherkin": c.get("gherkin") or c.get("criterion") or "",
                  "teste": c.get("test")} for i, c in enumerate(s.get("criteria") or []) if isinstance(c, dict)]
         kw = {"tipo": tipo, "agent": None, "como": s.get("as_a"), "quero": s.get("i_want"), "para": s.get("so_that"),
-              "criterios": crit, "reproducao": s.get("failing_test"), "fixes": s.get("fixes"), "teste": s.get("proving_test"),
+              "criterios": crit, "reproducao": s.get("failing_test"), "repro_steps": s.get("repro"), "fixes": s.get("fixes"), "teste": s.get("proving_test"),
               "legacy_id": s["id"], "legacy_tasks": tasks_by_story.get(s["id"])}
         done = s.get("state") == "DONE"
         if f is not None:
@@ -1922,7 +1935,8 @@ def migrate_format(root, actor="lead", dry_run=False):
                                  "carimbo de sessão (cs-session save) — 8 blocks; não editar")
             else:
                 it = items.get(next((i for i, x in items.items() if x["path"] == new), None))
-                hcore.write_item_json(os.path.join(base, new), it, HEADER, codes.get(it["id"]))
+                hcore.write_item_json(os.path.join(base, new), it, HEADER, codes.get(it["id"]),
+                                      hcore.disk_kind(ap))
         for old, new in plan:
             if old.startswith(hcore.TREE_RUNTIME + "/") and not old.endswith("projection.json5"):
                 d = hcore.read_state(os.path.join(base, old))
@@ -1947,16 +1961,17 @@ def migrate_item_status(root, dry_run=False):
             if not os.path.isfile(p):
                 skipped.append(iid)
                 continue
-            want = hcore.item_file_text(it, HEADER, codes[iid])
+            keep = hcore.disk_kind(p)       # a migração do status não renomeia o kind (epico → epic fica para o motor)
+            want = hcore.item_file_text(it, HEADER, codes[iid], keep)
             with open(p, encoding="utf-8") as f:
                 if f.read() != want:
-                    todo.append((iid, p, it))
+                    todo.append((iid, p, it, keep))
         if not dry_run:
-            for iid, p, it in todo:
-                hcore.write_item_json(p, it, HEADER, codes[iid])
+            for iid, p, it, keep in todo:
+                hcore.write_item_json(p, it, HEADER, codes[iid], keep)
     out = ["item-status%s: %d item(ns) a regravar, %d ja em dia" % (
         " (dry-run)" if dry_run else "", len(todo), len(codes) - len(todo) - len(skipped))]
-    out += ["  %s → %s" % (iid, codes[iid]) for iid, _, _ in todo]
+    out += ["  %s → %s" % (iid, codes[iid]) for iid, _, _, _ in todo]
     if skipped:
         out.append("  pulados (sem .json; rode migrate state-format antes): %s" % ", ".join(skipped))
     return out

@@ -59,7 +59,7 @@ Recusa com "suba a classe" (task avulsa em >1 território/agente, invariante ou 
 ## Processo (fluxo completo)
 
 Feature e risco entram pela hierarquia Épico → Feature → Sprint → Story (US, Bug ou Fix), criada com
-`.swarm/bin/cs-state new epico|feature|story|sprint|task` (planeja com `cs-state plan <id> --sprint <SPR-n>`; retira o que não começou com `cs-state drop <id> --reason "..."`); `.swarm/bin/cs-state board` mostra a árvore. Toda delegação
+`.swarm/bin/cs-state new epic|feature|story|sprint|task` (planeja com `cs-state plan <id> --sprint <SPR-n>`; retira o que não começou com `cs-state drop <id> --reason "..."`); `.swarm/bin/cs-state board` mostra a árvore. Depois de cada `cs-state close`, rode `git add -A .swarm` (o estado da árvore mora em `.swarm/` e precisa entrar no commit junto com o código). Toda delegação
 desse fluxo pertence a uma Story. DoR e DoD são verificados pelo script; se ele recusar, a mensagem diz o que falta.
 
 ## Um brief canônico (schema completo: `brief-schema.json5` da skill)

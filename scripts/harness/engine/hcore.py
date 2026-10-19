@@ -306,8 +306,15 @@ def _translate(obj, node, to):
     return out
 
 
+KIND_EN = {"epico": "epic"}          # valor de `kind` no disco (en); em memória segue o histórico
+KIND_PT = {"epic": "epico"}          # arquivo antigo (`kind: "epico"`) e novo (`epic`) são lidos igual
+
+
 def item_to_en(item):
-    return _translate(item, ITEM_SCHEMA, "en")
+    it = _translate(item, ITEM_SCHEMA, "en")
+    if isinstance(it, dict) and it.get("kind") in KIND_EN:
+        it["kind"] = KIND_EN[it["kind"]]
+    return it
 
 
 def item_to_pt(item):
@@ -315,6 +322,8 @@ def item_to_pt(item):
     it = _translate(item, ITEM_SCHEMA, "pt")
     if isinstance(it, dict):
         it.pop(GENERATED_BY, None)
+        if it.get("kind") in KIND_PT:
+            it["kind"] = KIND_PT[it["kind"]]
         if isinstance(it.get("path"), str) and it["path"].endswith(".json5"):
             it["path"] = it["path"][:-1]
     return it
@@ -382,22 +391,35 @@ def write_json(path, obj, header, plain_sorted=True):
     return path
 
 
-def item_file_text(item, header, status=None):
-    """Texto do arquivo `.json` do item; `status` (código canônico, D-37) é DERIVADO e não faz parte da projeção."""
+def item_file_text(item, header, status=None, kind=None):
+    """Texto do arquivo `.json` do item; `status` (código canônico, D-37) é DERIVADO e não faz parte da projeção.
+    `kind`: preserva o valor que o arquivo já tinha (migração que só regrava status/formato não renomeia o kind)."""
     en = item_to_en(item)
     if status is not None:
         en = dict(en)
         en["status"] = status
+    if kind and en.get("kind") != kind:
+        en = dict(en)
+        en["kind"] = kind
     return json_text(with_generated_by(order_item(en), header))
 
 
-def write_item_json(path, item, header, status=None):
+def write_item_json(path, item, header, status=None, kind=None):
     """Grava um item (forma interna) em `.json`, chaves em inglês e ordem de leitura."""
     path = json_twin(path)
-    atomic_write_bytes(path, item_file_text(item, header, status).encode("utf-8"))
+    atomic_write_bytes(path, item_file_text(item, header, status, kind).encode("utf-8"))
     with contextlib.suppress(OSError):
         os.unlink(path + "5")
     return path
+
+
+def disk_kind(path):
+    """`kind` que o arquivo do item tem hoje (None se ilegível)."""
+    try:
+        d = read_any(path)
+        return d.get("kind") if isinstance(d, dict) else None
+    except (OSError, ValueError):
+        return None
 
 
 def read_state(path):

@@ -22,7 +22,7 @@
 // Nunca refeito num upgrade (salvo migração explícita): entrevista, roster aprovado, cartões aprovados,
 // memória de lições, board/eventos.
 {
- version: "0.13.1",
+ version: "0.14.0",
  migrations: [
   {
    to: "0.5.0",
@@ -127,6 +127,14 @@
    actions: [
     {kind: "harness"},
     {kind: "item-status"}
+   ]
+  },
+  {
+   to: "0.14.0",
+   why: "CLI em inglês e rastro por tentativa (campanha-iter26): as flags em português da CLI do estado (`--tipo`, `--como`, `--quero`, `--para`, `--motivo`, `--reproducao`, `new epico`) passam a ser aliases depreciados com aviso, e os textos emitidos citam só `--type`, `--as-a`, `--i-want`, `--so-that`, `--reason`, `--failing-test` e `new epic`; o épico novo grava `kind: epic` (`epico` segue lido); `repro_steps` fica separado de `failing_test`; cada rejeição e cada gate gravam histórico por tentativa (`rejections`, `gate_history`); os tokens por despacho vão em `delegation.usage` (NOT_RUN ou ERROR quando não medidos); o `verify` não acusa caderno regravado pelo próprio harness; a saída do `close` orienta `git add .swarm` e o orquestrador emitido, `git add -A .swarm`. Reinstala o motor e reemite os artefatos em inglês. Campos mortos de itens antigos são tolerados sem migração: nenhum item é regravado. Sem refazer entrevista, roster, cartões, memória nem board",
+   actions: [
+    {kind: "harness"},
+    {kind: "emit"}
    ]
   }
  ]
