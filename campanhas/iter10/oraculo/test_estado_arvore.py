@@ -57,6 +57,10 @@ CRIT = "AC-1|Dado pedido Quando aplico Então desconta|tests.test_billing"
 REPRO_RED = "repro.test_repro"          # falha até existir src/billing/fixed.py
 REPRO_GREEN = "tests.test_billing"      # passa hoje
 HINT = "cs-state new task --tipo FIX --avulsa"
+HINTS = (HINT, "cs-state new task --type FIX --avulsa")   # 0.14.0 (iter26, CA-04): flags en canônicas
+# 0.14.0 (iter26, CA-04): a flag en equivalente vale pela pt (a pt segue aceita como alias depreciado)
+FLAG_EN = {"--como": "--as-a", "--quero": "--i-want", "--para": "--so-that", "--motivo": "--reason",
+           "--reproducao": "--failing-test"}
 CREATED_RE = re.compile(r"^criad[oa] (\S+) em (\S+)\s*$", re.M)
 HEADINGS = ["Fechado nesta sessão", "Frente atual", "Tasks da frente atual", "Em andamento", "Próximos passos",
             "Backlog imediato", "Decisões e pendências humanas", "Integridade"]
@@ -761,7 +765,7 @@ class TestGuard(Base):
         for actor in (None, self.SUB):
             code, out, err = hook(r, "pre-write", self._wp(r, "src/billing/discount.py", actor))
             self.assertEqual(code, 2, "escrita de produto sem task deve ser bloqueada (%s)" % (actor or "principal"))
-            self.assertIn(HINT, out + err, "o bloqueio traz a dica mínima `%s ...`" % HINT)
+            self.assertTrue(any(h in out + err for h in HINTS), "o bloqueio traz a dica mínima `%s ...`" % HINT)
 
     def test_com_uma_task_avulsa_a_escrita_e_liberada(self):
         r = self.repo()
@@ -1485,7 +1489,7 @@ class TestLeituraCompacta(Base):
 
 # ====================================================================== skills emitidas (/new-*, /close-*, ...)
 SKILLS_CLI = {
-    "new-epic": "cs-state new epico", "new-sprint": "cs-state new sprint", "new-feature": "cs-state new feature",
+    "new-epic": "cs-state new epic", "new-sprint": "cs-state new sprint", "new-feature": "cs-state new feature",
     "new-task": "cs-state new task", "new-story": "cs-state new story",
     "close-task": "cs-state close", "close-feature": "cs-state close", "close-sprint": "cs-state close",
     "close-epic": "cs-state close", "close-story": "cs-state close",
@@ -1593,6 +1597,7 @@ class TestSkillsEmitidas(unittest.TestCase):
     def test_new_task_cita_chore_e_seu_dor(self):
         _, body = self.skill("new-task")
         for w in ("CHORE", "--motivo", "--verify-cmd"):
+            w = w if w in body else FLAG_EN.get(w, w)
             self.assertIn(w, body, "/new-task cita o tipo CHORE e o DoR dele (%s)" % w)
 
     def test_skills_finas_sem_logica_do_motor(self):
@@ -1615,6 +1620,7 @@ class TestSkillsEmitidas(unittest.TestCase):
         for name, flags in sorted(DOR_FLAGS.items()):
             _, body = self.skill(name)
             for fl in flags:
+                fl = fl if fl in body else FLAG_EN.get(fl, fl)
                 self.assertIn(fl, body, "/%s carrega o DoR: cita %s" % (name, fl))
         for name in ("new-task", "new-story"):
             _, body = self.skill(name)
@@ -1623,6 +1629,7 @@ class TestSkillsEmitidas(unittest.TestCase):
                                 ("FIX", ("fixes",))):
                 self.assertIn(tipo, body, "/%s explica o tipo %s" % (name, tipo))
                 for w in words:
+                    w = w if w in low else {"como": "as-a", "quero": "i-want", "para": "so-that"}.get(w, w)  # 0.14.0
                     self.assertIn(w, low, "/%s: DoR de %s cita '%s'" % (name, tipo, w))
 
 
