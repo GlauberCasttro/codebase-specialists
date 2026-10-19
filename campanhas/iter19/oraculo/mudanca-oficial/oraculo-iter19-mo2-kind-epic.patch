@@ -1,0 +1,10 @@
+--- campanhas/iter19/oraculo/test_iter19.py
++++ campanhas/iter19/oraculo/test_iter19.py
+@@ -569,6 +569,7 @@
+         sess = [r for r in files if r.startswith("state/sessoes/")]
+         self.assertTrue(sess, "o carimbo de sessão deve estar em state/sessoes/*.json")
+         kinds = {load_any(sd_path(self.root, r)).get("kind") for r in files}
++        kinds |= {"epico"} if "epic" in kinds else set()   # 0.14.0 (iter26, CA-02): o épico grava kind "epic"
+         for k in ENTITY_KINDS:
+             self.assertIn(k, kinds, "fixture sem %s" % k)
+ 
