@@ -1,9 +1,9 @@
 <!-- resume-stamp
 FEATURES: —
 BRANCH: release/desenv-mac
-HEAD: 1d3d78d
-PRODUTO: a1bfb79f958908cb4e1a07fe350f3f80352c9456
-ESTADO: a83547873fb5dda8c8e6fb17752c818796f0f4c8
+HEAD: e920288
+PRODUTO: 6da785c653a66f951dbbeb4d0d3ff81225315133
+ESTADO: 289d2e5ac0d512f76fb53ae29e41d9c031a5fa6d
 GATE: —
 -->
 
@@ -20,32 +20,31 @@ arquivos sujos da skill: 4
 # RESUME — codebase-specialists (desenvolvimento)
 
 ## Escopo autorizado e limites
-- Autorizado: nenhuma feature em execução (IDLE). A iter25 (0.13.1) foi aceita pelo founder ("sim", 2026-10-16) e
-  fechada; commit da feature + commit à parte da mudança oficial 02 do oráculo iter23 (D-39), como na iter10.
-- NÃO autorizado: abrir a próxima feature sem o founder escolher; push; publicar o pacote (B-08); `claude -p` sem
-  confirmar custo (D-09); troca de branch do principal (resto do B-47); editar a v8 daqui (ajustes vão pela sessão
-  da v8, que já recebeu local/ajustes-v8.md).
-- Aguardando decisão: próxima feature. Sequência recomendada ao founder (2026-10-14): iter26 canonização + limpeza de
-  campos mortos + telemetria barata → iter27 task melhor (brief com contexto/DoD, matriz de casos, vermelho pelo motivo
-  certo por caso, checks do revisor por script; story/feature/épico no mesmo padrão) → iter28 métricas (`cs-state
-  metrics`) → B-50/B-48/B-49.
+- Autorizado: nenhuma feature em execução (IDLE). A iter26 (0.14.0) foi aceita pelo founder ("ok", 2026-10-19) e
+  fechada; instalada nesta máquina; a cobaia .NET já está na 0.14.0. O founder aceitou (2026-10-19, "pode seguir sua
+  recomendacao") abrir a próxima feature como iter27 = CLI e motor inteiros em inglês (B-72 + B-68 + B-71), antes da
+  task melhor.
+- NÃO autorizado: iniciar a criação sem o founder invocar `/criar-feature`; push; publicar o pacote (B-08); `claude -p`
+  sem confirmar custo (D-09); editar a v8 daqui; rodar o portão dentro de subagente (B-70).
+- Aguardando decisão: as perguntas da E1 da iter27.
 
 ## Onde paramos
-- 0.13.1 entregue (iter25, B-64): status canônico gravado no arquivo de cada item da árvore, sempre em dia, conferido
-  pelo validate, preenchido pelo upgrade (`cs-state migrate item-status`). Oráculo 8/21 → 21/21; portão VERDE nos 2.
-- A sessão da cobaia .NET vigia a VERSION instalada e roda o upgrade sozinha ao ver 0.13.1 (autorização do dono lá).
-- BACKLOG: B-64 entregue; novos B-65 (menores da 0.13.1), B-66 (sufixo SUBMITTED/RETURNED).
+- 0.14.0 entregue (iter26): `8401adc` + mudanças oficiais de oráculo iter10 `244006a`, iter13 `d12e026`, iter19
+  `58ebdc9`, iter23 `e920288`. Oráculo 15/51 → 51/51; portão VERDE nos 2 Pythons; D-35 sem regressão.
+- Cobaia .NET: upgrade 0.14.0 OK (validate --strict OK, events intacto, commit do alvo bc1b31c); B-49 ainda não provado
+  no uso real (exige task despachada). Achados viraram B-71 e B-72.
 
 ## Próximos passos
-1. `/install` (instala a 0.13.1) — a cobaia .NET roda o upgrade e manda divergências por mensagem.
-2. Founder escolhe a próxima feature (sequência recomendada acima).
+1. Founder: `/criar-feature iter27 — CLI e motor inteiros em inglês (B-72 + B-68 + B-71)`. Na E2, medir produto +
+   oráculos antigos + doctests (lição da iter26, B-70c).
+2. Depois: iter28 task melhor; iter29 métricas (`cs-state metrics`); B-61, B-50, B-48, B-70.
 
 ## Estado do ambiente
-- Cópias de trabalho e portões em local/work/iter23, local/portao-iter23, local/tech-lead/iter23 (evidências) e as
-  antigas local/work/iter19, iter21, iter22, iter24 podem ser apagadas. A linha da iter19 em campanhas/README.md ainda
-  diz "em andamento" (não conferida).
-- Sessões da cobaia .NET mandam achados por SendMessage para esta sessão (nomes das sessões em local/).
+- Cópias e portões em local/work/iter26, local/portao-iter26, local/tech-lead/iter26, local/mo10, local/mo13,
+  local/mo19 (rascunhos de mudança oficial), local/d35, local/d35b (evidências); as antigas local/work/iter19..iter25
+  podem ser apagadas.
+- Sessões da cobaia .NET mandam achados por SendMessage para esta sessão (nomes em local/).
 
 ## Ponteiros
-- archive/iter24/iter24.md · LAST_DELIVERY.md · local/criar-iter23/criacao-suspensa/ · BACKLOG B-17, B-47..B-58 ·
-  DECISIONS D-30, D-31 · PORTE-WINDOWS.md (0.12.1, 0.12.2)
+- archive/iter26/iter26.md · LAST_DELIVERY.md · BACKLOG B-68..B-72 · DECISIONS D-40..D-45 · PORTE-WINDOWS.md
+  (0.13.1, 0.14.0)

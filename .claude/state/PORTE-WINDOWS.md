@@ -128,6 +128,26 @@ Riscos Windows: o slug da auto-memória é derivado do realpath com todo [^A-Za-
 funciona no NTFS (Python 3.9+); `stuck_items` roda `sys.executable -I -c` com o caminho do alvo em argv (sem shell —
 ok com espaços); `HOME` vs `USERPROFILE` para achar `~/.claude/projects/`.
 
+## 0.13.1 — iter25 · commit `633a307` (+ `bac0e0f` oráculo iter23) (2026-10-17) · B-64
+
+Cada item da árvore grava o `status` canônico em inglês (TODO/BACKLOG/ACTIVE/DONE/DROPPED e o par M2), derivado de
+`tree.status_code`; validate confere; upgrade com a ação `item-status` (`cs-state migrate item-status`).
+Arquivos para cherry-pick: `scripts/harness/engine/{tree,hcore,engine,state}.py`,
+`scripts/harness/tests/test_iter25_status.py`, `scripts/upgrade/{core,version}.py`,
+`scripts/upgrade/tests/test_iter25_upgrade.py`, `references/migrations.json5`, `docs/{09-upgrade,10-arvore-de-estado}.md`,
+`VERSION`, `README.md`; oráculo `campanhas/iter25` e a mudança oficial 02 em `campanhas/iter23`.
+Riscos Windows: regravação de arquivos de item (fim de linha CRLF vs LF no texto comparado para "só regrava se mudou").
+
+## 0.14.0 — iter26 · commit `8401adc` (+ oráculos `244006a`, `d12e026`, `58ebdc9`, `e920288`) (2026-10-19) · B-49, B-67
+
+Sem campos mortos nas tasks; `kind: "epic"`; `repro_steps`; CLI/templates/docs em inglês com aliases pt depreciados;
+`rejections`/`gate_history` por tentativa; `delegation.usage` (tokens do transcript) no guard; verify aceita o caderno
+regravado pelo harness; `close` e orquestrador citam o `git add .swarm`.
+Arquivos para cherry-pick (39): lista em `.claude/state/archive/iter26/iter26.md` (seção Arquivos da feature).
+Riscos Windows: o guard lê o transcript do subagente inteiro linha a linha (caminho com `\` e encoding UTF-8 explícito);
+o verify compara a área livre do caderno com `git show HEAD:<caminho>` (separador `/` no pathspec do git);
+`git add -A .swarm` no texto emitido vale igual no Windows.
+
 ## Pendentes no BACKLOG que também afetarão o Windows
 
 B-19 (descarte de task não iniciada), B-21 (chaves do mandato em inglês), B-25, B-26, B-27, B-28 (`cs-state add` →
