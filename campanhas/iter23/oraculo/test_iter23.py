@@ -806,6 +806,7 @@ class TestCA07(unittest.TestCase):
             ("sprint plan", None): lambda: ["sprint", "plan", "--goal", "meta", "--budget", "10", "--stories",
                                             us_new()],
         }
+        concrete[("new", "epic")] = concrete[("new", "epico")]   # 0.14.0 (iter26, CA-04): `new epic` é o canônico
         concrete[("new", None)] = concrete[("new", "epico")]
         for k in ("...", "<tipo>", "<kind>"):
             concrete[("new", k)] = concrete[("new", "epico")]
