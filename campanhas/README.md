@@ -40,3 +40,4 @@ preencha commit/decisão no `close-front`.
 | iter23 | Fluxo da árvore — descartar e emendar task não iniciada, sprint que fecha, uma sprint aberta por épico (e descarte de sprint), DoR na criação, sprint ↔ story na árvore, textos emitidos com `new`, auto-memória do Claude Code e versão visível no alvo | 933012d | GO |
 | iter25 | Hotfix 0.13.1 — o arquivo JSON de cada item da árvore carrega o próprio `status`, sempre em dia, conferido pelo validate e preenchido pelo upgrade nos itens existentes | — | em andamento |
 | iter26 | Canonização do modelo de itens (inglês por dentro e na CLI, com aliases), remoção dos campos gravados e nunca lidos, histórico de rejeição e de gate por tentativa, custo real (tokens) por despacho, verify sem culpar a task pela escrita do próprio harness (B-49) e aviso do git add depois do close (B-67) | — | em andamento |
+| iter27 | CLI e motor inteiros em inglês (B-72 + B-68 + B-71) | — | em andamento |

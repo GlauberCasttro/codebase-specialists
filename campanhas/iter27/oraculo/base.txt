@@ -1,0 +1,265 @@
+# base iter27 — HEAD 9e908e0 + commits só de estado (produto inalterado; VERSION 0.14.0)
+# alvos em TMPDIR do sistema (<TMP>); skill 0.14.0 = git archive 9e908e0; skill 0.13.1 = git archive bac0e0f
+# D = defeito (falha no HEAD por asserção: FAIL, 0 ERROR); R = controle/calibração (passa)
+# caminhos saneados: raiz do projeto = <PROJETO>, temporário = <TMP>
+
+## python3 — classificação (rodada completa -v)
+# comando: cd campanhas/iter27/oraculo && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v test_iter27
+# data (date): 2026-10-20T01:07:15Z UTC · Python 3.13.3
+CA-01 D FAIL  TestCA01.test_ca01_new_epic_en_igual_pt
+CA-01 D FAIL  TestCA01.test_ca01_new_sprint_en_igual_pt
+CA-01 D FAIL  TestCA01.test_ca01_new_feature_en_igual_pt
+CA-01 D FAIL  TestCA01.test_ca01_new_task_en_igual_pt
+CA-01 D FAIL  TestCA01.test_ca01_new_task_standalone_en_igual_pt
+CA-01 D FAIL  TestCA01.test_ca01_new_story_en_igual_pt
+CA-01 D FAIL  TestCA01.test_ca01_move_standalone_en_igual_pt
+CA-01 D FAIL  TestCA01.test_ca01_close_return_en_igual_pt
+CA-01 D FAIL  TestCA01.test_ca01_pt_avisa_depreciacao
+CA-01 D FAIL  TestCA01.test_ca01_help_so_en
+CA-01 R ok    TestCA01.test_ca01_controle_par_pt_pt_e_deterministico
+CA-01 R ok    TestCA01.test_ca01_controle_pt_continua_criando
+CA-02 D FAIL  TestCA02.test_ca02_propose_en_igual_pt
+CA-02 D FAIL  TestCA02.test_ca02_approve_budget_en_igual_pt
+CA-02 D FAIL  TestCA02.test_ca02_amend_budget_en_igual_pt
+CA-02 D FAIL  TestCA02.test_ca02_plan_add_edit_submit_en_igual_pt
+CA-02 D FAIL  TestCA02.test_ca02_reflect_en_igual_pt
+CA-02 D FAIL  TestCA02.test_ca02_escalate_en_igual_pt
+CA-02 R ok    TestCA02.test_ca02_controle_resolve_escalation_mesmo_efeito
+CA-02 D FAIL  TestCA02.test_ca02_pause_en_igual_pt
+CA-02 D FAIL  TestCA02.test_ca02_route_outcome_en_igual_pt
+CA-02 D FAIL  TestCA02.test_ca02_route_anular_en_igual_pt
+CA-02 D FAIL  TestCA02.test_ca02_pt_avisa_depreciacao
+CA-02 D FAIL  TestCA02.test_ca02_help_so_en
+CA-02 R ok    TestCA02.test_ca02_controle_par_pt_pt_e_deterministico
+CA-02 R ok    TestCA02.test_ca02_controle_chaves_internas_do_mandato_continuam
+CA-03 D FAIL  TestCA03.test_ca03_uma_linha_para_n_flags_pt_no_cs_state
+CA-03 D FAIL  TestCA03.test_ca03_uma_linha_para_n_flags_pt_no_cs_auto
+CA-03 D FAIL  TestCA03.test_ca03_en_vence_no_cs_state
+CA-03 D FAIL  TestCA03.test_ca03_en_vence_no_cs_auto
+CA-03 D FAIL  TestCA03.test_ca03_flag_pt_com_igual
+CA-03 D FAIL  TestCA03.test_ca03_no_do_escalate_vira_node
+CA-03 R ok    TestCA03.test_ca03_controle_criterio_da_linha_unica
+CA-03 R ok    TestCA03.test_ca03_controle_prefixo_no_dash_nao_e_alias
+CA-04 D FAIL  TestCA04.test_ca04_emit_include_emitted_igual_alias
+CA-04 D FAIL  TestCA04.test_ca04_harness_install_include_emitted_igual_alias
+CA-04 D FAIL  TestCA04.test_ca04_upgrade_apply_include_emitted_igual_alias
+CA-04 D FAIL  TestCA04.test_ca04_init_replace_harness_include_emitted_igual_alias
+CA-04 D FAIL  TestCA04.test_ca04_recusa_do_emit_cita_include_emitted
+CA-04 D FAIL  TestCA04.test_ca04_recusa_do_harness_install_cita_include_emitted
+CA-04 D FAIL  TestCA04.test_ca04_recusa_do_upgrade_cita_include_emitted
+CA-04 D FAIL  TestCA04.test_ca04_recusa_do_replace_harness_cita_include_emitted
+CA-04 D FAIL  TestCA04.test_ca04_allow_outside_avisa_depreciacao
+CA-04 D FAIL  TestCA04.test_ca04_plano_do_upgrade_cita_swarm_events_jsonl
+CA-04 D FAIL  TestCA04.test_ca04_recusa_do_upgrade_de_0131_cita_include_emitted
+CA-04 D FAIL  TestCA04.test_ca04_plano_do_upgrade_de_0131_cita_swarm_events_jsonl
+CA-04 R ok    TestCA04.test_ca04_controle_par_allow_allow_e_deterministico
+CA-04 R ok    TestCA04.test_ca04_controle_allow_outside_continua_escrevendo
+CA-04 R ok    TestCA04.test_ca04_controle_plano_da_0140_cita_events_sem_caminho
+CA-05 D FAIL  TestCA05.test_ca05_textos_emitidos_sem_flag_pt
+CA-05 D FAIL  TestCA05.test_ca05_skill_e_modo_de_uso_sem_flag_pt
+CA-05 D FAIL  TestCA05.test_ca05_references_sem_flag_pt
+CA-05 D FAIL  TestCA05.test_ca05_docs_sem_flag_pt
+CA-05 D FAIL  TestCA05.test_ca05_templates_sem_flag_pt
+CA-05 D FAIL  TestCA05.test_ca05_dicas_e_recusas_do_codigo_sem_flag_pt
+CA-05 D FAIL  TestCA05.test_ca05_recusa_do_dor_cita_criterion
+CA-05 R ok    TestCA05.test_ca05_controle_varredura_acha_flag_pt_na_0140
+CA-05 R ok    TestCA05.test_ca05_controle_criterio_da_tabela_de_alias
+CA-06 D FAIL  TestCA06.test_ca06_doctest_reprova_citacao_invalida_do_cs_auto
+CA-06 R ok    TestCA06.test_ca06_controle_doctest_reprova_citacao_invalida_do_cs_state
+CA-06 R ok    TestCA06.test_ca06_controle_doctest_passa_na_skill
+CA-07 R ok    TestCA07.test_ca07_controle_criterio_do_item
+CA-07 D FAIL  TestCA07.test_ca07_dry_run_epic_mostra_o_item
+CA-07 D FAIL  TestCA07.test_ca07_dry_run_sprint_mostra_o_item
+CA-07 D FAIL  TestCA07.test_ca07_dry_run_feature_mostra_o_item
+CA-07 D FAIL  TestCA07.test_ca07_dry_run_task_mostra_o_item
+CA-07 D FAIL  TestCA07.test_ca07_dry_run_story_mostra_o_item
+CA-07 R ok    TestCA07.test_ca07_controle_dry_run_nao_escreve
+CA-07 R ok    TestCA07.test_ca07_controle_contrato_ids_criar_mover_eventos
+CA-08 D FAIL  TestCA08.test_ca08_arvore_em_memoria_sem_chave_pt
+CA-08 D FAIL  TestCA08.test_ca08_sessao_em_memoria_sem_chave_pt
+CA-08 D FAIL  TestCA08.test_ca08_replay_do_historico_pt_sem_chave_pt_e_igual
+CA-08 D FAIL  TestCA08.test_ca08_estado_igual_ao_da_0140_em_ingles
+CA-08 D FAIL  TestCA08.test_ca08_eventos_novos_gravam_item_en
+CA-08 R ok    TestCA08.test_ca08_controle_criterio_forma_do_arquivo_passa
+CA-08 R ok    TestCA08.test_ca08_controle_historico_legado_tem_chave_pt
+CA-08 R ok    TestCA08.test_ca08_controle_nenhum_def_removido
+CA-08 R ok    TestCA08.test_ca08_controle_arquivo_do_item_igual_ao_da_0140
+CA-09 D FAIL  TestCA09.test_ca09_apply_sai_0_e_validate_strict_passa
+CA-09 D FAIL  TestCA09.test_ca09_disco_passa_a_kind_epic
+CA-09 D FAIL  TestCA09.test_ca09_events_jsonl_intacto
+CA-09 D FAIL  TestCA09.test_ca09_textos_emitidos_sem_flag_pt
+CA-09 D FAIL  TestCA09.test_ca09_version_0150
+CA-09 R ok    TestCA09.test_ca09_controle_legado_tem_epico_e_texto_pt
+contagem: total 84 / falhas 62 / erros 0 / ok 22
+
+## /usr/bin/python3 — classificação (rodada completa -v)
+# comando: cd campanhas/iter27/oraculo && PYTHONDONTWRITEBYTECODE=1 /usr/bin/python3 -m unittest -v test_iter27
+# data (date): 2026-10-20T01:08:38Z UTC · Python 3.9.6
+CA-01 D FAIL  TestCA01.test_ca01_new_epic_en_igual_pt
+CA-01 D FAIL  TestCA01.test_ca01_new_sprint_en_igual_pt
+CA-01 D FAIL  TestCA01.test_ca01_new_feature_en_igual_pt
+CA-01 D FAIL  TestCA01.test_ca01_new_task_en_igual_pt
+CA-01 D FAIL  TestCA01.test_ca01_new_task_standalone_en_igual_pt
+CA-01 D FAIL  TestCA01.test_ca01_new_story_en_igual_pt
+CA-01 D FAIL  TestCA01.test_ca01_move_standalone_en_igual_pt
+CA-01 D FAIL  TestCA01.test_ca01_close_return_en_igual_pt
+CA-01 D FAIL  TestCA01.test_ca01_pt_avisa_depreciacao
+CA-01 D FAIL  TestCA01.test_ca01_help_so_en
+CA-01 R ok    TestCA01.test_ca01_controle_par_pt_pt_e_deterministico
+CA-01 R ok    TestCA01.test_ca01_controle_pt_continua_criando
+CA-02 D FAIL  TestCA02.test_ca02_propose_en_igual_pt
+CA-02 D FAIL  TestCA02.test_ca02_approve_budget_en_igual_pt
+CA-02 D FAIL  TestCA02.test_ca02_amend_budget_en_igual_pt
+CA-02 D FAIL  TestCA02.test_ca02_plan_add_edit_submit_en_igual_pt
+CA-02 D FAIL  TestCA02.test_ca02_reflect_en_igual_pt
+CA-02 D FAIL  TestCA02.test_ca02_escalate_en_igual_pt
+CA-02 R ok    TestCA02.test_ca02_controle_resolve_escalation_mesmo_efeito
+CA-02 D FAIL  TestCA02.test_ca02_pause_en_igual_pt
+CA-02 D FAIL  TestCA02.test_ca02_route_outcome_en_igual_pt
+CA-02 D FAIL  TestCA02.test_ca02_route_anular_en_igual_pt
+CA-02 D FAIL  TestCA02.test_ca02_pt_avisa_depreciacao
+CA-02 D FAIL  TestCA02.test_ca02_help_so_en
+CA-02 R ok    TestCA02.test_ca02_controle_par_pt_pt_e_deterministico
+CA-02 R ok    TestCA02.test_ca02_controle_chaves_internas_do_mandato_continuam
+CA-03 D FAIL  TestCA03.test_ca03_uma_linha_para_n_flags_pt_no_cs_state
+CA-03 D FAIL  TestCA03.test_ca03_uma_linha_para_n_flags_pt_no_cs_auto
+CA-03 D FAIL  TestCA03.test_ca03_en_vence_no_cs_state
+CA-03 D FAIL  TestCA03.test_ca03_en_vence_no_cs_auto
+CA-03 D FAIL  TestCA03.test_ca03_flag_pt_com_igual
+CA-03 D FAIL  TestCA03.test_ca03_no_do_escalate_vira_node
+CA-03 R ok    TestCA03.test_ca03_controle_criterio_da_linha_unica
+CA-03 R ok    TestCA03.test_ca03_controle_prefixo_no_dash_nao_e_alias
+CA-04 D FAIL  TestCA04.test_ca04_emit_include_emitted_igual_alias
+CA-04 D FAIL  TestCA04.test_ca04_harness_install_include_emitted_igual_alias
+CA-04 D FAIL  TestCA04.test_ca04_upgrade_apply_include_emitted_igual_alias
+CA-04 D FAIL  TestCA04.test_ca04_init_replace_harness_include_emitted_igual_alias
+CA-04 D FAIL  TestCA04.test_ca04_recusa_do_emit_cita_include_emitted
+CA-04 D FAIL  TestCA04.test_ca04_recusa_do_harness_install_cita_include_emitted
+CA-04 D FAIL  TestCA04.test_ca04_recusa_do_upgrade_cita_include_emitted
+CA-04 D FAIL  TestCA04.test_ca04_recusa_do_replace_harness_cita_include_emitted
+CA-04 D FAIL  TestCA04.test_ca04_allow_outside_avisa_depreciacao
+CA-04 D FAIL  TestCA04.test_ca04_plano_do_upgrade_cita_swarm_events_jsonl
+CA-04 D FAIL  TestCA04.test_ca04_recusa_do_upgrade_de_0131_cita_include_emitted
+CA-04 D FAIL  TestCA04.test_ca04_plano_do_upgrade_de_0131_cita_swarm_events_jsonl
+CA-04 R ok    TestCA04.test_ca04_controle_par_allow_allow_e_deterministico
+CA-04 R ok    TestCA04.test_ca04_controle_allow_outside_continua_escrevendo
+CA-04 R ok    TestCA04.test_ca04_controle_plano_da_0140_cita_events_sem_caminho
+CA-05 D FAIL  TestCA05.test_ca05_textos_emitidos_sem_flag_pt
+CA-05 D FAIL  TestCA05.test_ca05_skill_e_modo_de_uso_sem_flag_pt
+CA-05 D FAIL  TestCA05.test_ca05_references_sem_flag_pt
+CA-05 D FAIL  TestCA05.test_ca05_docs_sem_flag_pt
+CA-05 D FAIL  TestCA05.test_ca05_templates_sem_flag_pt
+CA-05 D FAIL  TestCA05.test_ca05_dicas_e_recusas_do_codigo_sem_flag_pt
+CA-05 D FAIL  TestCA05.test_ca05_recusa_do_dor_cita_criterion
+CA-05 R ok    TestCA05.test_ca05_controle_varredura_acha_flag_pt_na_0140
+CA-05 R ok    TestCA05.test_ca05_controle_criterio_da_tabela_de_alias
+CA-06 D FAIL  TestCA06.test_ca06_doctest_reprova_citacao_invalida_do_cs_auto
+CA-06 R ok    TestCA06.test_ca06_controle_doctest_reprova_citacao_invalida_do_cs_state
+CA-06 R ok    TestCA06.test_ca06_controle_doctest_passa_na_skill
+CA-07 R ok    TestCA07.test_ca07_controle_criterio_do_item
+CA-07 D FAIL  TestCA07.test_ca07_dry_run_epic_mostra_o_item
+CA-07 D FAIL  TestCA07.test_ca07_dry_run_sprint_mostra_o_item
+CA-07 D FAIL  TestCA07.test_ca07_dry_run_feature_mostra_o_item
+CA-07 D FAIL  TestCA07.test_ca07_dry_run_task_mostra_o_item
+CA-07 D FAIL  TestCA07.test_ca07_dry_run_story_mostra_o_item
+CA-07 R ok    TestCA07.test_ca07_controle_dry_run_nao_escreve
+CA-07 R ok    TestCA07.test_ca07_controle_contrato_ids_criar_mover_eventos
+CA-08 D FAIL  TestCA08.test_ca08_arvore_em_memoria_sem_chave_pt
+CA-08 D FAIL  TestCA08.test_ca08_sessao_em_memoria_sem_chave_pt
+CA-08 D FAIL  TestCA08.test_ca08_replay_do_historico_pt_sem_chave_pt_e_igual
+CA-08 D FAIL  TestCA08.test_ca08_estado_igual_ao_da_0140_em_ingles
+CA-08 D FAIL  TestCA08.test_ca08_eventos_novos_gravam_item_en
+CA-08 R ok    TestCA08.test_ca08_controle_criterio_forma_do_arquivo_passa
+CA-08 R ok    TestCA08.test_ca08_controle_historico_legado_tem_chave_pt
+CA-08 R ok    TestCA08.test_ca08_controle_nenhum_def_removido
+CA-08 R ok    TestCA08.test_ca08_controle_arquivo_do_item_igual_ao_da_0140
+CA-09 D FAIL  TestCA09.test_ca09_apply_sai_0_e_validate_strict_passa
+CA-09 D FAIL  TestCA09.test_ca09_disco_passa_a_kind_epic
+CA-09 D FAIL  TestCA09.test_ca09_events_jsonl_intacto
+CA-09 D FAIL  TestCA09.test_ca09_textos_emitidos_sem_flag_pt
+CA-09 D FAIL  TestCA09.test_ca09_version_0150
+CA-09 R ok    TestCA09.test_ca09_controle_legado_tem_epico_e_texto_pt
+contagem: total 84 / falhas 62 / erros 0 / ok 22
+
+## verificação pedida 1
+# comando: cd campanhas/iter27/oraculo && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v test_iter27 2>&1 | tail -60
+# data (date): Mon Oct 19 22:10:37 -03 2026 · Python 3.13.3
+FAIL: test_ca09_disco_passa_a_kind_epic (test_iter27.TestCA09.test_ca09_disco_passa_a_kind_epic)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<PROJETO>/campanhas/iter27/oraculo/test_iter27.py", line 1926, in test_ca09_disco_passa_a_kind_epic
+    r = self._applied()
+  File "<PROJETO>/campanhas/iter27/oraculo/test_iter27.py", line 1916, in _applied
+    self.assertEqual(code, 0, "upgrade --apply --include-emitted no alvo 0.14.0 deveria sair 0:\n%s%s"
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                     % (out[-2000:], err[-2000:]))
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 2 != 0 : upgrade --apply --include-emitted no alvo 0.14.0 deveria sair 0:
+usage: cs.py [-h] [--target TARGET] <subcomando> ...
+cs.py: error: unrecognized arguments: --include-emitted
+
+
+======================================================================
+FAIL: test_ca09_events_jsonl_intacto (test_iter27.TestCA09.test_ca09_events_jsonl_intacto)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<PROJETO>/campanhas/iter27/oraculo/test_iter27.py", line 1933, in test_ca09_events_jsonl_intacto
+    r = self._applied()
+  File "<PROJETO>/campanhas/iter27/oraculo/test_iter27.py", line 1916, in _applied
+    self.assertEqual(code, 0, "upgrade --apply --include-emitted no alvo 0.14.0 deveria sair 0:\n%s%s"
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                     % (out[-2000:], err[-2000:]))
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 2 != 0 : upgrade --apply --include-emitted no alvo 0.14.0 deveria sair 0:
+usage: cs.py [-h] [--target TARGET] <subcomando> ...
+cs.py: error: unrecognized arguments: --include-emitted
+
+
+======================================================================
+FAIL: test_ca09_textos_emitidos_sem_flag_pt (test_iter27.TestCA09.test_ca09_textos_emitidos_sem_flag_pt)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<PROJETO>/campanhas/iter27/oraculo/test_iter27.py", line 1938, in test_ca09_textos_emitidos_sem_flag_pt
+    r = self._applied()
+  File "<PROJETO>/campanhas/iter27/oraculo/test_iter27.py", line 1916, in _applied
+    self.assertEqual(code, 0, "upgrade --apply --include-emitted no alvo 0.14.0 deveria sair 0:\n%s%s"
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                     % (out[-2000:], err[-2000:]))
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 2 != 0 : upgrade --apply --include-emitted no alvo 0.14.0 deveria sair 0:
+usage: cs.py [-h] [--target TARGET] <subcomando> ...
+cs.py: error: unrecognized arguments: --include-emitted
+
+
+======================================================================
+FAIL: test_ca09_version_0150 (test_iter27.TestCA09.test_ca09_version_0150)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<PROJETO>/campanhas/iter27/oraculo/test_iter27.py", line 1945, in test_ca09_version_0150
+    self.assertGreaterEqual(vtuple(v), NEW_VERSION, "VERSION %s < 0.15.0" % v)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: (0, 14, 0) not greater than or equal to (0, 15, 0) : VERSION 0.14.0 < 0.15.0
+
+----------------------------------------------------------------------
+Ran 84 tests in 81.266s
+
+FAILED (failures=62)
+
+## verificação pedida 2
+# comando: cd campanhas/iter27/oraculo && PYTHONDONTWRITEBYTECODE=1 /usr/bin/python3 -m unittest test_iter27 2>&1 | tail -15
+# data (date): Mon Oct 19 22:11:58 -03 2026 · Python 3.9.6
+cs.py: error: unrecognized arguments: --include-emitted
+
+
+======================================================================
+FAIL: test_ca09_version_0150 (test_iter27.TestCA09)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<PROJETO>/campanhas/iter27/oraculo/test_iter27.py", line 1945, in test_ca09_version_0150
+    self.assertGreaterEqual(vtuple(v), NEW_VERSION, "VERSION %s < 0.15.0" % v)
+AssertionError: (0, 14, 0) not greater than or equal to (0, 15, 0) : VERSION 0.14.0 < 0.15.0
+
+----------------------------------------------------------------------
+Ran 84 tests in 86.158s
+
+FAILED (failures=62)
