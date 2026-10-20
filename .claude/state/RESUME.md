@@ -1,7 +1,7 @@
 <!-- resume-stamp
 FEATURES: iter27
 BRANCH: release/desenv-mac
-HEAD: 9e908e0
+HEAD: cb6e407
 PRODUTO: 6da785c653a66f951dbbeb4d0d3ff81225315133
 ESTADO: 47f9122d4b450482fb5c62325ecaf882e0f2d11e
 GATE: PENDENTE
@@ -27,7 +27,7 @@ arquivos sujos da skill: 4
 - NÃO autorizado: correção (tasks 02–06) antes da aprovação do founder no script (`ac.py check intake.3`); rodar o
   script de aprovação ou pedir a senha; push; publicar o pacote (B-08); `claude -p` sem confirmar custo (D-09);
   editar a v8 daqui; rodar o portão dentro de subagente (B-70); os subcomandos pt `senha/conferir/anular` (B-73).
-- Aguardando decisão: nada pendente além da aprovação do oráculo (depois que ele existir).
+- Aguardando decisão: aprovação do oráculo da iter27 (depois que ele existir); ordem da iter28 (B-76 recomendada).
 
 ## Onde paramos
 - iter27 aberta (nada commitado): 8 tasks, CA-01..CA-09, campanha `campanhas/iter27/` em `intake`, 35 globs de
@@ -43,8 +43,9 @@ arquivos sujos da skill: 4
    ESPEC.md, test_iter27.py, base.txt).
 2. Gerar o script de aprovação (`bash .claude/tools/script-aprovacao.sh iter27`); o founder roda no terminal com a
    senha.
-3. Correção: 02 (G1) ∥ 04 (G2) → 03 e 05 → 06 → QA (portão sob o tech-lead com caffeinate) → REVIEW. Depois: iter28
-   task melhor; iter29 métricas.
+3. Correção: 02 (G1) ∥ 04 (G2) → 03 e 05 → 06 → QA (portão sob o tech-lead com caffeinate) → REVIEW. Depois: iter28 =
+   candidata B-76 (state/ do alvo em arquivos-chave JSON, pedido do dono da cobaia .NET) + B-77(a) — aguarda o
+   founder; task melhor e métricas depois.
 
 ## Estado do ambiente
 - Cópias e portões em local/work/iter26, local/portao-iter26, local/tech-lead/iter26, local/mo10, local/mo13,
@@ -53,5 +54,5 @@ arquivos sujos da skill: 4
 - Sessões da cobaia .NET mandam achados por SendMessage para esta sessão (nomes em local/).
 
 ## Ponteiros
-- features/iter27/ · archive/iter26/iter26.md · LAST_DELIVERY.md · BACKLOG B-68..B-73 · DECISIONS D-40..D-47 · PORTE-WINDOWS.md
+- features/iter27/ · archive/iter26/iter26.md · LAST_DELIVERY.md · BACKLOG B-68..B-78 (B-76 state/ do alvo) · DECISIONS D-40..D-47 · PORTE-WINDOWS.md
   (0.13.1, 0.14.0)
