@@ -2,11 +2,11 @@
 
 <!-- gerado por .claude/tools/feature.py a partir dos cabeçalhos das tasks; não edite à mão -->
 
-Progresso: 0/8 · próxima: 01-TASK-ORACULO
+Progresso: 1/8 · próxima: 02-TASK-FLAGS-EN
 
 | id | entrega | tipo | grupo | CAs | depends | status |
 |---|---|---|---|---|---|---|
-| 01-TASK-ORACULO | Oráculo da iter27 (CA-01..CA-09), escrito por agente separado | ORACULO | — | CA-01, CA-02, CA-03, CA-04, CA-05, CA-06, CA-07, CA-08, CA-09 | — | PENDENTE |
+| 01-TASK-ORACULO | Oráculo da iter27 (CA-01..CA-09), escrito por agente separado | ORACULO | — | CA-01, CA-02, CA-03, CA-04, CA-05, CA-06, CA-07, CA-08, CA-09 | — | DONE |
 | 02-TASK-FLAGS-EN | Flags en com alias pt no cs-state, cs-auto e cs-route; aviso agregado; dry-run com o item | CORRECAO | G1 | CA-01, CA-02, CA-03, CA-05, CA-07 | 01-TASK-ORACULO (o oráculo congelado é a régua da correção) | PENDENTE |
 | 03-TASK-MEMORIA-EN | Forma interna do item e da sessão em inglês; kind epic normalizado na migração | CORRECAO | G1 | CA-08, CA-09 | 02-TASK-FLAGS-EN (mesmos arquivos state.py/auto.py/hcore.py/tree.py: serializado) | PENDENTE |
 | 04-TASK-INCLUDE-EMITTED | --include-emitted com alias --allow-outside; caminho exato do log no plano do upgrade | CORRECAO | G2 | CA-04, CA-05 | 01-TASK-ORACULO (o oráculo congelado é a régua da correção) | PENDENTE |

@@ -1,9 +1,9 @@
 <!-- resume-stamp
 FEATURES: iter27
 BRANCH: release/desenv-mac
-HEAD: cb6e407
+HEAD: cfb2587
 PRODUTO: 6da785c653a66f951dbbeb4d0d3ff81225315133
-ESTADO: 47f9122d4b450482fb5c62325ecaf882e0f2d11e
+ESTADO: 932314aba6ba3b1f8f5b574a957c446e2c669715
 GATE: PENDENTE
 -->
 
@@ -20,39 +20,44 @@ arquivos sujos da skill: 4
 # RESUME — codebase-specialists (desenvolvimento)
 
 ## Escopo autorizado e limites
-- Autorizado: iter27 (CLI e motor inteiros em inglês — B-72 + B-68 + B-71) ABERTA em 2026-10-19 pelo
-  `/criar-feature` (E1 "sim", E2–E5 "ok"; D-47). Próximo trabalho permitido: a task 01-TASK-ORACULO por agente
-  separado (persona oraculista via /rh) e o `oracle freeze`; depois GERAR o script de aprovação
-  (`script-aprovacao.sh iter27`) para o founder rodar com a senha.
-- NÃO autorizado: correção (tasks 02–06) antes da aprovação do founder no script (`ac.py check intake.3`); rodar o
-  script de aprovação ou pedir a senha; push; publicar o pacote (B-08); `claude -p` sem confirmar custo (D-09);
-  editar a v8 daqui; rodar o portão dentro de subagente (B-70); os subcomandos pt `senha/conferir/anular` (B-73).
-- Aguardando decisão: aprovação do oráculo da iter27 (depois que ele existir); ordem da iter28 (B-76 recomendada).
+- Autorizado: iter27 (CLI e motor inteiros em inglês — B-72 + B-68 + B-71), aberta em 2026-10-19 (D-47), em execução
+  pelo `/tech-lead` no modo **autônomo** (escolha do founder em 2026-10-19: "autonomo"). Feito: 01-TASK-ORACULO
+  (oráculo congelado f482a969021e) e o script de aprovação GERADO (`local/aprovar-iter27.sh`).
+- NÃO autorizado: correção (tasks 02–06) antes de o founder rodar o script (`ac.py check intake.3` ainda falha); rodar
+  o script ou pedir a senha; mudar o oráculo congelado (só mudança oficial); push; publicar o pacote (B-08); `claude
+  -p` sem confirmar custo (D-09); editar a v8 daqui; rodar o portão dentro de subagente (B-70); os subcomandos pt
+  `senha/conferir/anular` (B-73); implementar B-79/B-80/B-81 (são BACKLOG; viram feature só por decisão do founder).
+- Aguardando decisão: (1) o founder rodar `sh local/aprovar-iter27.sh` (gate stop + gate oracle:requisito + preauth
+  commit); (2) a frente "lixo de criação e retenção no alvo" (B-80) vira feature (iter28 alternativa ou junto do B-76)
+  ou fica no BACKLOG; (3) ordem da iter28 (B-76 recomendada; B-79 é entrada dela, D-48).
 
 ## Onde paramos
-- iter27 aberta (nada commitado): 8 tasks, CA-01..CA-09, campanha `campanhas/iter27/` em `intake`, 35 globs de
-  escopo, alvo VERSION 0.15.0. Proposta e medição: `.claude/state/features/iter27/` (FEATURE.md, TASKS/, propostas/);
-  rascunhos em `local/criar-iter27/`.
-- E2 mediu: 28 nomes de flag pt sem en (35 linhas), 311 citações pt nos textos, 28 chaves pt + `kind: "epico"` na
-  forma interna, cs-auto fora do doctest; oráculos antigos não leem a forma interna (nenhuma mudança oficial prevista
-  com alias).
-- 0.14.0 (iter26) entregue e instalada; cobaia .NET na 0.14.0 (B-49 ainda não provado no uso real).
+- iter27 1/8: 01-TASK-ORACULO DONE/PASS — 84 testes (TestCA01..09), no HEAD 62 D FAIL / 0 ERROR / 22 R OK nos 2
+  Pythons, refeito pelo tech-lead; campanha em `intake` 2/3 (budget e oracle.command/split/calibration gravados;
+  falta intake.3 = gate stop do founder). Próxima elegível depois da aprovação: 02-TASK-FLAGS-EN (G1) ∥
+  04-TASK-INCLUDE-EMITTED (G2).
+- Nesta sessão também: análise arquivo a arquivo do `.swarm/` da cobaia .NET (B-80, B-81; relatório em
+  `local/frente-lixo-alvo/RELATORIO.md`) e o B-79 (status de story/feature/épico pela pasta × rollup da v8, com prova
+  em `local/b79-prova/`).
 
 ## Próximos passos
-1. `/tech-lead iter27` → 01-TASK-ORACULO por agente separado (oraculista), conferência e `oracle freeze` (3 arquivos:
-   ESPEC.md, test_iter27.py, base.txt).
-2. Gerar o script de aprovação (`bash .claude/tools/script-aprovacao.sh iter27`); o founder roda no terminal com a
-   senha.
-3. Correção: 02 (G1) ∥ 04 (G2) → 03 e 05 → 06 → QA (portão sob o tech-lead com caffeinate) → REVIEW. Depois: iter28 =
-   candidata B-76 (state/ do alvo em arquivos-chave JSON, pedido do dono da cobaia .NET) + B-77(a) — aguarda o
-   founder; task melhor e métricas depois.
+1. Founder: `sh local/aprovar-iter27.sh` no terminal dele (com a senha). Depois: `python3 .claude/tools/ac/ac.py
+   --work campanhas/iter27 check intake.3` deve dar ok → `done intake`, `done oraculo` e a etapa `base` (`run record
+   --round 0`) pelo `/tech-lead`.
+2. `/tech-lead` (modo autônomo): cópia de trabalho (`bash .claude/tools/copia.sh iter27`) → 02 (G1) ∥ 04 (G2) → 03 e 05
+   → 06 → QA (portão sob o tech-lead com caffeinate) → REVIEW → aceite do founder.
+3. Decidir o destino do B-80 (frente da cobaia) e a ordem da iter28 (B-76 + B-77(a), entrada B-79).
 
 ## Estado do ambiente
-- Cópias e portões em local/work/iter26, local/portao-iter26, local/tech-lead/iter26, local/mo10, local/mo13,
-  local/mo19 (rascunhos de mudança oficial), local/d35, local/d35b (evidências); as antigas local/work/iter19..iter25
+- Fora do commit do save: `campanhas/README.md` (modificado antes desta sessão, de terceiros/anterior — intacto) e
+  `campanhas/iter27/` (oráculo congelado; entra no commit da feature pelo `/fechar-feature`).
+- local/: `local/tech-lead/iter27/` (ficha, snapshot, verificações), `local/aprovar-iter27.sh`,
+  `local/frente-lixo-alvo/` (RELATORIO.md + cópia de 34 MB da cobaia que pode ser apagada), `local/b79-prova/`
+  (scripts da prova; `tmp/` vazio). Antigas: local/work/iter19..iter26, local/portao-iter26, local/mo*, local/d35*
   podem ser apagadas.
 - Sessões da cobaia .NET mandam achados por SendMessage para esta sessão (nomes em local/).
 
 ## Ponteiros
-- features/iter27/ · archive/iter26/iter26.md · LAST_DELIVERY.md · BACKLOG B-68..B-78 (B-76 state/ do alvo) · DECISIONS D-40..D-47 · PORTE-WINDOWS.md
-  (0.13.1, 0.14.0)
+- features/iter27/ · archive/iter26/iter26.md · LAST_DELIVERY.md · BACKLOG B-68..B-81 (B-76 state/ do alvo; B-79 ciclo
+  de vida; B-80 lixo/retenção no alvo; B-81 consolidate em árvore e bin/ ignorado) · DECISIONS D-40..D-48 ·
+  PORTE-WINDOWS.md (0.13.1, 0.14.0)

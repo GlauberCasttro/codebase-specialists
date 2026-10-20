@@ -157,3 +157,7 @@
       - o aviso agregado (F2);
       - o upgrade normalizar `kind: "epico"` (F5);
       - "nenhuma chave pt em memória" (não existe teste que varra a forma interna).
+
+## [PASS] 01-TASK-ORACULO — 2026-10-19T22:17:53-0300
+- status: DONE · gate: PASS
+- oráculo congelado f482a969021e; 84 testes, 62 D FAIL/0 ERROR/22 R OK nos 2 Pythons (refeito pelo tech-lead); escopo e privacidade conferidos
